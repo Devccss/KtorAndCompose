@@ -1,4 +1,4 @@
-package com.example
+package com.example.Routes
 
 
 import io.ktor.http.*
@@ -12,7 +12,7 @@ import io.ktor.server.resources.Resources
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 @Serializable
 data class DatabaseTestResult(
@@ -44,11 +44,13 @@ fun Application.configureRouting() {
                         rs.getInt(1)
                     }
                 }
-                call.respond(DatabaseTestResult(
+                call.respond(
+                    DatabaseTestResult(
                     status = "OK",
                     result = result!!,
                     database = "PostgreSQL"
-                ))
+                )
+                )
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.InternalServerError,

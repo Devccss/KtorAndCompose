@@ -27,6 +27,9 @@ dependencies {
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.exposed.core)
     implementation(libs.exposed.jdbc)
+    implementation(libs.postgresql)
+    implementation(libs.exposed.kotlin.datetime)
+    implementation(libs.exposed.java.time)
     implementation(libs.h2)
     implementation(libs.ktor.server.host.common)
     implementation(libs.ktor.server.status.pages)
@@ -44,4 +47,5 @@ dependencies {
     implementation(libs.room.compiler)
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
+
 }

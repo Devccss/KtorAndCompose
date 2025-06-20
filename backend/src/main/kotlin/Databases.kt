@@ -23,12 +23,12 @@ import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.serialization.Serializable
-import org.jetbrains.exposed.sql.*
+
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
 
-fun Application.configureDatabases() {
+/*fun Application.configureDatabases() {
     val database = Database.connect(
         url = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1",
         user = "root",
@@ -70,4 +70,4 @@ fun Application.configureDatabases() {
             call.respond(HttpStatusCode.OK)
         }
     }
-}
+}*/
