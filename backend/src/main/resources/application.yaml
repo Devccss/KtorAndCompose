@@ -3,7 +3,7 @@ ktor:
         modules:
             - com.example.ApplicationKt.module
     deployment:
-        port: 1666
+        port: 443
 jwt:
   domain: "https://jwt-provider-domain/"
   audience: "jwt-audience"
