@@ -1,4 +1,4 @@
-import com.example.config.DatabaseFactory
+
 import com.example.dtos.PhraseDTO
 import com.example.dtos.WordDTO
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq

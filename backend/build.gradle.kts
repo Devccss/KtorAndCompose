@@ -33,7 +33,6 @@ dependencies {
     implementation(libs.h2)
     implementation(libs.ktor.server.host.common)
     implementation(libs.ktor.server.status.pages)
-    implementation(libs.ktor.server.resources)
     implementation(libs.ktor.server.auth)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.apache)

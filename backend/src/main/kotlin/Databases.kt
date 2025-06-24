@@ -7,7 +7,7 @@ import io.github.flaxoos.ktor.server.plugins.ratelimiter.implementations.*
 import io.ktor.client.*
 import io.ktor.client.engine.apache.*
 import io.ktor.http.*
-import io.ktor.resources.*
+
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -17,7 +17,6 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.plugins.swagger.*
 import io.ktor.server.request.*
-import io.ktor.server.resources.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
@@ -28,7 +27,7 @@ import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
 
-/*fun Application.configureDatabases() {
+/*fun Application.config.configureDatabases() {
     val database = Database.connect(
         url = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1",
         user = "root",

@@ -1,4 +1,4 @@
-package com.example.config
+package config
 
 import Dialogs
 import Levels
@@ -10,12 +10,11 @@ import UserPhraseStandby
 import UserProgress
 import Users
 import Words
-import io.ktor.server.application.Application
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
-fun Application.configureDatabases() {
+fun configureDatabases() {
     Database.connect(
         "jdbc:postgresql://localhost:5432/ktorDatabase",
         user = "Deivid_user",
