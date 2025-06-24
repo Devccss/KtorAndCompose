@@ -16,9 +16,9 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 fun configureDatabases() {
     Database.connect(
-        "jdbc:postgresql://localhost:5432/ktorDatabase",
-        user = "Deivid_user",
-        password = "-Ducli123"
+        "jdbc:postgresql://pgsqltrans.face.ubiobio.cl:5432/dsandoval_bd",
+        user = "dsandoval",
+        password = "deivid2025"
     )
     transaction {
         SchemaUtils.create(
