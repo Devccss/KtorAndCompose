@@ -1,4 +1,4 @@
-package org.example.project.Screens
+package org.example.project.screens
 
 import androidx.compose.runtime.Composable
 import cafe.adriel.voyager.core.screen.Screen

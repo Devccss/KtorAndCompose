@@ -1,4 +1,4 @@
-package org.example.project.Screens
+package org.example.project.screens
 
 import AdminDashboard
 import androidx.compose.foundation.layout.*

@@ -3,9 +3,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.Ballot
-import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -22,6 +20,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.core.screen.uniqueScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import org.example.project.screens.AdminLevelsScreen
 
 
 class AdminDashboard : Screen {
@@ -84,7 +83,7 @@ fun AdminNavBar(
         NavigationBarItem(
             icon = { Icons.Default.Balance },
             label = { Text("Niveles") },
-            selected = currentDestination.contains("AdminLevelsScreen"),
+            selected = currentDestination.contains("org.example.project.Screens.AdminLevelsScreen"),
             onClick = { onNavigate("levels") }
         )
         NavigationBarItem(

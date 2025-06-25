@@ -42,11 +42,11 @@ fun Application.configureRouting() {
     val levelService = get<LevelService>()
 
     routing {
-        route("/") {
-            get("/health") {
-                call.respondText("API is running!")
-            }
+
+        get("/health") {
+            call.respondText("API is running!")
         }
+
 
         get("/") {
             call.respondText("Hola funciona la api!")
@@ -77,69 +77,73 @@ fun Application.configureRouting() {
                 )
             }
         }
-        route("/api/v1/levels") {
+        route("/api/v1") {
 
-            // GET /levels - Obtener todos los niveles
-            get("/test-levels") {
-                call.respond(mapOf("status" to "works!"))
-            }
 
-            get {
+            route("/levels") {
 
-                val levels = levelService.getAllLevels()
-                call.respond(levels)
-            }
-
-            // GET /levels/{id} - Obtener un nivel por ID
-            get("{id}") {
-                val id = call.parameters["id"]?.toIntOrNull()
-                    ?: throw BadRequestException("Invalid ID")
-                val level = levelService.getLevelById(id)
-                call.respond(level)
-            }
-
-            // POST /levels - Crear nuevo nivel
-            post {
-                val level = call.receive<LevelCreationDTO>()
-                val createdLevel = levelService.createLevel(level)
-                call.respond(HttpStatusCode.Created, createdLevel)
-            }
-
-            // PUT /levels/{id} - Actualizar nivel
-            put("{id}") {
-                val id = call.parameters["id"]?.toIntOrNull()
-                    ?: throw BadRequestException("Invalid ID")
-                val level = call.receive<LevelUpdateDTO>()
-                val updatedLevel = levelService.updateLevel(id, level)
-                call.respond(updatedLevel)
-            }
-
-            // DELETE /levels/{id} - Eliminar nivel
-            delete("{id}") {
-                val id = call.parameters["id"]?.toIntOrNull()
-                    ?: throw BadRequestException("Invalid ID")
-                val success = levelService.deleteLevel(id)
-                if (success) {
-                    call.respond(HttpStatusCode.NoContent)
-                } else {
-                    throw NotFoundException("Level not found")
+                // GET /levels - Obtener todos los niveles
+                get("/test-levels") {
+                    call.respond(mapOf("status" to "works!"))
                 }
-            }
 
-            // GET /levels/difficulty/{level} - Obtener niveles por dificultad
-            get("difficulty/{level}") {
-                val difficulty = call.parameters["level"]?.let { levelStr ->
-                    try {
-                        DifficultyLevel.valueOf(levelStr.uppercase())
-                    } catch (e: IllegalArgumentException) {
-                        null
+                get {
+
+                    val levels = levelService.getAllLevels()
+                    call.respond(levels)
+                }
+
+                // GET /levels/{id} - Obtener un nivel por ID
+                get("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val level = levelService.getLevelById(id)
+                    call.respond(level)
+                }
+
+                // POST /levels - Crear nuevo nivel
+                post {
+                    val level = call.receive<LevelCreationDTO>()
+                    val createdLevel = levelService.createLevel(level)
+                    call.respond(HttpStatusCode.Created, createdLevel)
+                }
+
+                // PUT /levels/{id} - Actualizar nivel
+                put("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val level = call.receive<LevelUpdateDTO>()
+                    val updatedLevel = levelService.updateLevel(id, level)
+                    call.respond(updatedLevel)
+                }
+
+                // DELETE /levels/{id} - Eliminar nivel
+                delete("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val success = levelService.deleteLevel(id)
+                    if (success) {
+                        call.respond(HttpStatusCode.NoContent)
+                    } else {
+                        throw NotFoundException("Level not found")
                     }
-                } ?: throw BadRequestException("Invalid difficulty level")
+                }
 
-                val levels = levelService.getLevelsByDifficulty(difficulty)
-                call.respond(levels)
+                // GET /levels/difficulty/{level} - Obtener niveles por dificultad
+                get("difficulty/{level}") {
+                    val difficulty = call.parameters["level"]?.let { levelStr ->
+                        try {
+                            DifficultyLevel.valueOf(levelStr.uppercase())
+                        } catch (e: IllegalArgumentException) {
+                            null
+                        }
+                    } ?: throw BadRequestException("Invalid difficulty level")
+
+                    val levels = levelService.getLevelsByDifficulty(difficulty)
+                    call.respond(levels)
+                }
+
             }
-
         }
     }
 }
