@@ -1,6 +1,6 @@
 package org.example.project.screens
 
-import AdminDashboard
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -29,7 +29,7 @@ class LoginScreen: Screen {
             }
 
             Button(
-                onClick = { navigator.push(AdminDashboard()) },
+                onClick = { navigator.push(AdminDashboard("Deivid")) },
                 modifier = Modifier.padding(16.dp)
             ) {
                 Text("Iniciar sesión como administrador")
