@@ -32,7 +32,7 @@ class AdminLevelsScreen : Screen {
             LevelsViewModel(
                 KtorLevelRepository(
                     httpClient = createHttpClient(),
-                    baseUrl = "http://10.0.2.2:17986"
+                    baseUrl = "http://0.0.0.0:443"
                 )
             )
         }
