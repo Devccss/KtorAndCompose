@@ -18,10 +18,16 @@ class LevelService(private val levelRepository: LevelRepository) {
         return levelRepository.getLevelById(id) ?: throw NotFoundException("Level not found")
     }
 
-    suspend fun createLevel(level: LevelCreationDTO): LevelDTO {
+    suspend fun createLevel(
+        level: LevelCreationDTO,
+        beforeId: Int? = null,
+        afterId: Int? = null
+    ): LevelDTO {
         validateLevelCreation(level)
-        return levelRepository.createLevel(level)
+
+        return levelRepository.createLevelSmart(level, beforeId, afterId)
     }
+
 
     suspend fun updateLevel(id: Int, level: LevelUpdateDTO): LevelDTO {
         val updateResult = levelRepository.updateLevel(id, level)
@@ -45,9 +51,6 @@ class LevelService(private val levelRepository: LevelRepository) {
         }
         if (level.description.isBlank()) {
             throw ValidationException("Level description cannot be empty")
-        }
-        if (level.order < 0) {
-            throw ValidationException("Order must be positive")
         }
     }
 }

@@ -3,23 +3,23 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class LevelDTO(
-    val id: Int? = null,
+    val id: Int,
     val accent: Int,
     val difficulty: DifficultyLevel,
     val name: String,
     val description: String,
-    val order: Int,
+    val orderLevel: Float,
     val isActive: Boolean = true,
     val createdAt: String? = null
 )
 
 @Serializable
 data class LevelCreationDTO(
-    val accent: Int,
     val difficulty: DifficultyLevel,
     val name: String,
     val description: String,
-    val order: Int
+    val orderLevel: Float? = null,
+
 )
 
 @Serializable
@@ -29,5 +29,5 @@ data class LevelUpdateDTO(
     val name: String? = null,
     val description: String? = null,
     val isActive: Boolean? = null,
-    val order: Int? = null
+    val orderLevel: Float? = null
 )

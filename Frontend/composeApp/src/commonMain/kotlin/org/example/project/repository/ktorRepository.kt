@@ -12,7 +12,7 @@ abstract class KtorLevelRepository(
     private val baseUrl: String
 ) : LevelRepository {
 
-    override suspend fun addLevel(level: Level): Level =
+    override suspend fun addLevel(level: Level, beforeId: Int?, afterId: Int?): Level =
         httpClient.post("$baseUrl/levels") {
             contentType(ContentType.Application.Json)
             setBody(level)

@@ -9,7 +9,7 @@ ktor-routing-version = "2.3.8"
 logback-version = "1.4.14"
 room-common-jvm-version = "2.7.1"
 room-compiler-version = "2.7.1"
-postgresql-version = "42.6.0"
+postgresql-version = "42.7.3"
 
 [libraries]
 ktor-server-rate-limiting = { module = "io.github.flaxoos:ktor-server-rate-limiting", version = "2.2.1" }

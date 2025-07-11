@@ -16,7 +16,7 @@ import org.koin.ktor.ext.inject
 fun Route.levelRoutes() {
     val levelService by inject<LevelService>()
 
-    route("/levels") {
+    /*route("/levels") {
         // GET /levels - Obtener todos los niveles
         get("/test-levels") {
             call.respond(mapOf("status" to "works!"))
@@ -36,10 +36,16 @@ fun Route.levelRoutes() {
         }
 
         // POST /levels - Crear nuevo nivel
-        post {
-            val level = call.receive<LevelCreationDTO>()
-            val createdLevel = levelService.createLevel(level)
-            call.respond(HttpStatusCode.Created, createdLevel)
+        post() {
+            val dto = call.receive<LevelCreationDTO>()
+            val beforeId = call.request.queryParameters["beforeId"]?.toIntOrNull()
+            val afterId = call.request.queryParameters["afterId"]?.toIntOrNull()
+
+            println("beforeId: $beforeId")
+            println("afterId: $afterId")
+
+            val level = levelService.createLevel(dto, beforeId, afterId)
+            call.respond(HttpStatusCode.Created, level)
         }
 
         // PUT /levels/{id} - Actualizar nivel
@@ -76,5 +82,5 @@ fun Route.levelRoutes() {
             val levels = levelService.getLevelsByDifficulty(difficulty)
             call.respond(levels)
         }
-    }
+    }*/
 }

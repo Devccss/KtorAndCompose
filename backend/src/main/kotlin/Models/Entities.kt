@@ -23,7 +23,7 @@ object Levels : IntIdTable() {
     val difficulty = enumerationByName<DifficultyLevel>("difficulty", 10)
     val name = varchar("name", 100)
     val description = text("description")
-    val order = integer("order").uniqueIndex()
+    val orderLevel = float("orderLevel").uniqueIndex()
     val isActive = bool("is_active").default(true)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }
@@ -44,7 +44,7 @@ object Phrases : IntIdTable() {
     val dialogId = integer("dialog_id").references(Dialogs.id)
     val englishText = text("english_text")
     val spanishText = text("spanish_text")
-    val order = integer("order")
+    val orderLevel = integer("orderLevel")
     val isActive = bool("is_active").default(true)
 }
 
@@ -87,7 +87,7 @@ object TestQuestions : IntIdTable() {
     val questionText = text("question_text")
     val correctAnswer = text("correct_answer")
     val options = text("options") // JSON con opciones para preguntas de alternativas
-    val order = integer("order")
+    val orderLevel = integer("orderLevel")
 }
 
 object UserProgress : IntIdTable() {

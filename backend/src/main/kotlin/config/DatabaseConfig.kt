@@ -17,6 +17,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 fun configureDatabases() {
     Database.connect(
         "jdbc:postgresql://pgsqltrans.face.ubiobio.cl:5432/dsandoval_bd",
+        driver = "org.postgresql.Driver",
         user = "dsandoval",
         password = "deivid2025"
     )

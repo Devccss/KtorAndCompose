@@ -1,3 +1,4 @@
+import com.example.routes.levelRoutes
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -79,16 +80,13 @@ fun Application.configureRouting() {
         }
         route("/api/v1") {
 
-
             route("/levels") {
-
                 // GET /levels - Obtener todos los niveles
                 get("/test-levels") {
                     call.respond(mapOf("status" to "works!"))
                 }
 
                 get {
-
                     val levels = levelService.getAllLevels()
                     call.respond(levels)
                 }
@@ -102,10 +100,16 @@ fun Application.configureRouting() {
                 }
 
                 // POST /levels - Crear nuevo nivel
-                post {
-                    val level = call.receive<LevelCreationDTO>()
-                    val createdLevel = levelService.createLevel(level)
-                    call.respond(HttpStatusCode.Created, createdLevel)
+                post() {
+                    val dto = call.receive<LevelCreationDTO>()
+                    val beforeId = call.request.queryParameters["beforeId"]?.toIntOrNull()
+                    val afterId = call.request.queryParameters["afterId"]?.toIntOrNull()
+
+                    println("beforeId: $beforeId")
+                    println("afterId: $afterId")
+
+                    val level = levelService.createLevel(dto, beforeId, afterId)
+                    call.respond(HttpStatusCode.Created, level)
                 }
 
                 // PUT /levels/{id} - Actualizar nivel
@@ -142,7 +146,6 @@ fun Application.configureRouting() {
                     val levels = levelService.getLevelsByDifficulty(difficulty)
                     call.respond(levels)
                 }
-
             }
         }
     }

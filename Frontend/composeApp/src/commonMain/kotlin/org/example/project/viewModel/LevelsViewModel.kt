@@ -24,12 +24,12 @@ class LevelsViewModel(private val repo: LevelRepository) : ViewModel(), ScreenMo
     init { refresh() }
 
     /** === PUBLIC API === */
-    fun addLevel(newLevel: Level) {
+    fun addLevel(newLevel: Level, beforeId: Int? = null, afterId: Int? = null) {
         launchCatching(
-            block = { repo.addLevel(newLevel) },
+            block = { repo.addLevel(newLevel, beforeId, afterId) },
             onSuccess = { added ->
                 _state.value = _state.value.copy(
-                    levels = _state.value.levels + added
+                    levels = (_state.value.levels + added).sortedBy { it.order }
                 )
             }
         )
