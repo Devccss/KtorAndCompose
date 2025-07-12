@@ -44,6 +44,7 @@ class AdminDashboard(private val adminName: String) : Screen {
                 topBar = {
                     AdminTopBar(
                         currentPage = "dashboard",
+                        titlePage = "Admind Dashboard",
                         onBack = { navigator.pop() },
                         onMenuClick = { scope.launch { drawerState.open() } }
                     )
@@ -150,7 +151,7 @@ fun DrawerContent(onNavigate: (Screen) -> Unit) {
         NavigationDrawerItem(label = { Text("Dashboard") }, selected = false, onClick = { onNavigate(AdminDashboard("Admin")) })
         NavigationDrawerItem(label = { Text("Usuarios") }, selected = false, onClick = { onNavigate(LoginScreen()) })
         NavigationDrawerItem(label = { Text("Niveles") }, selected = false, onClick = { onNavigate(AdminLevelsScreen()) })
-        NavigationDrawerItem(label = { Text("Diálogos") }, selected = false, onClick = { onNavigate(LoginScreen()) })
+        NavigationDrawerItem(label = { Text("Diálogos") }, selected = false, onClick = { onNavigate(AdminDialogsScreen(null)) })
         NavigationDrawerItem(label = { Text("Frases") }, selected = false, onClick = { onNavigate(LoginScreen()) })
         NavigationDrawerItem(label = { Text("Palabras") }, selected = false, onClick = { onNavigate(LoginScreen()) })
     }
@@ -158,17 +159,17 @@ fun DrawerContent(onNavigate: (Screen) -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminTopBar(currentPage: String, onBack: () -> Unit, onMenuClick: () -> Unit) {
+fun AdminTopBar(currentPage: String, onBack: () -> Unit, onMenuClick: () -> Unit, titlePage: String) {
     TopAppBar(
-        title = { Text("Admin Dashboard") },
+        title = { Text(titlePage) },
         navigationIcon = {
-            Row {
-                IconButton(onClick = onMenuClick) {
-                    Icon(Icons.Default.Menu, contentDescription = "Menu")
-                }
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                }
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+            }
+        },
+        actions = {
+            IconButton(onClick = onMenuClick) {
+                Icon(Icons.Default.Menu, contentDescription = "Menu")
             }
         }
     )

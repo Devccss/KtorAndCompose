@@ -1,4 +1,4 @@
-package org.example.project.network
+package org.example.project.repository
 
 
 import io.ktor.client.*
@@ -7,7 +7,6 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import org.example.project.dtos.LevelCreationDTO
 import org.example.project.models.Level
-import org.example.project.repository.LevelRepository
 
 class KtorLevelRepository(private val httpClient: HttpClient, private val baseUrl: String) : LevelRepository {
 

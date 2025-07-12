@@ -29,7 +29,8 @@ class LevelsViewModel(private val repo: LevelRepository) : ViewModel(), ScreenMo
             block = { repo.addLevel(newLevel, beforeId, afterId) },
             onSuccess = { added ->
                 _state.value = _state.value.copy(
-                    levels = (_state.value.levels + added).sortedBy { it.order }
+                    levels = (_state.value.levels + added).sortedBy { it.orderLevel
+                    }
                 )
             }
         )

@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.core.screen.uniqueScreenKey
 
-class AdminDialogsScreen : Screen {
+class AdminDialogsScreen(val levelSelect: String?) : Screen {
     override val key = uniqueScreenKey
     @Composable
     override fun Content() {

@@ -32,7 +32,7 @@ class LevelRepository {
     }
 
     fun getAllLevels(): List<LevelDTO> = transaction {
-        Levels.selectAll().map(::resultRowToLevel)
+        Levels.selectAll().orderBy(Levels.orderLevel).map(::resultRowToLevel)
     }
 
     fun getLevelById(id: Int): LevelDTO? = transaction {

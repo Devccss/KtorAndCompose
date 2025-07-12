@@ -12,5 +12,5 @@ data class Level(
     val difficulty: DifficultyLevel,
     val name: String,
     val description: String,
-    val order: Float
+    val orderLevel: Float
 )

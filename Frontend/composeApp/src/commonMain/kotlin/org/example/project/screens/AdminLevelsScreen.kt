@@ -1,6 +1,7 @@
 package org.example.project.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -15,10 +16,11 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.core.screen.uniqueScreenKey
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
+import kotlinx.coroutines.launch
 import org.example.project.models.Level
 import org.example.project.models.DifficultyLevel
-import org.example.project.network.KtorLevelRepository
-import org.example.project.network.createHttpClient
 import org.example.project.viewModel.LevelsViewModel
 
 class AdminLevelsScreen : Screen {
@@ -28,13 +30,7 @@ class AdminLevelsScreen : Screen {
     @Composable
     override fun Content() {
         val vm = rememberScreenModel {
-            LevelsViewModel(
-                KtorLevelRepository(
-                    httpClient = createHttpClient(),
-                    baseUrl = "http://10.0.2.2:443"
-                    //baseUrl = "http://146.83.198.35:1667"
-                )
-            )
+            LevelsViewModel(RepositoryProvider.levelRepository)
         }
 
         val ui by vm.state.collectAsState()
@@ -44,97 +40,117 @@ class AdminLevelsScreen : Screen {
         var insertBeforeId by remember { mutableStateOf<Int?>(null) }
         var insertAfterId by remember { mutableStateOf<Int?>(null) }
 
+        val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+        val scope = rememberCoroutineScope()
+        val navigator = LocalNavigator.currentOrThrow
 
-        Scaffold(
-            topBar = {
-                Column(modifier = Modifier.padding(16.dp)) {
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                DrawerContent(onNavigate = { route ->
+                    scope.launch { drawerState.close() }
+                    navigator.push(route)
+                })
+            }
+        ) {
+            Scaffold(
+                topBar = {
+                    AdminTopBar(
+                        currentPage = "levels",
+                        titlePage = "Gestión de Niveles",
+                        onBack = { navigator.pop() },
+                        onMenuClick = { scope.launch { drawerState.open() } }
+                    )
+
+                },
+                floatingActionButton = {
+                    FloatingActionButton(onClick = { vm.refresh() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                    }
+                }
+            ) { padding ->
+                Column(modifier = Modifier.padding(16.dp).padding(WindowInsets.safeDrawing.asPaddingValues())) {
                     Text("Gestión de Niveles", style = MaterialTheme.typography.headlineMedium)
                     Text("Administra los niveles y evaluaciones", style = MaterialTheme.typography.bodySmall)
                 }
-            },
-            floatingActionButton = {
-                FloatingActionButton(onClick = { vm.refresh() }) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                }
-            }
-        ) { padding ->
-            Box(Modifier.fillMaxSize().padding(padding), Alignment.Center) {
-                when {
-                    ui.isLoading -> CircularProgressIndicator()
-                    ui.error != null -> Text("Error: ${ui.error}")
-                    else -> LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
-                        val levels = ui.levels
+                Box(Modifier.fillMaxSize().padding(padding), Alignment.Center) {
+                    when {
+                        ui.isLoading -> CircularProgressIndicator()
+                        ui.error != null -> Text("Error: ${ui.error}")
+                        else -> LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
+                            val levels = ui.levels
 
-                        items(levels.size + 1) { index ->
-                            // Si estamos al final de la lista, no hay siguiente
-                            val before = levels.getOrNull(index - 1)
-                            val after = levels.getOrNull(index)
+                            items(levels.size + 1) { index ->
+                                // Si estamos al final de la lista, no hay siguiente
+                                val before = levels.getOrNull(index - 1)
+                                val after = levels.getOrNull(index)
 
-                            AddButton(onClick = {
-                                insertBeforeId = before?.id
-                                insertAfterId = after?.id
-                                showAddDialog = true
-                            })
+                                AddButton(onClick = {
+                                    insertBeforeId = before?.id
+                                    insertAfterId = after?.id
+                                    showAddDialog = true
+                                })
 
-                            after?.let { level ->
-                                LevelCard(
-                                    level = level,
-                                    onEdit = { editing = it },
-                                    onDelete = { confirmDelete = it }
-                                )
-                                Spacer(Modifier.height(12.dp))
+                                after?.let { level ->
+                                    LevelCard(
+                                        level = level,
+                                        onEdit = { editing = it },
+                                        onDelete = { confirmDelete = it },
+                                        onClick = { navigator.push(LevelDetails(level.id)) }
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                }
                             }
                         }
                     }
+                    println("Mensaje de error: ${ui.error}")
                 }
-                println("Mensaje de error: ${ui.error}")
-            }
 
-            editing?.let {
-                EditLevelDialog(
-                    initial = it,
-                    onSave = {
-                        vm.addLevel(it, insertBeforeId, insertAfterId)
-                        showAddDialog = false
-                        insertBeforeId = null
-                        insertAfterId = null
-                    },
-                    onDismiss = { editing = null }
-                )
-            }
+                editing?.let {
+                    EditLevelDialog(
+                        initial = it,
+                        onSave = {
+                            vm.addLevel(it, insertBeforeId, insertAfterId)
+                            showAddDialog = false
+                            insertBeforeId = null
+                            insertAfterId = null
+                        },
+                        onDismiss = { editing = null }
+                    )
+                }
 
-            if (showAddDialog) {
-                EditLevelDialog(
-                    initial = Level(null, accent = 0, difficulty = DifficultyLevel.A1, name = "", description = "", order = 0f),
-                    onSave = {
-                        vm.addLevel(it, insertBeforeId, insertAfterId)
-                        showAddDialog = false
-                        insertBeforeId = null
-                        insertAfterId = null
-                    },
-                    onDismiss = { showAddDialog = false }
-                )
-            }
+                if (showAddDialog) {
+                    EditLevelDialog(
+                        initial = Level(null, accent = 0, difficulty = DifficultyLevel.A1, name = "", description = "", orderLevel = 0f),
+                        onSave = {
+                            vm.addLevel(it, insertBeforeId, insertAfterId)
+                            showAddDialog = false
+                            insertBeforeId = null
+                            insertAfterId = null
+                        },
+                        onDismiss = { showAddDialog = false }
+                    )
+                }
 
-            confirmDelete?.let {
-                AlertDialog(
-                    onDismissRequest = { confirmDelete = null },
-                    title = { Text("Eliminar nivel") },
-                    text = { Text("¿Seguro de eliminar ${it.name}?") },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            it.id?.let(vm::delete)
-                            confirmDelete = null
-                        }) { Text("Eliminar") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { confirmDelete = null }) { Text("Cancelar") }
-                    }
-                )
+                confirmDelete?.let {
+                    AlertDialog(
+                        onDismissRequest = { confirmDelete = null },
+                        title = { Text("Eliminar nivel") },
+                        text = { Text("¿Seguro de eliminar ${it.name}?") },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                it.id?.let(vm::delete)
+                                confirmDelete = null
+                            }) { Text("Eliminar") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { confirmDelete = null }) { Text("Cancelar") }
+                        }
+                    )
+                }
             }
         }
     }
-
 }
 @Composable
 fun AddButton(onClick: () -> Unit) {
@@ -147,11 +163,12 @@ fun AddButton(onClick: () -> Unit) {
 
 
 @Composable
-fun LevelCard(level: Level, onEdit: (Level) -> Unit, onDelete: (Level) -> Unit) {
+fun LevelCard(level: Level, onEdit: (Level) -> Unit, onDelete: (Level) -> Unit, onClick: () -> Unit) {
     Card(
-        Modifier.fillMaxWidth(),
+        Modifier.fillMaxWidth().clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(4.dp)
+        
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -166,12 +183,12 @@ fun LevelCard(level: Level, onEdit: (Level) -> Unit, onDelete: (Level) -> Unit) 
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("${level.order}", color = Color.White)
+                    Text("${level.accent}", color = Color.White)
                 }
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
                     Text(level.name, style = MaterialTheme.typography.titleMedium)
-                    Text("Nivel ${level.order}", style = MaterialTheme.typography.labelSmall)
+                    Text("Dificultad: ${level.difficulty}", style = MaterialTheme.typography.labelSmall)
                 }
                 IconButton(onClick = { onEdit(level) }) {
                     Icon(Icons.Default.Edit, contentDescription = "Editar")
