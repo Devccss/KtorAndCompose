@@ -1,4 +1,4 @@
-package org.example.project.repository
+package org.example.project.repository.levelRepository
 
 
 import io.ktor.client.*
@@ -8,7 +8,8 @@ import io.ktor.http.*
 import org.example.project.dtos.LevelCreationDTO
 import org.example.project.models.Level
 
-class KtorLevelRepository(private val httpClient: HttpClient, private val baseUrl: String) : LevelRepository {
+class KtorLevelRepository(private val httpClient: HttpClient, private val baseUrl: String) :
+    LevelRepository {
 
     override suspend fun getAllLevels(): List<Level> =
         httpClient.get("$baseUrl/api/v1/levels").body()

@@ -56,7 +56,7 @@ class LevelRepository {
 
             val beforeOrder = Levels
                 .select(Levels.orderLevel)
-                .where ( Levels.id eq beforeId )
+                .where(Levels.id eq beforeId)
                 .map { it[Levels.orderLevel] }
                 .singleOrNull()
 
@@ -64,7 +64,7 @@ class LevelRepository {
             val afterOrder = afterId?.let {
                 Levels
                     .select(Levels.orderLevel)
-                    .where ( Levels.id eq afterId )
+                    .where(Levels.id eq afterId)
                     .map { it[Levels.orderLevel] }
                     .singleOrNull()
             }
@@ -121,10 +121,11 @@ class LevelRepository {
         Levels.deleteWhere { Levels.id eq id } > 0
     }
 
-    fun getLevelsByDifficulty(difficulty: DifficultyLevel): List<LevelDTO> =
-        transaction {
-            Levels.selectAll().where { Levels.difficulty eq difficulty }
-                .orderBy(Levels.orderLevel)
-                .map(::resultRowToLevel)
-        }
+    fun getLevelsByDifficulty(difficulty: DifficultyLevel): List<LevelDTO> = transaction {
+        Levels
+            .selectAll()
+            .where { Levels.difficulty eq difficulty }
+            .orderBy(Levels.orderLevel)
+            .map(::resultRowToLevel)
+    }
 }

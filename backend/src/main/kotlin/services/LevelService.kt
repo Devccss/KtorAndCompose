@@ -10,15 +10,15 @@ import LevelUpdateDTO
 
 class LevelService(private val levelRepository: LevelRepository) {
 
-    suspend fun getAllLevels(): List<LevelDTO> {
+    fun getAllLevels(): List<LevelDTO> {
         return levelRepository.getAllLevels()
     }
 
-    suspend fun getLevelById(id: Int): LevelDTO {
+    fun getLevelById(id: Int): LevelDTO {
         return levelRepository.getLevelById(id) ?: throw NotFoundException("Level not found")
     }
 
-    suspend fun createLevel(
+    fun createLevel(
         level: LevelCreationDTO,
         beforeId: Int? = null,
         afterId: Int? = null
@@ -29,7 +29,7 @@ class LevelService(private val levelRepository: LevelRepository) {
     }
 
 
-    suspend fun updateLevel(id: Int, level: LevelUpdateDTO): LevelDTO {
+    fun updateLevel(id: Int, level: LevelUpdateDTO): LevelDTO {
         val updateResult = levelRepository.updateLevel(id, level)
         if (!updateResult) {
             throw NotFoundException("Level not found")
@@ -37,11 +37,11 @@ class LevelService(private val levelRepository: LevelRepository) {
         return levelRepository.getLevelById(id)!!
     }
 
-    suspend fun deleteLevel(id: Int): Boolean {
+    fun deleteLevel(id: Int): Boolean {
         return levelRepository.deleteLevel(id)
     }
 
-    suspend fun getLevelsByDifficulty(difficulty: DifficultyLevel): List<LevelDTO> {
+     fun getLevelsByDifficulty(difficulty: DifficultyLevel): List<LevelDTO> {
         return levelRepository.getLevelsByDifficulty(difficulty)
     }
 

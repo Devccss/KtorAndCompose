@@ -1,4 +1,4 @@
-package org.example.project.repository
+package org.example.project.repository.levelRepository
 
 import org.example.project.models.Level
 

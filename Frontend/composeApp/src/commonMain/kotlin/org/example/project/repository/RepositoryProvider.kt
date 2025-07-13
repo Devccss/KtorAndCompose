@@ -1,4 +1,4 @@
-import org.example.project.repository.KtorLevelRepository
+import org.example.project.repository.levelRepository.KtorLevelRepository
 import org.example.project.network.createHttpClient
 
 object RepositoryProvider {

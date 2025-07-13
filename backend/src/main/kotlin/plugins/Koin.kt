@@ -1,4 +1,5 @@
 package com.example.plugins
+import com.example.services.DialogService
 import repositories.LevelRepository
 import services.LevelService
 import io.ktor.server.application.Application
@@ -6,12 +7,17 @@ import io.ktor.server.application.install
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
+import repositories.DialogRepository
 
 // En backend/src/main/kotlin/plugins/Koin.kt
 
 val levelModule = module {
     single { LevelRepository() }
     single { LevelService(get()) } // get() inyecta automáticamente el Repository
+}
+val dialogsModule = module {
+    single { DialogRepository() }
+    single { DialogService(get()) }
 }
 
 
@@ -21,6 +27,7 @@ fun Application.configureKoin() {
         slf4jLogger()
         modules(
             levelModule,
+            dialogsModule
 
         )
     }

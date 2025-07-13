@@ -1,4 +1,7 @@
-import com.example.routes.levelRoutes
+
+import com.example.dtos.CreateDialogDTO
+import com.example.dtos.UpdateDialogDTO
+import com.example.services.DialogService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -13,12 +16,9 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
-
-
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.koin.ktor.ext.get
-import org.koin.ktor.ext.inject
 import services.LevelService
 import services.NotFoundException
 
@@ -41,6 +41,7 @@ fun Application.configureRouting() {
         }
     }
     val levelService = get<LevelService>()
+    val dialogService = get<DialogService>()
 
     routing {
 
@@ -79,6 +80,61 @@ fun Application.configureRouting() {
             }
         }
         route("/api/v1") {
+
+            route("/dialogs"){
+                get {
+                    val dialogs = dialogService.getAllDialogs()
+                    call.respond(dialogs)
+                }
+                get("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val dialog = dialogService.getDialogById(id)
+                    call.respond(dialog)
+                }
+                get("level/{levelId}") {
+                    val levelId = call.parameters["levelId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Level ID")
+                    val dialogs = dialogService.getDialogsByLevelId(levelId)
+                    call.respond(dialogs)
+                }
+                post("{levelId}") {
+                    val dto = call.receive<CreateDialogDTO>()
+                    val idLevel = call.parameters["levelId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Level ID")
+                    val dialog = dialogService.createDialog(dto,idLevel)
+                    call.respond(HttpStatusCode.Created, dialog)
+                }
+                put("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val dialog = call.receive<UpdateDialogDTO>()
+                    if (dialog.name?.isBlank() == true) {
+                        throw BadRequestException("Dialog name cannot be empty")
+                    }
+                    if (dialog.description?.isBlank() == true) {
+                        throw BadRequestException("Dialog description cannot be empty")
+                    }
+                    if (dialog.levelId == null) {
+                        throw BadRequestException("Dialog must have a level ID")
+                    }
+                    dialog.levelId.let { levelService.getLevelById(it) }
+                    val updatedDialog = dialogService.updateDialog(id, dialog)
+                    call.respond(updatedDialog)
+                }
+                delete("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val success = dialogService.deleteDialog(id)
+                    if (success) {
+                        call.respond(HttpStatusCode.NoContent)
+                    } else {
+                        throw NotFoundException("Dialog not found")
+                    }
+                }
+
+
+            }
 
             route("/levels") {
                 // GET /levels - Obtener todos los niveles

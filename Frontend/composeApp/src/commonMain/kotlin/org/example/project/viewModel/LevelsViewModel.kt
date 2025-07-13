@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.example.project.models.Level
-import org.example.project.repository.LevelRepository
+import org.example.project.repository.levelRepository.LevelRepository
 
 data class LevelsUiState(
     val levels: List<Level> = emptyList(),
