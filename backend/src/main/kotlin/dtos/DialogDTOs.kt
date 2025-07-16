@@ -19,6 +19,7 @@ data class DialogDTOs(
 
 @Serializable
 data class CreateDialogDTO(
+    val levelId: Int,
     val name: String,
     val difficulty: DifficultyLevel,
     val description: String,

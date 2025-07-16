@@ -1,4 +1,4 @@
-package org.example.project.screens
+package org.example.project.screens.admindScreens
 
 
 import androidx.compose.foundation.layout.*
@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import org.example.project.screens.StudentDashboard
 
 
 class LoginScreen: Screen {

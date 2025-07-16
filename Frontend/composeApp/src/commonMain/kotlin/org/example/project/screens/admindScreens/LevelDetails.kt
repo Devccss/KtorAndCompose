@@ -1,5 +1,5 @@
 
-package org.example.project.screens
+package org.example.project.screens.admindScreens
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.CircularProgressIndicator

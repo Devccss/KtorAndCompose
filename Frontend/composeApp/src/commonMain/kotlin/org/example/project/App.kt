@@ -1,7 +1,7 @@
 package org.example.project
 
 
-import org.example.project.screens.LoginScreen
+import org.example.project.screens.admindScreens.LoginScreen
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import cafe.adriel.voyager.core.annotation.InternalVoyagerApi

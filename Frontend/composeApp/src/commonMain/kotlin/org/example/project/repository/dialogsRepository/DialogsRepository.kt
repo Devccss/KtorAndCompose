@@ -1,4 +1,7 @@
 package org.example.project.repository.dialogsRepository
 
-class DialogsRepository {
+import org.example.project.models.Dialog
+
+interface DialogsRepository {
+
 }

@@ -1,4 +1,4 @@
-package org.example.project.screens
+package org.example.project.screens.admindScreens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

@@ -1,4 +1,4 @@
-package org.example.project.screens
+package org.example.project.screens.admindScreens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -148,12 +148,24 @@ fun AdminDashboardContent(
 fun DrawerContent(onNavigate: (Screen) -> Unit) {
     ModalDrawerSheet {
         Text("Menú de Administración", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
-        NavigationDrawerItem(label = { Text("Dashboard") }, selected = false, onClick = { onNavigate(AdminDashboard("Admin")) })
-        NavigationDrawerItem(label = { Text("Usuarios") }, selected = false, onClick = { onNavigate(LoginScreen()) })
-        NavigationDrawerItem(label = { Text("Niveles") }, selected = false, onClick = { onNavigate(AdminLevelsScreen()) })
-        NavigationDrawerItem(label = { Text("Diálogos") }, selected = false, onClick = { onNavigate(AdminDialogsScreen(null)) })
-        NavigationDrawerItem(label = { Text("Frases") }, selected = false, onClick = { onNavigate(LoginScreen()) })
-        NavigationDrawerItem(label = { Text("Palabras") }, selected = false, onClick = { onNavigate(LoginScreen()) })
+        NavigationDrawerItem(label = { Text("Dashboard") }, selected = false, onClick = { onNavigate(
+            AdminDashboard("Admin")
+        ) })
+        NavigationDrawerItem(label = { Text("Usuarios") }, selected = false, onClick = { onNavigate(
+            LoginScreen()
+        ) })
+        NavigationDrawerItem(label = { Text("Niveles") }, selected = false, onClick = { onNavigate(
+            AdminLevelsScreen()
+        ) })
+        NavigationDrawerItem(label = { Text("Diálogos") }, selected = false, onClick = { onNavigate(
+            DialogsScreen(null)
+        ) })
+        NavigationDrawerItem(label = { Text("Frases") }, selected = false, onClick = { onNavigate(
+            LoginScreen()
+        ) })
+        NavigationDrawerItem(label = { Text("Palabras") }, selected = false, onClick = { onNavigate(
+            LoginScreen()
+        ) })
     }
 }
 

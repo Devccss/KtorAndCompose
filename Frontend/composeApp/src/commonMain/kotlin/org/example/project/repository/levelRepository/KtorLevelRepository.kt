@@ -5,7 +5,6 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
-import org.example.project.dtos.LevelCreationDTO
 import org.example.project.models.Level
 
 class KtorLevelRepository(private val httpClient: HttpClient, private val baseUrl: String) :
@@ -29,19 +28,14 @@ class KtorLevelRepository(private val httpClient: HttpClient, private val baseUr
             urlBuilder.append("?${queryParams.joinToString("&")}")
         }
 
-        val dto = LevelCreationDTO(
-            name = level.name,
-            description = level.description,
-            difficulty = level.difficulty
-        )
 
         return httpClient.post(urlBuilder.toString()) {
             contentType(ContentType.Application.Json)
-            setBody(dto)
+            setBody(level)
         }.body()
     }
 
-    override suspend fun updateLevel(id: Int, level: Level): Level =
+    override suspend fun updateLevel(id: Int, level: Level  ): Level =
         httpClient.put("$baseUrl/api/v1/levels/$id") {
             contentType(ContentType.Application.Json)
             setBody(level)
