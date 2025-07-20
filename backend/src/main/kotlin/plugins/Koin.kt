@@ -11,25 +11,23 @@ import repositories.DialogRepository
 
 // En backend/src/main/kotlin/plugins/Koin.kt
 
-val levelModule = module {
-    single { LevelRepository() }
-    single { LevelService(get()) } // get() inyecta automáticamente el Repository
-}
-val dialogsModule = module {
+
+val repositoryModule = module {
+    single { LevelRepository(get()) }
     single { DialogRepository() }
+}
+
+val serviceModule = module {
+    single { LevelService(get()) }
     single { DialogService(get()) }
 }
 
-
-// 2. Configura Koin en tu aplicación Ktor
 fun Application.configureKoin() {
     install(Koin) {
         slf4jLogger()
         modules(
-            levelModule,
-            dialogsModule
-
+            repositoryModule,
+            serviceModule
         )
     }
-
 }

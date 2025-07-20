@@ -44,24 +44,28 @@ class LevelsViewModel(private val repo: LevelRepository) : ViewModel(), ScreenMo
     }
 
     fun delete(levelId: Int) {
-        launchCatching( { repo.deleteLevel(levelId) },
-            onSuccess = { success ->
-                if (success) {
-                    _state.value = _state.value.copy(
-                        levels = _state.value.levels.filterNot { it.id == levelId }
-                    )
-                } else {
-                    _state.value = _state.value.copy(error = "Failed to delete level")
-                }
+        launchCatching(
+            block = { repo.deleteLevel(levelId) },
+            onSuccess = { result ->
+                result.fold(
+                    onSuccess = {
+                        _state.value = _state.value.copy(
+                            levels = _state.value.levels.filterNot { it.id == levelId }
+                        )
+                    },
+                    onFailure = { error ->
+                        _state.value = _state.value.copy(error = error.message)
+                    }
+                )
             }
         )
     }
 
 
-    fun saveEdits(edited: Level) {
+    fun saveEdits(edited: Level, beforeId: Int? = null, afterId: Int? = null) {
         val id = edited.id ?: return
         launchCatching(
-            block = { repo.updateLevel(id, edited) },
+            block = { repo.updateLevel(id, edited, beforeId, afterId) },
             onSuccess = { updated ->
                 _state.value = _state.value.copy(
                     levels = _state.value.levels.map { if (it.id == updated.id) updated else it }

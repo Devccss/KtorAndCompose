@@ -4,6 +4,7 @@ package org.example.project.repository.levelRepository
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.*
 import org.example.project.models.Level
 
@@ -35,15 +36,24 @@ class KtorLevelRepository(private val httpClient: HttpClient, private val baseUr
         }.body()
     }
 
-    override suspend fun updateLevel(id: Int, level: Level  ): Level =
+    override suspend fun updateLevel(id: Int, level: Level, beforeId: Int?, afterId: Int?): Level =
         httpClient.put("$baseUrl/api/v1/levels/$id") {
             contentType(ContentType.Application.Json)
             setBody(level)
         }.body()
 
-    override suspend fun deleteLevel(id: Int): Boolean {
-        val response = httpClient.delete("$baseUrl/api/v1/levels/$id")
-        return response.status == HttpStatusCode.NoContent
+    override suspend fun deleteLevel(id: Int): Result<Unit> {
+        return try {
+            val response = httpClient.delete("$baseUrl/api/v1/levels/$id")
+            if (response.status == HttpStatusCode.NoContent) {
+                Result.success(Unit)
+            } else {
+                val errorMsg = response.bodyAsText().removePrefix("{").removeSuffix("}")
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     override suspend fun getLevelsByDifficulty(difficulty: String): List<Level> =

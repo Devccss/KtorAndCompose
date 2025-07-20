@@ -34,6 +34,7 @@ class AdminLevelsScreen : Screen {
         }
 
         val ui by vm.state.collectAsState()
+        val snackbarHostState = remember { SnackbarHostState() }
         var editing by remember { mutableStateOf<Level?>(null) }
         var confirmDelete by remember { mutableStateOf<Level?>(null) }
         var showAddDialog by remember { mutableStateOf(false) }
@@ -43,6 +44,12 @@ class AdminLevelsScreen : Screen {
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         val scope = rememberCoroutineScope()
         val navigator = LocalNavigator.currentOrThrow
+
+        LaunchedEffect(ui.error) {
+            ui.error?.let {
+                snackbarHostState.showSnackbar(it)
+            }
+        }
 
         ModalNavigationDrawer(
             drawerState = drawerState,
@@ -67,7 +74,8 @@ class AdminLevelsScreen : Screen {
                     FloatingActionButton(onClick = { vm.refresh() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
-                }
+                },
+                snackbarHost = { SnackbarHost(snackbarHostState) }
             ) { padding ->
                 Column(modifier = Modifier.padding(16.dp).padding(WindowInsets.safeDrawing.asPaddingValues())) {
                     Text("Gestión de Niveles", style = MaterialTheme.typography.headlineMedium)
@@ -76,7 +84,7 @@ class AdminLevelsScreen : Screen {
                 Box(Modifier.fillMaxSize().padding(padding), Alignment.Center) {
                     when {
                         ui.isLoading -> CircularProgressIndicator()
-                        ui.error != null -> Text("Error: ${ui.error}")
+
                         else -> LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
                             val levels = ui.levels
 
@@ -94,7 +102,13 @@ class AdminLevelsScreen : Screen {
                                 after?.let { level ->
                                     LevelCard(
                                         level = level,
-                                        onEdit = { editing = it },
+                                        onEdit = {
+                                            editing = it
+                                            // Asigna los IDs según la posición
+                                            val idx = levels.indexOf(it)
+                                            insertBeforeId = levels.getOrNull(idx - 1)?.id
+                                            insertAfterId = levels.getOrNull(idx + 1)?.id
+                                        },
                                         onDelete = { confirmDelete = it },
                                         onClick = { navigator.push(LevelDetails(level.id)) }
                                     )
@@ -109,9 +123,9 @@ class AdminLevelsScreen : Screen {
                 editing?.let {
                     EditLevelDialog(
                         initial = it,
-                        onSave = {
-                            vm.addLevel(it, insertBeforeId, insertAfterId)
-                            showAddDialog = false
+                        onSave = { editedLevel ->
+                            vm.saveEdits(editedLevel, insertBeforeId, insertAfterId)
+                            editing = null
                             insertBeforeId = null
                             insertAfterId = null
                         },
@@ -232,14 +246,14 @@ fun EditLevelDialog(initial: Level, onSave: (Level) -> Unit, onDismiss: () -> Un
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                         },
-                        modifier = Modifier.menuAnchor()
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
                     )
 
                     ExposedDropdownMenu(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
                     ) {
-                        DifficultyLevel.values().forEach { level ->
+                        DifficultyLevel.entries.forEach { level ->
                             DropdownMenuItem(
                                 text = { Text(level.name) },
                                 onClick = {

@@ -1,6 +1,6 @@
-
 package org.example.project.viewModel
 
+import RepositoryProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cafe.adriel.voyager.core.model.ScreenModel
@@ -8,27 +8,36 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.example.project.models.Dialog
-import org.example.project.repository.dialogsRepository.ktorDialogsRepository
+import org.example.project.models.Level
+import org.example.project.repository.dialogsRepository.KtorDialogsRepository
 
 data class DialogsUiState(
     val dialogs: List<Dialog> = emptyList(),
+    val levels: List<Level> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null
 )
 
-class DialogViewModel(private val repo: ktorDialogsRepository) : ViewModel(), ScreenModel {
+class DialogViewModel(private val repo: KtorDialogsRepository) : ViewModel(), ScreenModel {
     private val _state = MutableStateFlow(DialogsUiState(isLoading = true))
     val state: StateFlow<DialogsUiState> = _state
 
     init {
         refresh()
+        refreshLevels()
     }
 
     /** === PUBLIC API === */
     fun addDialog(newDialog: Dialog, idLevel: Int) {
+        println("addDialog: Intentando crear diálogo con levelId=$idLevel y datos=$newDialog")
         launchCatching(
-            block = { repo.createDialog(newDialog, idLevel) as Dialog },
+            block = {
+                val result = repo.createDialog(newDialog, idLevel) as Dialog
+                println("addDialog: Diálogo creado exitosamente: $result")
+                result
+            },
             onSuccess = { added ->
+                println("addDialog: onSuccess ejecutado con $added")
                 _state.value = _state.value.copy(
                     dialogs = _state.value.dialogs + added
                 )
@@ -62,11 +71,28 @@ class DialogViewModel(private val repo: ktorDialogsRepository) : ViewModel(), Sc
         )
     }
 
-    fun refresh() {
+    private fun refresh() {
         launchCatching(
-            block = { repo.getAllDialogs() },
-            onSuccess = { dialogs -> _state.value = DialogsUiState(dialogs = dialogs) }
+            block = {
+                val dialogs = repo.getAllDialogs()
+                val levels = repo.getAllLevelsFromDialogsRepo()
+                Pair<List<Dialog>, List<Level>>(dialogs, levels)
+            },
+            onSuccess = { (dialogs, levels) ->
+                _state.value = DialogsUiState(dialogs = dialogs, levels = levels)
+            }
         )
+    }
+
+    private fun refreshLevels() {
+        viewModelScope.launch {
+            try {
+                val levels = repo.getAllLevelsFromDialogsRepo()
+                _state.value = _state.value.copy(levels = levels)
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(error = e.message)
+            }
+        }
     }
 
     private fun <T> launchCatching(

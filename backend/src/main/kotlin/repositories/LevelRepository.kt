@@ -16,7 +16,8 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import java.time.LocalDateTime
 
-class LevelRepository {
+class LevelRepository(private val dialogRepository: DialogRepository) {
+
 
     private fun resultRowToLevel(row: ResultRow): LevelDTO {
         return LevelDTO(
@@ -118,6 +119,13 @@ class LevelRepository {
     }
 
     fun deleteLevel(id: Int): Boolean = transaction {
+        if (Levels.select(Levels.id eq id).empty()) {
+            throw BadRequestException("No se encontró el nivel con ID: $id")
+        }
+        val dialogs = dialogRepository.getDialogsByLevelId(id)
+        if (dialogs.isNotEmpty()) {
+            throw BadRequestException("No se puede eliminar el nivel porque tiene diálogos asociados")
+        }
         Levels.deleteWhere { Levels.id eq id } > 0
     }
 

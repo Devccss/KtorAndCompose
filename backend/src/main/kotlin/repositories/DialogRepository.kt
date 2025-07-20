@@ -15,11 +15,9 @@ import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
-import org.koin.ktor.ext.get
-import services.LevelService
 import java.time.LocalDateTime
 
-class DialogRepository {
+class DialogRepository() {
 
     fun resultRowToDialog(row:ResultRow): DialogDTOs {
         return DialogDTOs(
@@ -91,6 +89,8 @@ class DialogRepository {
 
     }
     fun deleteDialog(id: Int): Boolean = transaction{
+        getDialogById(id) ?: throw BadRequestException("El diálogo con ID $id no existe.")
+
         Dialogs.deleteWhere { Dialogs.id eq id } > 0
     }
 }
