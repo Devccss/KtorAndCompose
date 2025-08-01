@@ -13,7 +13,7 @@ class UserService(private val userRepository: UsersRepository) {
     fun createUser(dto: CreateUserDto): UsersDto {
         return userRepository.createUser(dto)
     }
-    fun getAllUsers(): List<UsersDto> {
+    fun getAllUsers(): List<UsersDto?> {
         return userRepository.getAllUsers()
     }
     fun getUserById(id: Int): UsersDto? {

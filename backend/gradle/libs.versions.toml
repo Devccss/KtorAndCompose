@@ -10,9 +10,10 @@ room-common-jvm-version = "2.7.1"
 room-compiler-version = "2.7.1"
 postgresql-version = "42.7.3"
 jbcrypt-version = "0.4"
-
+dotenv-kotlin-version = "6.4.1"
 
 [libraries]
+dotenv-kotlin = { module = "io.github.cdimascio:dotenv-kotlin", version.ref = "dotenv-kotlin-version" }
 jbcrypt = { module = "org.mindrot:jbcrypt", version.ref = "jbcrypt-version" }
 ktor-server-rate-limiting = { module = "io.github.flaxoos:ktor-server-rate-limiting", version = "2.2.1" }
 koin-ktor = { module = "io.insert-koin:koin-ktor", version.ref = "koin-version" }

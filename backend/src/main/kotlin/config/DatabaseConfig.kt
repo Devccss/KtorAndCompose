@@ -1,4 +1,5 @@
 package config
+import io.github.cdimascio.dotenv.dotenv
 import models.TestQuestions
 import models.Levels
 import models.UserPhraseStandby
@@ -15,15 +16,17 @@ import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 fun configureDatabases() {
-    val url = System.getenv("DB_URL")
-    val user = System.getenv("DB_USER")
-    val password = System.getenv("DB_PASSWORD")
+
+    val dotenv = dotenv()
+    val dbUrl = dotenv["DB_URL"]
+    val dbUser = dotenv["DB_USER"]
+    val dbPassword = dotenv["DB_PASSWORD"]
 
     Database.connect(
-        url = url,
+        url = dbUrl,
         driver = "org.postgresql.Driver",
-        user = user,
-        password = password
+        user = dbUser,
+        password = dbPassword
     )
 
     transaction {

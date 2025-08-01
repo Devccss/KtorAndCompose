@@ -18,6 +18,7 @@ repositories {
 }
 
 dependencies {
+    implementation(libs.dotenv.kotlin)
     implementation(libs.jbcrypt)
     implementation(libs.ktor.server.rate.limiting)
     implementation(libs.koin.ktor)

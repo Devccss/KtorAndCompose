@@ -124,7 +124,7 @@ class UsersRepository {
         return BCrypt.hashpw(password, BCrypt.gensalt())
     }
 
-    fun getAllUsers(): List<UsersDto> = try {
+    fun getAllUsers(): List<UsersDto?> = try {
         transaction {
             Users.selectAll().map { row ->
                 UsersDto(

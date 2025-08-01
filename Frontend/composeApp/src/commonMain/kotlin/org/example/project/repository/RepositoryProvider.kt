@@ -10,7 +10,8 @@ import org.example.project.repository.dialogsRepository.KtorDialogsRepository
 object RepositoryProvider {
     private val httpClient = createHttpClient()
     //private const val baseUrl = "http://146.83.198.35:1667"
-    private const val baseUrl = "http://10.0.2.2:443"
+    //private const val baseUrl = "http://10.0.2.2:443"
+    private const val baseUrl = "http://146.83.194.168:8080"
     val levelRepository by lazy { KtorLevelRepository(httpClient, baseUrl) }
     val dialogsRepository by lazy { KtorDialogsRepository(
         httpClient, baseUrl,
