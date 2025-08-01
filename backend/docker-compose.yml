@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ktor-backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/ktor_db
+      DB_USER: ktor
+      DB_PASSWORD: ktor123
+
+  db:
+    image: postgres:16
+    container_name: ktor-db
+    restart: always
+    environment:
+      POSTGRES_DB: ktor_db
+      POSTGRES_USER: ktor
+      POSTGRES_PASSWORD: ktor123
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:

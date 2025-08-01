@@ -15,15 +15,20 @@ import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 fun configureDatabases() {
+    val url = System.getenv("DB_URL")
+    val user = System.getenv("DB_USER")
+    val password = System.getenv("DB_PASSWORD")
+
     Database.connect(
-        "jdbc:postgresql://pgsqltrans.face.ubiobio.cl:5432/dsandoval_bd",
+        url = url,
         driver = "org.postgresql.Driver",
-        user = "dsandoval",
-        password = "deivid2025"
+        user = user,
+        password = password
     )
+
     transaction {
         SchemaUtils.create(
-            Users, Levels, Dialogs, Phrase,PhraseOrder, Word,
+            Users, Levels, Dialogs, Phrase, PhraseOrder, Word,
             PhraseWords, UserPhraseStandby, Tests,
             TestQuestions, UserProgress
         )
