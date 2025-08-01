@@ -1,10 +1,19 @@
-FROM gradle:8.3-jdk17 AS builder
-WORKDIR /app
-COPY . .
-RUN gradle installDist
+FROM gradle:7.6.1-jdk17 AS builder
 
-FROM openjdk:17-jdk
+COPY . /app
 WORKDIR /app
-COPY --from=builder /app/build/install/backend/app
+
+RUN chmod +x ./gradlew
+RUN ./gradlew installDist
+
+FROM openjdk:17-jdk-slim
+WORKDIR /app
+
+
+RUN apt-get update && apt-get install -y findutils
+
+COPY --from=builder /app/build/install/backend .
+
 EXPOSE 8080
+
 CMD ["./bin/backend"]
