@@ -3,7 +3,7 @@ ktor:
         modules:
             - com.example.ApplicationKt.module
     deployment:
-        port: 443
+        port: 8080
 
 
 
