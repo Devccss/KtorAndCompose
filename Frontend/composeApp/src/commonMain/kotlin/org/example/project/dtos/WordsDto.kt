@@ -1,4 +1,5 @@
-package com.example.dtos
+package org.example.project.dtos
+
 import kotlinx.serialization.Serializable
 
 @Serializable

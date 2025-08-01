@@ -2,6 +2,7 @@ package org.example.project.screens.admindScreens
 
 import RepositoryProvider
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,8 +30,6 @@ import org.example.project.viewModel.DialogViewModel
 
 class DialogsScreen(private val levelId: Int?) : Screen {
     override val key = uniqueScreenKey
-
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val vm = rememberScreenModel {
@@ -77,6 +76,7 @@ class DialogsScreen(private val levelId: Int?) : Screen {
                             items(ui.dialogs) { dialog ->
                                 DialogCard(
                                     dialog = dialog,
+                                    onClick = {navigator.push(DialogDetails(dialog.id))},
                                     onEdit = { editing = it },
                                     levels = ui.levels,
                                     onDelete = { confirmDelete = it }
@@ -152,12 +152,13 @@ class DialogsScreen(private val levelId: Int?) : Screen {
 fun DialogCard(
     dialog: Dialog,
     levels: List<Level>,
+    onClick: () -> Unit = {},
     onEdit: (Dialog) -> Unit,
     onDelete: (Dialog) -> Unit
 ) {
     val levelName = levels.find { it.id == dialog.levelId }?.name ?: "Desconocido"
     Card(
-        Modifier.fillMaxWidth(),
+        Modifier.fillMaxWidth().clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {

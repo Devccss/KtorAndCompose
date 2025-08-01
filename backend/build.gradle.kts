@@ -18,7 +18,7 @@ repositories {
 }
 
 dependencies {
-
+    implementation(libs.jbcrypt)
     implementation(libs.ktor.server.rate.limiting)
     implementation(libs.koin.ktor)
     implementation(libs.koin.logger.slf4j)

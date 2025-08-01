@@ -1,15 +1,15 @@
 package config
-
-import Dialogs
-import Levels
-import PhraseWords
-import Phrases
-import TestQuestions
-import Tests
-import UserPhraseStandby
-import UserProgress
-import Users
-import Words
+import models.TestQuestions
+import models.Levels
+import models.UserPhraseStandby
+import models.UserProgress
+import models.Users
+import models.Word
+import models.Tests
+import models.Dialogs
+import models.PhraseWords
+import models.PhraseOrder
+import models.Phrase
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -23,7 +23,7 @@ fun configureDatabases() {
     )
     transaction {
         SchemaUtils.create(
-            Users, Levels, Dialogs, Phrases, Words,
+            Users, Levels, Dialogs, Phrase,PhraseOrder, Word,
             PhraseWords, UserPhraseStandby, Tests,
             TestQuestions, UserProgress
         )

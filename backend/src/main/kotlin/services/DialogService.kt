@@ -42,4 +42,6 @@ class DialogService(private val dialogsRepository: DialogRepository) {
             throw ValidationException("Dialog description cannot be empty")
         }
     }
+
+
 }

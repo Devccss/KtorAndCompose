@@ -1,9 +1,9 @@
 package com.example.dtos
 
-import DifficultyLevel
+
+import models.DifficultyLevel
 import kotlinx.serialization.Serializable
-import org.jetbrains.exposed.v1.javatime.datetime
-import java.time.LocalDateTime
+
 
 @Serializable
 data class DialogDTOs(
@@ -19,7 +19,6 @@ data class DialogDTOs(
 
 @Serializable
 data class CreateDialogDTO(
-    val levelId: Int,
     val name: String,
     val difficulty: DifficultyLevel,
     val description: String,

@@ -1,7 +1,20 @@
-
+import models.DifficultyLevel
 import com.example.dtos.CreateDialogDTO
+import com.example.dtos.CreateParticipantDTO
+import com.example.dtos.CreatePhraseDto
+import com.example.dtos.CreatePhraseWordDto
+import com.example.dtos.CreateUserDto
+import com.example.dtos.CreateWordDto
+import com.example.dtos.LoginDto
 import com.example.dtos.UpdateDialogDTO
+import com.example.dtos.UpdateParticipantDTO
+import com.example.dtos.OrderPhraseDto
+import com.example.services.DialogParticipantsService
 import com.example.services.DialogService
+import com.example.services.PhraseService
+import com.example.services.PhraseWordService
+import com.example.services.UserService
+import com.example.services.WordService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -42,6 +55,11 @@ fun Application.configureRouting() {
     }
     val levelService = get<LevelService>()
     val dialogService = get<DialogService>()
+    val dialogParticipants = get<DialogParticipantsService>()
+    val phraseService = get<PhraseService>()
+    val wordService = get<WordService>()
+    val phraseWordService = get<PhraseWordService>()
+    val userService = get<UserService>()
 
     routing {
 
@@ -81,7 +99,256 @@ fun Application.configureRouting() {
         }
         route("/api/v1") {
 
-            route("/dialogs"){
+            route("/users"){
+                get {
+                    val users = userService.getAllUsers()
+                    call.respond(users)
+                }
+                get("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val user = userService.getUserById(id)
+                    if (user != null) {
+                        call.respond(user)
+                    } else {
+                        throw NotFoundException("User not found")
+                    }
+                }
+                get("email/{email}") {
+                    val email = call.parameters["email"]
+                        ?: throw BadRequestException("Email parameter is required")
+                    val user = userService.getUserByEmail(email)
+                    if (user != null) {
+                        call.respond(user)
+                    } else {
+                        throw NotFoundException("User not found")
+                    }
+                }
+                post("login") {
+                    val dto = call.receive<LoginDto>()
+                    val user = userService.initSesion(dto)
+                    call.respond(user)
+                }
+                post ("register") {
+                    val dto = call.receive<CreateUserDto>()
+                    val user = userService.createUser(dto)
+                    call.respond(HttpStatusCode.Created, user)
+                }
+                put("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val dto = call.receive<CreateUserDto>()
+                    val updatedUser = userService.updateUser(id, dto)
+                    if (updatedUser != null) {
+                        call.respond(updatedUser)
+                    } else {
+                        throw NotFoundException("User not found")
+                    }
+                }
+                delete("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val success = userService.deleteUser(id)
+                    if (success) {
+                        call.respond(HttpStatusCode.NoContent)
+                    } else {
+                        throw NotFoundException("User not found")
+                    }
+                }
+            }
+
+            route("/words"){
+                get {
+                    val words = wordService.getAllWords()
+                    call.respond(words)
+                }
+                get("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val word = wordService.getWordById(id)
+                    if (word != null) {
+                        call.respond(word)
+                    } else {
+                        throw NotFoundException("Word not found")
+                    }
+                }
+                get("phrase/{phraseId}") {
+                    val phraseId = call.parameters["phraseId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Phrase ID")
+                    val words = wordService.getWordsByPhraseId(phraseId)
+                    call.respond(words)
+                }
+                post {
+                    val dto = call.receive<CreateWordDto>()
+                    val word = wordService.createWord(dto)
+                    call.respond(HttpStatusCode.Created, word)
+                }
+                put("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val dto = call.receive<CreateWordDto>()
+                    val updatedWord = wordService.updateWord(id, dto)
+                    if (updatedWord != null) {
+                        call.respond(updatedWord)
+                    } else {
+                        throw NotFoundException("Word not found")
+                    }
+                }
+                delete("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val success = wordService.deleteWord(id)
+                    if (success) {
+                        call.respond(HttpStatusCode.NoContent)
+                    } else {
+                        throw NotFoundException("Word not found")
+                    }
+                }
+            }
+
+            route("/phrases") {
+                get {
+                    val phrases = phraseService.getAllPhrases()
+                    call.respond(phrases)
+                }
+                get("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val phrase = phraseService.getPhraseById(id)
+                    call.respond(phrase)
+                }
+                post("{participantId}") {
+                    val dto = call.receive<CreatePhraseDto>()
+                    val participantId = call.parameters["participantId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Participant ID")
+                    val phrase = phraseService.createPhrase(dto, participantId)
+                    call.respond(HttpStatusCode.Created, phrase)
+                }
+                put("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val dto = call.receive<CreatePhraseDto>()
+                    val updatedPhrase = phraseService.updatePhrase(id, dto)
+                    call.respond(updatedPhrase)
+                }
+                delete("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val success = phraseService.deletePhrase(id)
+                    if (success) {
+                        call.respond(HttpStatusCode.NoContent)
+                    } else {
+                        throw NotFoundException("Phrase not found")
+                    }
+                }
+                put("/order"){
+                    val dto = call.receive<OrderPhraseDto>()
+                    val success = phraseService.orderPhrase(dto)
+                    if (success) {
+                        call.respond(HttpStatusCode.OK, mapOf("status" to "Phrase ordered successfully"))
+                    } else {
+                        throw NotFoundException("Failed to order phrase")
+                    }
+                }
+            }
+
+            route("/phraseWord"){
+                get(){
+                    val phraseWords = phraseWordService.getAllPhraseWords()
+                    call.respond(phraseWords)
+                }
+                get("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val phraseWord = phraseWordService.getPhraseWordById(id)
+                    if (phraseWord != null) {
+                        call.respond(phraseWord)
+                    } else {
+                        throw NotFoundException("PhraseWord not found")
+                    }
+                }
+                get("phrase/{phraseId}") {
+                    val phraseId = call.parameters["phraseId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Phrase ID")
+                    val phraseWords = phraseWordService.getPhraseWordsByPhraseId(phraseId)
+                    call.respond(phraseWords)
+                }
+                get("word/{wordId}") {
+                    val wordId = call.parameters["wordId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Word ID")
+                    val phraseWords = phraseWordService.getPhraseWordsByWordId(wordId)
+                    call.respond(phraseWords)
+                }
+                post{
+                    val dto = call.receive<CreatePhraseWordDto>()
+                    val phraseWord = phraseWordService.createPhraseWord(dto)
+                    call.respond(HttpStatusCode.Created, phraseWord)
+                }
+                put("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val dto = call.receive<CreatePhraseWordDto>()
+                    val updatedPhraseWord = phraseWordService.updatePhraseWord(id, dto)
+                    if (updatedPhraseWord != null) {
+                        call.respond(updatedPhraseWord)
+                    } else {
+                        throw NotFoundException("PhraseWord not found")
+                    }
+                }
+                delete("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val success = phraseWordService.deletePhraseWord(id)
+                    if (success) {
+                        call.respond(HttpStatusCode.NoContent)
+                    } else {
+                        throw NotFoundException("PhraseWord not found")
+                    }
+                }
+            }
+
+            route("/participants") {
+                get("byId/{participantId}") {
+                    val participantId = call.parameters["participantId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Participant ID")
+                    val participant = dialogParticipants.getParticipantById(participantId)
+                        ?: throw NotFoundException("Participant not found")
+                    call.respond(participant)
+                }
+                get("{dialogId}") {
+                    val dialogId = call.parameters["dialogId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Dialog ID")
+                    val participants = dialogParticipants.getParticipantsByDialogId(dialogId)
+                    call.respond(participants)
+                }
+                post("{dialogId}") {
+                    val dto = call.receive<CreateParticipantDTO>()
+                    val dialogId = call.parameters["dialogId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Dialog ID")
+                    val participant = dialogParticipants.createDialogParticipant(dialogId, dto)
+                    call.respond(HttpStatusCode.Created, participant)
+                }
+                put("{participantId}") {
+                    val participantId = call.parameters["participantId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Participant ID")
+                    val dto = call.receive<UpdateParticipantDTO>()
+                    val updatedParticipant =
+                        dialogParticipants.updateDialogParticipant(participantId, dto)
+                    call.respond(updatedParticipant)
+                }
+                delete("{participantId}") {
+                    val participantId = call.parameters["participantId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Participant ID")
+                    val success = dialogParticipants.deleteDialogParticipant(participantId)
+                    if (success) {
+                        call.respond(HttpStatusCode.NoContent)
+                    } else {
+                        throw NotFoundException("Participant not found")
+                    }
+                }
+            }
+
+            route("/dialogs") {
                 get {
                     val dialogs = dialogService.getAllDialogs()
                     call.respond(dialogs)
@@ -102,7 +369,7 @@ fun Application.configureRouting() {
                     val dto = call.receive<CreateDialogDTO>()
                     val idLevel = call.parameters["levelId"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid Level ID")
-                    val dialog = dialogService.createDialog(dto,idLevel)
+                    val dialog = dialogService.createDialog(dto, idLevel)
                     call.respond(HttpStatusCode.Created, dialog)
                 }
                 put("{id}") {

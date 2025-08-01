@@ -1,4 +1,4 @@
-
+package models
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 import org.jetbrains.exposed.v1.javatime.datetime
 import java.time.LocalDateTime
@@ -9,14 +9,19 @@ import java.time.LocalDateTime
 object Users : IntIdTable() {
     val name = varchar("name", 100)
     val email = varchar("email", 100).uniqueIndex()
-    val password = varchar("password", 100)
-    val preferences = text("preferences").nullable() // JSON con preferencias
+    val password = varchar("password", 100).nullable()
+    val provider = varchar("provider",100).nullable()
+    val providerId = text("providerId")
+    val preferences = text("preferences").nullable()
     val currentLevelId = integer("current_level_id").references(Levels.id).nullable()
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
     val role = enumerationByName<Role>("role", 20).default(Role.STUDENT)
 }
+object GoogleUser: IntIdTable(){
 
-enum class Role { ADMIN, TEACHER, STUDENT }
+}
+
+enum class Role { ADMIN, CONTENT_EDITOR, STUDENT }
 
 object Levels : IntIdTable() {
     val accent = integer("accent") // 1,2,3...
@@ -40,32 +45,45 @@ object Dialogs : IntIdTable() {
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }
 
-object Phrases : IntIdTable() {
+object DialogParticipants : IntIdTable() {
     val dialogId = integer("dialog_id").references(Dialogs.id)
-    val englishText = text("english_text")
-    val spanishText = text("spanish_text")
-    val orderLevel = integer("orderLevel")
-    val isActive = bool("is_active").default(true)
+    val name = varchar("name", 100)
+    val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }
 
-object Words : IntIdTable() {
+object Phrase : IntIdTable() {
+    val participantId = integer("participant_id").references(DialogParticipants.id)
+    val audioUrl = varchar("audio_url", 255).nullable()
+    val englishText = text("english_text")
+    val spanishText = text("spanish_text").nullable()
+    val isActive = bool("is_active").default(true)
+    val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
+}
+
+object PhraseWords : IntIdTable() {
+    val phraseId = integer("phrase_id").references(Phrase.id)
+    val wordId = integer("word_id").references(Word.id)
+    val order = integer("order")
+}
+
+object PhraseOrder : IntIdTable() {
+    val dialogId = integer("dialog_id").references(Dialogs.id)
+    val phraseId = integer("phrase_id").references(Phrase.id)
+    val order = integer("order")
+}
+
+object Word : IntIdTable() {
     val english = varchar("english", 100)
     val spanish = varchar("spanish", 100)
     val phonetic = varchar("phonetic", 100).nullable()
     val description = text("description").nullable()
-    val difficulty = enumerationByName<DifficultyLevel>("difficulty", 10).nullable()
     val isActive = bool("is_active").default(true)
 }
 
-object PhraseWords : org.jetbrains.exposed.v1.core.Table("phrase_words") {
-    internal val phraseId = integer("phrase_id").references(Phrases.id)
-    internal val wordId = integer("word_id").references(Words.id)
-    override val primaryKey = PrimaryKey(phraseId, wordId)
-}
 
 object UserPhraseStandby : IntIdTable() {
     val userId = integer("user_id").references(Users.id)
-    val phraseId = integer("phrase_id").references(Phrases.id)
+    val phraseId = integer("phrase_id").references(Phrase.id)
     val incorrectAttempts = integer("incorrect_attempts").default(0)
     val addedAt = datetime("added_at").clientDefault { LocalDateTime.now() }
 }

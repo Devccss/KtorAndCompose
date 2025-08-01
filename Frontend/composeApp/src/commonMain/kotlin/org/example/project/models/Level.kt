@@ -12,5 +12,6 @@ data class Level(
     val difficulty: DifficultyLevel,
     val name: String,
     val description: String,
-    val orderLevel: Float
+    val orderLevel: Float,
+    val dialogsOfLevel: List<Int> = emptyList()
 )

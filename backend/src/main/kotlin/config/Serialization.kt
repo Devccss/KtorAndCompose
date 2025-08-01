@@ -15,7 +15,7 @@ fun Application.configureSerialization() {
             isLenient = true
             ignoreUnknownKeys = true
             explicitNulls = false
-            coerceInputValues = true // Esto ayuda con tipos mixtos
+            coerceInputValues = true
         })
     }
     routing {

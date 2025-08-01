@@ -1,4 +1,5 @@
 
+import models.DifficultyLevel
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -19,6 +20,7 @@ data class LevelCreationDTO(
     val name: String,
     val description: String,
     val orderLevel: Float? = null,
+
 
 )
 

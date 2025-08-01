@@ -11,8 +11,7 @@ class KtorDialogsRepository(
     private val httpClient: HttpClient,
     private val baseUrl: String,
     private val levelsRepo: LevelRepository
-) :
-    DialogsRepository {
+)  {
 
     suspend fun getAllDialogs(): List<Dialog> =
         httpClient.get("$baseUrl/api/v1/dialogs").body()

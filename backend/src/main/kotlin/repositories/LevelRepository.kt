@@ -1,10 +1,10 @@
 package repositories
 
-import DifficultyLevel
 import LevelCreationDTO
 import LevelDTO
 import LevelUpdateDTO
-import Levels
+import models.DifficultyLevel
+import models.Levels
 import io.ktor.server.plugins.BadRequestException
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
@@ -113,6 +113,7 @@ class LevelRepository(private val dialogRepository: DialogRepository) {
             level.difficulty?.let { update[difficulty] = it }
             level.name?.let { update[name] = it }
             level.description?.let { update[description] = it }
+
             level.isActive?.let { update[isActive] = it }
             level.orderLevel?.let { update[orderLevel] = it }
         } > 0

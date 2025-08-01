@@ -1,7 +1,6 @@
 package repositories;
 
-import Dialogs
-import Levels
+import models.Dialogs
 import com.example.dtos.CreateDialogDTO
 import com.example.dtos.DialogDTOs;
 import com.example.dtos.UpdateDialogDTO
@@ -11,13 +10,14 @@ import org.jetbrains.exposed.v1.core.ResultRow;
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import java.time.LocalDateTime
 
 class DialogRepository() {
+
+
 
     fun resultRowToDialog(row:ResultRow): DialogDTOs {
         return DialogDTOs(
@@ -41,23 +41,20 @@ class DialogRepository() {
     fun getDialogsByLevelId(levelId: Int): List<DialogDTOs> = transaction {
         Dialogs.selectAll().where { Dialogs.levelId eq levelId }.map(::resultRowToDialog)
     }
-    fun createDialog(dto: CreateDialogDTO,IdLevel:Int ): DialogDTOs = try {
+    fun createDialog(dto: CreateDialogDTO,idLevel:Int ): DialogDTOs = try {
         transaction {
-            // Verificar si el nivel existe
-            val levelExists = Levels.select ( Levels.id eq IdLevel ).count() > 0
-            if (!levelExists) {
-                throw BadRequestException("El nivel con ID $IdLevel no existe.")
-            }
+
             val dialogNew = Dialogs.insert {
-                it[levelId] = IdLevel
+                it[levelId] = idLevel
                 it[name] = dto.name
                 it[difficulty] = dto.difficulty
                 it[description] = dto.description
                 it[audioUrl] = dto.audioUrl
             }[Dialogs.id]
+
             DialogDTOs(
                 id = dialogNew.value,
-                levelId = IdLevel,
+                levelId = idLevel,
                 name = dto.name,
                 difficulty = dto.difficulty,
                 description = dto.description,
@@ -65,6 +62,7 @@ class DialogRepository() {
                 isActive = true,
                 createdAt = LocalDateTime.now().toString()
             )
+
         }
     }catch (e: Exception) {
         throw BadRequestException("Error al crear el diálogo: ${e.message}")
@@ -93,4 +91,8 @@ class DialogRepository() {
 
         Dialogs.deleteWhere { Dialogs.id eq id } > 0
     }
+
+    //Participants
+
+
 }

@@ -19,6 +19,9 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlinx.coroutines.launch
+import org.example.project.repository.UsersRepository.UserRepo
+import org.example.project.screens.LoginScreen
+import org.example.project.viewModel.UserViewModel
 
 data class WeeklyStats(val day: String, val users: Int, val lessons: Int)
 data class PopularContent(val title: String, val completions: Int, val category: String)
@@ -166,6 +169,10 @@ fun DrawerContent(onNavigate: (Screen) -> Unit) {
         NavigationDrawerItem(label = { Text("Palabras") }, selected = false, onClick = { onNavigate(
             LoginScreen()
         ) })
+        NavigationDrawerItem(label = { Text("Cerrar Seccion") }, selected = false, onClick = {
+
+            onNavigate(LoginScreen(true))
+        })
     }
 }
 

@@ -104,7 +104,6 @@ class AdminLevelsScreen : Screen {
                                         level = level,
                                         onEdit = {
                                             editing = it
-                                            // Asigna los IDs según la posición
                                             val idx = levels.indexOf(it)
                                             insertBeforeId = levels.getOrNull(idx - 1)?.id
                                             insertAfterId = levels.getOrNull(idx + 1)?.id

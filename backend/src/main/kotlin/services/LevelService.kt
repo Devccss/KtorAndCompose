@@ -1,11 +1,10 @@
 package services
 
-import DifficultyLevel
 import LevelCreationDTO
 import LevelDTO
 import repositories.LevelRepository
 import LevelUpdateDTO
-
+import models.DifficultyLevel
 
 
 class LevelService(private val levelRepository: LevelRepository) {
