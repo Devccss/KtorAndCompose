@@ -494,6 +494,7 @@ fun Application.configureRouting() {
                     call.respond(levels)
                 }
             }
+
             route("/student") {
                 // Obtener datos del usuario por ID
                 get("{userId}") {
