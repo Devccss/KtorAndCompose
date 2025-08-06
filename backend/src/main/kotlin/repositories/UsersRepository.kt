@@ -3,13 +3,18 @@ package com.example.repositories
 import com.example.dtos.CreateUserDto
 import com.example.dtos.GoogleUserDto
 import com.example.dtos.LoginDto
+import com.example.dtos.StandbyDto
+import com.example.dtos.StandbyUpdateDto
 import com.example.dtos.UsersDto
 import io.ktor.server.plugins.BadRequestException
 import models.Role
+import models.UserPhraseStandby
+import models.UserProgress
 import models.Users
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
@@ -39,7 +44,7 @@ class UsersRepository {
 
     }
 
-    fun initSesion(dto:LoginDto): UsersDto = try {
+    fun initSesion(dto: LoginDto): UsersDto = try {
         transaction {
             Users.selectAll().where { Users.email eq dto.email }.singleOrNull()?.let { row ->
                 if (BCrypt.checkpw(dto.password, row[Users.password])) {
@@ -92,6 +97,19 @@ class UsersRepository {
 
     fun createUser(dto: CreateUserDto): UsersDto = try {
         transaction {
+            if (Users.selectAll().where { Users.email eq dto.email }.any()) {
+                throw BadRequestException("El usuario con el email ${dto.email} ya existe")
+            }
+            if (dto.password.isBlank()) {
+                throw BadRequestException("La contraseña no puede estar en blanco")
+            }
+            if (dto.name.isBlank()) {
+                throw BadRequestException("El nombre no puede estar en blanco")
+            }
+            if (dto.email.isBlank()) {
+                throw BadRequestException("El email no puede estar en blanco")
+            }
+
             val hashedPassword = hashPassword(dto.password)
             val newUser = Users.insert {
                 it[name] = dto.name
@@ -100,7 +118,7 @@ class UsersRepository {
                 it[preferences] = dto.preferences
                 it[provider] = dto.provider ?: "local"
                 it[providerId] = dto.providerId ?: "local-${dto.email}"
-                it[currentLevelId] = dto.currentLevelId ?: 0
+                it[currentLevelId] = dto.currentLevelId
                 it[role] = dto.role ?: Role.STUDENT
             }[Users.id]
 
@@ -109,7 +127,7 @@ class UsersRepository {
                 name = dto.name,
                 email = dto.email,
                 preferences = dto.preferences,
-                provider = dto.provider?: "local",
+                provider = dto.provider ?: "local",
                 providerId = dto.providerId ?: "local-${dto.email}",
                 currentLevelId = dto.currentLevelId,
                 createdAt = LocalDateTime.now().toString(),
@@ -124,7 +142,7 @@ class UsersRepository {
         return BCrypt.hashpw(password, BCrypt.gensalt())
     }
 
-    fun getAllUsers(): List<UsersDto?> = try {
+    fun getAllUsers(): List<UsersDto> = try {
         transaction {
             Users.selectAll().map { row ->
                 UsersDto(
@@ -159,6 +177,7 @@ class UsersRepository {
     } catch (e: Exception) {
         throw BadRequestException("Error fetching user by ID: ${e.message}")
     }
+
     fun getUserByEmail(email: String): UsersDto? = try {
         transaction {
             Users.selectAll().where { Users.email eq email }.singleOrNull()?.let { row ->
@@ -176,6 +195,7 @@ class UsersRepository {
     } catch (e: Exception) {
         throw BadRequestException("Error fetching user by email: ${e.message}")
     }
+
     fun updateUser(id: Int, dto: CreateUserDto): UsersDto? = try {
         transaction {
             Users.update({ Users.id eq id }) { update ->
@@ -198,5 +218,112 @@ class UsersRepository {
         }
     } catch (e: Exception) {
         throw BadRequestException("Error deleting user: ${e.message}")
+    }
+
+    fun getUserProgress(userId: Int): Any = try {
+        transaction {
+            UserProgress.select ( UserProgress.userId eq userId )
+                .map { row ->
+                    mapOf(
+                        "levelId" to row[UserProgress.levelId],
+                        "completedDialogs" to row[UserProgress.completedDialogs],
+                        "totalDialogs" to row[UserProgress.totalDialogs],
+                        "testScore" to row[UserProgress.testScore],
+                        "isLevelCompleted" to row[UserProgress.isLevelCompleted],
+                        "lastAccessed" to row[UserProgress.lastAccessed]?.toString()
+                    )
+                }
+        }
+    } catch (e: Exception) {
+        throw BadRequestException("Error fetching user progress: ${e.message}")
+    }
+
+    fun getUserDialogs(userId: Int): Any = try {
+        transaction {
+            UserProgress.select ( UserProgress.userId eq userId )
+                .map { row ->
+                    val levelId = row[UserProgress.levelId]
+                    val completedDialogs = row[UserProgress.completedDialogs]
+                    val totalDialogs = row[UserProgress.totalDialogs]
+                    mapOf(
+                        "levelId" to levelId,
+                        "completedDialogs" to completedDialogs,
+                        "totalDialogs" to totalDialogs
+                    )
+                }
+        }
+    } catch (e: Exception) {
+        throw BadRequestException("Error fetching user dialogs: ${e.message}")
+    }
+
+    fun getUserStandbyPhrases(userId: Int): List<Any> = try {
+        transaction {
+            UserPhraseStandby.select ( UserPhraseStandby.userId eq userId )
+                .map { row ->
+                    mapOf(
+                        "standbyId" to row[UserPhraseStandby.id].value,
+                        "phraseId" to row[UserPhraseStandby.phraseId],
+                        "incorrectAttempts" to row[UserPhraseStandby.incorrectAttempts],
+                        "addedAt" to row[UserPhraseStandby.addedAt].toString()
+                    )
+                }
+        }
+    } catch (e: Exception) {
+        throw BadRequestException("Error fetching standby phrases: ${e.message}")
+    }
+    fun getStandbyPhraseById(standbyId: Int): StandbyDto? = try {
+        transaction {
+            UserPhraseStandby.selectAll().where { UserPhraseStandby.id eq standbyId }.singleOrNull()?.let { row ->
+                StandbyDto(
+                    id = row[UserPhraseStandby.id].value,
+                    userId = row[UserPhraseStandby.userId],
+                    phraseId = row[UserPhraseStandby.phraseId],
+                    incorrectAttempts = row[UserPhraseStandby.incorrectAttempts],
+                    addedAt = row[UserPhraseStandby.addedAt].toString()
+                )
+            }
+        }
+    } catch (e: Exception) {
+        throw BadRequestException("Error fetching standby phrase by ID: ${e.message}")
+    }
+
+    fun addPhraseToStandby(userId: Int, phraseId: Int): Any = try {
+        transaction {
+            val standbyId = UserPhraseStandby.insert {
+                it[UserPhraseStandby.userId] = userId
+                it[UserPhraseStandby.phraseId] = phraseId
+                it[UserPhraseStandby.incorrectAttempts] = 0
+            }[UserPhraseStandby.id]
+            mapOf(
+                "standbyId" to standbyId.value,
+                "userId" to userId,
+                "phraseId" to phraseId,
+                "incorrectAttempts" to 0
+            )
+        }
+    } catch (e: Exception) {
+        throw BadRequestException("Error adding phrase to standby: ${e.message}")
+    }
+
+    fun updateStandbyPhrase(standbyId: Int, updateDto: StandbyUpdateDto) = try {
+        transaction {
+            UserPhraseStandby.update({ UserPhraseStandby.id eq standbyId }) { update ->
+                updateDto.incorrectAttempts?.let { update[incorrectAttempts] = it }
+                updateDto.addedAt?.let { update[addedAt] = LocalDateTime.parse(it) }
+
+            }
+        }
+
+    }catch (e: Exception) {
+        throw BadRequestException("Error updating standby phrase: ${e.message}")
+    }
+
+
+    fun deleteStandbyPhrase(standbyId: Int): Boolean = try {
+        transaction {
+            UserPhraseStandby.deleteWhere { UserPhraseStandby.id eq standbyId } > 0
+        }
+    } catch (e: Exception) {
+        throw BadRequestException("Error deleting standby phrase: ${e.message}")
     }
 }

@@ -63,6 +63,7 @@ object Phrase : IntIdTable() {
 object PhraseWords : IntIdTable() {
     val phraseId = integer("phrase_id").references(Phrase.id)
     val wordId = integer("word_id").references(Word.id)
+    val selectToTranslate = bool("select_to_translate").default(false)
     val order = integer("order")
 }
 
@@ -90,9 +91,10 @@ object UserPhraseStandby : IntIdTable() {
 
 object Tests : IntIdTable() {
     val levelId = integer("level_id").references(Levels.id)
+    val phraseIds = text("phrase_ids")
     val name = varchar("name", 100)
     val description = text("description").nullable()
-    val testType = enumerationByName<TestType>("test_type", 20)
+    val testType = TestType.entries
     val difficulty = enumerationByName<DifficultyLevel>("difficulty", 10)
     val isActive = bool("is_active").default(true)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }

@@ -17,6 +17,9 @@ class PhraseService(private val phraseRepository: PhraseRepository) {
         return phraseRepository.getPhraseById(id) ?: throw NotFoundException("Phrase not found")
     }
 
+    fun getPhrasesByParticipantId(participantId: Int): List<PhraseDto> {
+        return phraseRepository.getPhrasesByParticipantId(participantId)
+    }
     fun createPhrase(phrase: CreatePhraseDto, participantID: Int): PhraseDto {
         validatePhrase(phrase)
         return phraseRepository.createPhrase(
@@ -24,7 +27,9 @@ class PhraseService(private val phraseRepository: PhraseRepository) {
             participantID
         )
     }
-
+    fun cretePhraseOrder(order: OrderPhraseDto): OrderPhraseDto {
+        return phraseRepository.createPhraseOrder(order)
+    }
     fun updatePhrase(id: Int, phrase: CreatePhraseDto): PhraseDto {
         validatePhrase(phrase)
         phraseRepository.updatePhrase(id, phrase)
@@ -37,10 +42,12 @@ class PhraseService(private val phraseRepository: PhraseRepository) {
 
     private fun validatePhrase(phrase: CreatePhraseDto) {
         if (phrase.englishText.isBlank()) {
-            throw ValidationException("English text cannot be empty")
+            throw ValidationException("La frase en inglés no puede estar vacía")
         }
     }
-
+    fun getOrderPhraseByPhraseId(phraseId: Int): Int? {
+        return phraseRepository.getOrderPhraseByPhraseId(phraseId)
+    }
     fun orderPhrase(dto:OrderPhraseDto): Boolean {
         return phraseRepository.orderPhrases(dto)
     }

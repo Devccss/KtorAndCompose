@@ -7,6 +7,7 @@ data class PhraseWordDto(
     val id: Int? = null,
     val phraseId: Int,
     val wordId: Int,
+    val select: Boolean? = false,
     val order : Int
 )
 

@@ -35,4 +35,8 @@ data class UpdateDialogDTO(
     val isActive: Boolean? = null
 )
 
-
+@Serializable
+data class DialogDetailDTO(
+    val dialog: DialogDTOs,
+    val participants: List<ParticipantDetailDTO>
+)

@@ -26,3 +26,10 @@ data class OrderPhraseDto (
     val phraseId: Int,
     val order: Int
 )
+
+@Serializable
+data class PhraseDetailDTO(
+    val phrase: PhraseDto,
+    val words: List<WordDto>,
+    val oreder: Int? = null
+)

@@ -19,3 +19,10 @@ data class CreateParticipantDTO (
 data class UpdateParticipantDTO(
     val name: String,
 )
+
+@Serializable
+data class ParticipantDetailDTO(
+    val participant: DialogParticipantDTO,
+    val phrases: List<PhraseDetailDTO>,
+)
+

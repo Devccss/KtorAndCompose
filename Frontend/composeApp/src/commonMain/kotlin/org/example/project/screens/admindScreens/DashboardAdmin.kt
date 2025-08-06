@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
@@ -169,7 +170,7 @@ fun DrawerContent(onNavigate: (Screen) -> Unit) {
         NavigationDrawerItem(label = { Text("Palabras") }, selected = false, onClick = { onNavigate(
             LoginScreen()
         ) })
-        NavigationDrawerItem(label = { Text("Cerrar Seccion") }, selected = false, onClick = {
+        NavigationDrawerItem(label = { Text("Cerrar Sesión") }, selected = false, onClick = {
 
             onNavigate(LoginScreen(true))
         })
@@ -183,7 +184,7 @@ fun AdminTopBar(currentPage: String, onBack: () -> Unit, onMenuClick: () -> Unit
         title = { Text(titlePage) },
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
             }
         },
         actions = {
@@ -224,14 +225,14 @@ fun WeeklyStatsRow(stat: WeeklyStats) {
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     LinearProgressIndicator(
-                        progress = stat.users / 250f,
+                        progress = { stat.users / 250f },
                         modifier = Modifier.weight(1f).height(6.dp),
-                        color = Color(0xFF003AB6)
+                        color = Color(0xFF003AB6),
                     )
                     LinearProgressIndicator(
-                        progress = stat.lessons / 600f,
+                        progress = { stat.lessons / 600f },
                         modifier = Modifier.weight(1f).height(6.dp),
-                        color = Color(0xFF4CAF50)
+                        color = Color(0xFF4CAF50),
                     )
                 }
             }

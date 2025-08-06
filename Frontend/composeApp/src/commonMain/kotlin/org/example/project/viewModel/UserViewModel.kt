@@ -1,36 +1,56 @@
 package org.example.project.viewModel
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cafe.adriel.voyager.core.model.ScreenModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.example.project.dtos.CreateUserDto
+import org.example.project.dtos.LoginDto
+import org.example.project.dtos.UsersDto
+import org.example.project.models.Role
 
 import org.example.project.models.Users
 import org.example.project.repository.UsersRepository.UserRepo
 
 
 data class UsersUiState(
-    val users: List<Users> = emptyList(),
-    val currentUser: Users? = null,
+    val users: List<Users>? = emptyList(),
+    val currentUser: UsersDto? = null,
     val isLoading: Boolean = false,
-    val error: String? = null
-)
+    val registerUser: CreateUserDto? = null,
+    val error: String? = null,
+
+    )
 
 class UserViewModel(private val repo: UserRepo) : ViewModel(), ScreenModel {
-    private val _state = MutableStateFlow(UsersUiState(isLoading = true))
+    private val _state = MutableStateFlow(
+        UsersUiState(
+            isLoading = true,
+        )
+    )
     val state: StateFlow<UsersUiState> = _state
+
+    var generalMessage by mutableStateOf<String?>(null)
+
+    fun updateMessage(message: String?) {
+        generalMessage = message
+    }
 
     init {
         loadUsers()
     }
 
+
     private fun loadUsers() {
         launchCatching(
             block = { repo.getAllUsers() },
             onSuccess = { users ->
-                _state.value = _state.value.copy(
+                _state.value = UsersUiState(
                     users = users,
                     isLoading = false
                 )
@@ -40,20 +60,6 @@ class UserViewModel(private val repo: UserRepo) : ViewModel(), ScreenModel {
                     error = error.message,
                     isLoading = false
                 )
-            }
-        )
-    }
-
-    fun addUser(newUser: Users) {
-        launchCatching(
-            block = { repo.createUser(newUser) },
-            onSuccess = { added ->
-                _state.value = _state.value.copy(
-                    users = _state.value.users + added
-                )
-            },
-            onError = { error ->
-                _state.value = _state.value.copy(error = error.message)
             }
         )
     }
@@ -83,13 +89,24 @@ class UserViewModel(private val repo: UserRepo) : ViewModel(), ScreenModel {
         )
     }
 
-    fun registerUser(newUser: Users) {
+    fun registerUser(newUser: CreateUserDto) {
         launchCatching(
-            block = { repo.createUser(newUser) },
+            block = {
+                if (newUser.name.isEmpty()) {
+                    throw IllegalArgumentException("El nombre no puede estar vacío")
+                }
+                if (newUser.email.isEmpty() || !newUser.email.contains("@")) {
+                    throw IllegalArgumentException("El email es invalido")
+                }
+                if (newUser.password.isEmpty()) {
+                    throw IllegalArgumentException("La contraseña no puede estar vacía")
+                }
+                repo.createUser(newUser)
+            },
             onSuccess = { added ->
                 _state.value = _state.value.copy(
-                    users = _state.value.users + added,
-                    currentUser = added,
+                    users = _state.value.users?.plus(added),
+                    registerUser = newUser,
                     isLoading = false
                 )
             },
@@ -102,18 +119,17 @@ class UserViewModel(private val repo: UserRepo) : ViewModel(), ScreenModel {
         )
     }
 
-    fun login(email: String, password: String) {
+    fun login(loginDto: LoginDto) {
         launchCatching(
-            block = { repo.loginUser(email, password) },
+            block = {
+                repo.loginUser(loginDto)
+            },
             onSuccess = { user ->
-                user?.let {
+                println("------Z USER: $user")
+                user.let {
+
                     _state.value = _state.value.copy(
-                        currentUser = it,
-                        isLoading = false
-                    )
-                } ?: run {
-                    _state.value = _state.value.copy(
-                        error = "Invalid email or password",
+                        currentUser = user,
                         isLoading = false
                     )
                 }
@@ -132,7 +148,6 @@ class UserViewModel(private val repo: UserRepo) : ViewModel(), ScreenModel {
             block = { repo.updateUser(id, updatedUser) },
             onSuccess = { updated ->
                 _state.value = _state.value.copy(
-                    users = _state.value.users.map { if (it.id == id) updated else it },
                     currentUser = if (_state.value.currentUser?.id == id) updated else _state.value.currentUser
                 )
             },
@@ -147,10 +162,13 @@ class UserViewModel(private val repo: UserRepo) : ViewModel(), ScreenModel {
             block = { repo.deleteUser(id) },
             onSuccess = { success ->
                 if (success) {
-                    _state.value = _state.value.copy(
-                        users = _state.value.users.filterNot { it.id == id },
-                        currentUser = if (_state.value.currentUser?.id == id) null else _state.value.currentUser
-                    )
+                    _state.value =
+                        (if (_state.value.currentUser?.id == id) null else _state.value.currentUser)?.let { it ->
+                            _state.value.copy(
+                                users = _state.value.users?.filterNot { it.id == id },
+                                currentUser = it
+                            )
+                        }!!
                 } else {
                     _state.value = _state.value.copy(error = "Failed to delete user")
                 }

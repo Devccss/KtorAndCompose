@@ -36,8 +36,35 @@ class PhraseRepository {
             createdAt = LocalDateTime.now().toString(),
         )
     }
+    fun createPhraseOrder(dto: OrderPhraseDto): OrderPhraseDto = transaction {
+        val newOrder = PhraseOrder.insert {
+            it[dialogId] = dto.dialogId
+            it[phraseId] = dto.phraseId
+            it[order] = dto.order
+        }[PhraseOrder.id]
+        OrderPhraseDto(
+            dialogId = dto.dialogId,
+            phraseId = dto.phraseId,
+            order = dto.order
+        )
+    }
     fun getAllPhrases(): List<PhraseDto> = transaction {
         Phrase.selectAll().map { row ->
+            PhraseDto(
+                id = row[Phrase.id].value,
+                participantId = row[Phrase.participantId],
+                audioUrl = row[Phrase.audioUrl],
+                englishText = row[Phrase.englishText],
+                spanishText = row[Phrase.spanishText]?.let {
+                    Json.decodeFromString(it)
+                },
+                isActive = row[Phrase.isActive],
+                createdAt = row[Phrase.createdAt].toString()
+            )
+        }
+    }
+    fun getPhrasesByParticipantId(participantId: Int): List<PhraseDto> = transaction {
+        Phrase.selectAll().where { Phrase.participantId eq participantId }.map { row ->
             PhraseDto(
                 id = row[Phrase.id].value,
                 participantId = row[Phrase.participantId],
@@ -68,6 +95,12 @@ class PhraseRepository {
             )
         }
     }
+    fun getOrderPhraseByPhraseId(phraseId: Int): Int? = transaction {
+        PhraseOrder.selectAll()
+            .where { PhraseOrder.phraseId eq phraseId }
+            .singleOrNull()?.get(PhraseOrder.order)
+    }
+
     fun updatePhrase(id: Int, dto: CreatePhraseDto): PhraseDto? = transaction {
         val jsonSpanish = Json.encodeToString(dto.spanishText)
         Phrase.update({ Phrase.id eq id }) {
@@ -90,4 +123,5 @@ class PhraseRepository {
         }
         updatedRows > 0
     }
+
 }

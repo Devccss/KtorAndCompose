@@ -83,6 +83,7 @@ class DialogRepository() {
                 dto.audioUrl?.let { update[audioUrl] = dto.audioUrl }
                 dto.isActive?.let { update[isActive] = dto.isActive }
             }
+
         }
 
     }
@@ -92,7 +93,7 @@ class DialogRepository() {
         Dialogs.deleteWhere { Dialogs.id eq id } > 0
     }
 
-    //Participants
+
 
 
 }

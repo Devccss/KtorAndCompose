@@ -11,7 +11,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @OptIn(InternalVoyagerApi::class)
 @Composable
-@Preview
+
 fun App() {
 
     MaterialTheme{

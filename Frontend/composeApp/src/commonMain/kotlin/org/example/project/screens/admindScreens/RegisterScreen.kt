@@ -1,46 +1,79 @@
-package org.example.project.screens
+package org.example.project.screens.admindScreens
 
-import RepositoryProvider
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
-import androidx.compose.ui.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.*
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import org.example.project.viewModel.UserViewModel
-import cafe.adriel.voyager.core.model.rememberScreenModel
-import org.example.project.dtos.LoginDto
+import org.example.project.dtos.CreateUserDto
 import org.example.project.models.Role
-import org.example.project.screens.admindScreens.AdminDashboard
-import org.example.project.screens.admindScreens.RegisterScreen
+import org.example.project.screens.LoginScreen
 import org.example.project.screens.studentScreens.StudentDashboard
+import org.example.project.viewModel.UserViewModel
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
-class LoginScreen(private val logout: Boolean? = false) : Screen {
+
+class RegisterScreen() : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
 
-        // Instancia del ViewModel
-        val userViewModel = rememberScreenModel {UserViewModel(RepositoryProvider.usersRepository)}
+        val userViewModel =
+            rememberScreenModel { UserViewModel(RepositoryProvider.usersRepository) }
         val uiState by userViewModel.state.collectAsState()
 
-        var email by remember { mutableStateOf("") }
-        var password by remember { mutableStateOf("") }
-        var showPassword by remember { mutableStateOf(false) }
+        var name: String by remember { mutableStateOf("") }
+        var email: String by remember { mutableStateOf("") }
+        var password: String by remember { mutableStateOf("") }
+        val provider: String? by remember { mutableStateOf(null) }
+        val providerId: String? by remember { mutableStateOf(null) }
+        var confirmPassword: String by remember { mutableStateOf("") }
+        val preferences: String? by remember { mutableStateOf("") }
+        val currentLevelId: Int? by remember { mutableStateOf(null) }
+        val role: Role? by remember { mutableStateOf(Role.STUDENT) }
+
         var showError by remember { mutableStateOf(false) }
+        var showPassword by remember { mutableStateOf(false) }
+        var showSuceess by remember { mutableStateOf(false) }
+
 
         // Gradientes
         val backgroundGradient = Brush.linearGradient(
@@ -52,28 +85,7 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
         val buttonGradient = Brush.horizontalGradient(
             colors = listOf(Color(0xFF003AB6), Color(0xFF48145B))
         )
-        val generalMessage = userViewModel.generalMessage
 
-        if (generalMessage != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF4CAF50), RoundedCornerShape(8.dp))
-                    .padding(12.dp)
-            ) {
-                Text(
-                    text = generalMessage,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-            // Limpia el mensaje después de mostrarlo
-            LaunchedEffect(Unit) {
-                userViewModel.updateMessage(null)
-            }
-        }
         // Mostrar error si existe
         LaunchedEffect(uiState.error) {
             showError = uiState.error != null
@@ -112,6 +124,7 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
                     .padding(top = 80.dp, bottom = 0.dp),
                 contentAlignment = Alignment.Center
             ) {
+
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -132,7 +145,7 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = "Iniciar Sesión",
+                                text = "Registrarse",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 24.sp,
                                 color = Color(0xFF131313)
@@ -157,6 +170,30 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
 
                         // Campos
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            // Nombre completo
+                            Column {
+                                Text(
+                                    text = "Nombre",
+                                    color = Color(0xFF131313),
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 15.sp
+                                )
+                                OutlinedTextField(
+                                    value = name,
+                                    onValueChange = { name = it },
+                                    placeholder = { Text("Pepito sandoval") },
+                                    singleLine = true,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color(0xFF003AB6),
+                                        unfocusedBorderColor = Color(0xFFE5E7EB)
+                                    )
+                                )
+                            }
+
                             // Email
                             Column {
                                 Text(
@@ -218,16 +255,61 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
                                     )
                                 }
                             }
+                            // Confirmar contraseña
+                            Column {
+                                Text(
+                                    text = "Confirmar contraseña",
+                                    color = Color(0xFF131313),
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 15.sp
+                                )
+                                OutlinedTextField(
+                                    value = confirmPassword,
+                                    onValueChange = { confirmPassword = it },
+                                    placeholder = { Text("••••••••") },
+                                    singleLine = true,
+                                    visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color(0xFF003AB6),
+                                        unfocusedBorderColor = Color(0xFFE5E7EB)
+                                    ),
+                                    trailingIcon = {
+                                        IconButton(
+                                            onClick = { showPassword = !showPassword },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                                contentDescription = if (showPassword) "Ocultar contraseña" else "Mostrar contraseña",
+                                                tint = Color(0xFF9B9B9B)
+                                            )
+                                        }
+                                    }
+                                )
+                            }
                         }
 
-                        // Botón de iniciar sesión
+
+
                         Button(
                             onClick = {
-                                val loginUser = LoginDto(
+
+                                val newUser = CreateUserDto(
+                                    name = name,
                                     email = email,
-                                    password = password
+                                    password = password,
+                                    preferences = preferences,
+                                    provider = provider,
+                                    providerId = providerId,
+                                    currentLevelId = currentLevelId,
+                                    role = role ?: Role.STUDENT
                                 )
-                                userViewModel.login(loginUser)
+
+                                userViewModel.registerUser(newUser)
                                 showError = false
                             },
                             modifier = Modifier
@@ -255,7 +337,7 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
                                     )
                                 } else {
                                     Text(
-                                        "Iniciar Sesión",
+                                        "Registrarse",
                                         color = Color.White,
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 16.sp
@@ -265,56 +347,29 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
                         }
 
 
-                        LaunchedEffect(uiState.currentUser) {
-                            if (uiState.currentUser?.role == Role.STUDENT && uiState.currentUser?.id != null) {
-                                uiState.currentUser?.let {
-                                    navigator.push(
-                                        StudentDashboard(
-                                            student = it,
-                                        )
-                                    )
-                                }
-
-                            }
-                            else if (uiState.currentUser?.role == Role.ADMIN && uiState.currentUser?.id != null) {
-                                navigator.push(AdminDashboard(
-                                    adminName = uiState.currentUser?.name ?: "Administrador"
-                                ))
-                            }
-                            else if (uiState.currentUser?.role == Role.CONTENT_EDITOR && uiState.currentUser?.id != null) {
-                                navigator.push(AdminDashboard(
-                                    adminName = uiState.currentUser?.name ?: "Editor de Contenido"
-                                ))
-                            }
-                        }
-                        LaunchedEffect(logout){
-                            if (logout == true) {
-                                userViewModel.logout()
-                                email = ""
-                                password = ""
-                                showPassword = false
-                                showError = false
-                                navigator.push(LoginScreen(logout=false))
+                        LaunchedEffect(uiState.registerUser) {
+                            if (uiState.registerUser != null) {
+                                userViewModel.updateMessage("¡Usuario creado correctamente!")
+                                navigator.push(LoginScreen())
                             }
                         }
 
-                        // ¿No tienes cuenta? Regístrate
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                "¿No tienes cuenta? ",
+                                "¿Ya tienes cuenta? ",
                                 color = Color(0xFF9B9B9B),
                                 fontSize = 15.sp
                             )
                             TextButton(
-                                onClick = { navigator.push(RegisterScreen()) },
+                                onClick = { navigator.push(LoginScreen()) },
                                 contentPadding = PaddingValues(0.dp)
                             ) {
                                 Text(
-                                    "Regístrate",
+                                    "Iniciar Sesión",
                                     color = Color(0xFF003AB6),
                                     fontWeight = FontWeight.SemiBold,
                                     fontSize = 15.sp

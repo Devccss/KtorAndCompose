@@ -38,6 +38,7 @@ class PhraseWordRepository {
                     id = row[PhraseWords.id].value,
                     phraseId = row[PhraseWords.phraseId],
                     wordId = row[PhraseWords.wordId],
+                    select = row[PhraseWords.selectToTranslate],
                     order = row[PhraseWords.order]
                 )
             }
