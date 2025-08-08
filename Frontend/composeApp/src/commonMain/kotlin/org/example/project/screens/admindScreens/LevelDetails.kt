@@ -127,7 +127,13 @@ class LevelDetails(
                                         .padding(vertical = 4.dp)
                                         .fillMaxWidth()
                                         .clickable {
-                                            navigator.push(DialogDetails(dialog.id))
+                                            if (dialog.id != null) {
+                                                navigator.push(
+                                                    DialogDetails(dialog.id)
+                                                )
+                                            }else {
+                                                error = "El diálogo no tiene ID"
+                                            }
                                         }
                                 ) {
                                     Row(

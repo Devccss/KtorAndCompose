@@ -17,6 +17,9 @@ class PhraseRepository(private val httpClient: HttpClient, private val baseUrl: 
     suspend fun getPhraseById(id: Int): PhraseDto =
         httpClient.get("$baseUrl/api/v1/phrases/$id").body()
 
+    suspend fun getPhrasesByParticipantId(participantId: Int): List<PhraseDto> =
+        httpClient.get("$baseUrl/api/v1/phrases/participant/$participantId").body()
+
     suspend fun createPhrase(participantId: Int, phrase: CreatePhraseDto): PhraseDto =
         httpClient.post("$baseUrl/api/v1/phrases/$participantId") {
             contentType(ContentType.Application.Json)
@@ -36,11 +39,16 @@ class PhraseRepository(private val httpClient: HttpClient, private val baseUrl: 
         return response.status.value == 204
     }
 
-    suspend fun orderPhrase(orderDto: OrderPhraseDto): Boolean {
-        val response = httpClient.put("$baseUrl/api/v1/phrases/order") {
+    suspend fun createPhraseOrder(order: OrderPhraseDto): OrderPhraseDto =
+        httpClient.post("$baseUrl/api/v1/phrases/order") {
+            contentType(ContentType.Application.Json)
+            setBody(order)
+        }.body()
+
+    suspend fun orderPhrase(orderDto: OrderPhraseDto): Int? =
+        httpClient.get("$baseUrl/api/v1/phrases/order") {
             contentType(ContentType.Application.Json)
             setBody(orderDto)
-        }
-        return response.status.value == 200
-    }
+        }.body()
+
 }

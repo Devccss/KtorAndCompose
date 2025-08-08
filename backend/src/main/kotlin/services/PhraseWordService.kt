@@ -30,4 +30,7 @@ class PhraseWordService(private val phraseWordRepository: PhraseWordRepository) 
     fun deletePhraseWord(id: Int): Boolean {
         return phraseWordRepository.deletePhraseWord(id)
     }
+    fun deletePhraseWordsByPhraseId(phraseId: Int): Boolean {
+        return phraseWordRepository.deletePhraseWordsByPhraseId(phraseId)
+    }
 }

@@ -51,5 +51,8 @@ class PhraseService(private val phraseRepository: PhraseRepository) {
     fun orderPhrase(dto:OrderPhraseDto): Boolean {
         return phraseRepository.orderPhrases(dto)
     }
+    fun deleteOrderPhraseByPhraseId(phraseId: Int): Boolean {
+        return phraseRepository.deleteOrderPhraseByPhraseId(phraseId)
+    }
 
 }

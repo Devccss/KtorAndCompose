@@ -1,10 +1,12 @@
 package repositories;
 
+import LevelDTO
 import models.Dialogs
 import com.example.dtos.CreateDialogDTO
 import com.example.dtos.DialogDTOs;
 import com.example.dtos.UpdateDialogDTO
 import io.ktor.server.plugins.BadRequestException
+import models.Levels
 
 import org.jetbrains.exposed.v1.core.ResultRow;
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
@@ -40,6 +42,20 @@ class DialogRepository() {
     }
     fun getDialogsByLevelId(levelId: Int): List<DialogDTOs> = transaction {
         Dialogs.selectAll().where { Dialogs.levelId eq levelId }.map(::resultRowToDialog)
+    }
+    fun getLevelByDialogId(id: Int): LevelDTO? = transaction {
+        Levels.selectAll().where { Levels.id eq id }.singleOrNull()?.let {
+            LevelDTO(
+                id = it[Levels.id].value,
+                name = it[Levels.name],
+                description = it[Levels.description],
+                isActive = it[Levels.isActive],
+                createdAt = it[Levels.createdAt].toString(),
+                accent = it[Levels.accent],
+                difficulty = it[Levels.difficulty],
+                orderLevel = it[Levels.orderLevel]
+            )
+        }
     }
     fun createDialog(dto: CreateDialogDTO,idLevel:Int ): DialogDTOs = try {
         transaction {
@@ -89,6 +105,7 @@ class DialogRepository() {
     }
     fun deleteDialog(id: Int): Boolean = transaction{
         getDialogById(id) ?: throw BadRequestException("El diálogo con ID $id no existe.")
+
 
         Dialogs.deleteWhere { Dialogs.id eq id } > 0
     }

@@ -3,9 +3,11 @@ package com.example.repositories
 import com.example.dtos.CreateUserDto
 import com.example.dtos.GoogleUserDto
 import com.example.dtos.LoginDto
+import com.example.dtos.ProgressDto
 import com.example.dtos.StandbyDto
 import com.example.dtos.StandbyUpdateDto
 import com.example.dtos.UsersDto
+import com.example.dtos.updateUserDto
 import io.ktor.server.plugins.BadRequestException
 import models.Role
 import models.UserPhraseStandby
@@ -142,6 +144,25 @@ class UsersRepository {
         return BCrypt.hashpw(password, BCrypt.gensalt())
     }
 
+    fun createProgress(userId: Int, dto: ProgressDto): Any = try {
+        transaction {
+            val existingUser = Users.selectAll().where { Users.id eq userId }.singleOrNull()
+            if (existingUser == null) {
+                throw BadRequestException("No user found with ID $userId")
+            }
+            val progressId = UserProgress.insert {
+                it[UserProgress.userId] = userId
+                it[completedDialogs] = dto.completedDialogs
+                it[totalDialogs] = dto.totalDialogs
+                it[testScore] = dto.testScore ?: 0
+                it[lastAccessed] = LocalDateTime.now()
+            }[UserProgress.id]
+            mapOf("id" to progressId.value)
+        }
+    } catch (e: Exception) {
+        throw BadRequestException("Error creating user progress: ${e.message}")
+    }
+
     fun getAllUsers(): List<UsersDto> = try {
         transaction {
             Users.selectAll().map { row ->
@@ -196,14 +217,20 @@ class UsersRepository {
         throw BadRequestException("Error fetching user by email: ${e.message}")
     }
 
-    fun updateUser(id: Int, dto: CreateUserDto): UsersDto? = try {
+    fun updateUser(id: Int, dto: updateUserDto): UsersDto? = try {
         transaction {
+            val hashedPassword = dto.password?.let { hashPassword(it) }
             Users.update({ Users.id eq id }) { update ->
-                update[name] = dto.name
-                update[email] = dto.email
-                update[password] = dto.password
-                update[preferences] = dto.preferences
-                update[currentLevelId] = dto.currentLevelId ?: 0
+                dto.name?.let { update[name] = it }
+                dto.email?.let { update[email] = it }
+                dto.password?.let {
+                    if (it.isNotBlank()) {
+                        update[password] = hashedPassword
+                    }
+                }
+                dto.preferences?.let { update[preferences] = it }
+                dto.currentLevelId?.let { update[currentLevelId] = it }
+                dto.role?.let { update[role] = it }
             }
 
             getUserById(id)
@@ -220,19 +247,17 @@ class UsersRepository {
         throw BadRequestException("Error deleting user: ${e.message}")
     }
 
-    fun getUserProgress(userId: Int): Any = try {
+    fun getUserProgress(userId: Int): ProgressDto? = try {
         transaction {
-            UserProgress.select ( UserProgress.userId eq userId )
-                .map { row ->
-                    mapOf(
-                        "levelId" to row[UserProgress.levelId],
-                        "completedDialogs" to row[UserProgress.completedDialogs],
-                        "totalDialogs" to row[UserProgress.totalDialogs],
-                        "testScore" to row[UserProgress.testScore],
-                        "isLevelCompleted" to row[UserProgress.isLevelCompleted],
-                        "lastAccessed" to row[UserProgress.lastAccessed]?.toString()
-                    )
-                }
+            UserProgress.selectAll().where{UserProgress.userId eq userId}.singleOrNull()?.let { row ->
+                ProgressDto(
+                    id = row[UserProgress.id].value,
+                    completedDialogs = row[UserProgress.completedDialogs],
+                    totalDialogs = row[UserProgress.totalDialogs],
+                    testScore = row[UserProgress.testScore],
+                    lastAccessed = row[UserProgress.lastAccessed].toString()
+                )
+            }
         }
     } catch (e: Exception) {
         throw BadRequestException("Error fetching user progress: ${e.message}")
@@ -240,13 +265,11 @@ class UsersRepository {
 
     fun getUserDialogs(userId: Int): Any = try {
         transaction {
-            UserProgress.select ( UserProgress.userId eq userId )
+            UserProgress.select(UserProgress.userId eq userId)
                 .map { row ->
-                    val levelId = row[UserProgress.levelId]
                     val completedDialogs = row[UserProgress.completedDialogs]
                     val totalDialogs = row[UserProgress.totalDialogs]
                     mapOf(
-                        "levelId" to levelId,
                         "completedDialogs" to completedDialogs,
                         "totalDialogs" to totalDialogs
                     )
@@ -258,7 +281,7 @@ class UsersRepository {
 
     fun getUserStandbyPhrases(userId: Int): List<Any> = try {
         transaction {
-            UserPhraseStandby.select ( UserPhraseStandby.userId eq userId )
+            UserPhraseStandby.select(UserPhraseStandby.userId eq userId)
                 .map { row ->
                     mapOf(
                         "standbyId" to row[UserPhraseStandby.id].value,
@@ -271,17 +294,19 @@ class UsersRepository {
     } catch (e: Exception) {
         throw BadRequestException("Error fetching standby phrases: ${e.message}")
     }
+
     fun getStandbyPhraseById(standbyId: Int): StandbyDto? = try {
         transaction {
-            UserPhraseStandby.selectAll().where { UserPhraseStandby.id eq standbyId }.singleOrNull()?.let { row ->
-                StandbyDto(
-                    id = row[UserPhraseStandby.id].value,
-                    userId = row[UserPhraseStandby.userId],
-                    phraseId = row[UserPhraseStandby.phraseId],
-                    incorrectAttempts = row[UserPhraseStandby.incorrectAttempts],
-                    addedAt = row[UserPhraseStandby.addedAt].toString()
-                )
-            }
+            UserPhraseStandby.selectAll().where { UserPhraseStandby.id eq standbyId }.singleOrNull()
+                ?.let { row ->
+                    StandbyDto(
+                        id = row[UserPhraseStandby.id].value,
+                        userId = row[UserPhraseStandby.userId],
+                        phraseId = row[UserPhraseStandby.phraseId],
+                        incorrectAttempts = row[UserPhraseStandby.incorrectAttempts],
+                        addedAt = row[UserPhraseStandby.addedAt].toString()
+                    )
+                }
         }
     } catch (e: Exception) {
         throw BadRequestException("Error fetching standby phrase by ID: ${e.message}")
@@ -314,7 +339,7 @@ class UsersRepository {
             }
         }
 
-    }catch (e: Exception) {
+    } catch (e: Exception) {
         throw BadRequestException("Error updating standby phrase: ${e.message}")
     }
 

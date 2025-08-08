@@ -112,10 +112,14 @@ object TestQuestions : IntIdTable() {
 
 object UserProgress : IntIdTable() {
     val userId = integer("user_id").references(Users.id)
-    val levelId = integer("level_id").references(Levels.id)
     val completedDialogs = integer("completed_dialogs").default(0)
     val totalDialogs = integer("total_dialogs")
     val testScore = integer("test_score").nullable()
-    val isLevelCompleted = bool("is_level_completed").default(false)
     val lastAccessed = datetime("last_accessed").nullable()
+}
+
+object CompleteLevels : IntIdTable() {
+    val userId = integer("user_id").references(Users.id)
+    val levelId = integer("level_id").references(Levels.id)
+    val completedAt = datetime("completed_at").clientDefault { LocalDateTime.now() }
 }

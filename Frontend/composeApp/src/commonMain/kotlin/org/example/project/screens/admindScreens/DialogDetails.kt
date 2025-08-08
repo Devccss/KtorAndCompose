@@ -34,7 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,42 +55,32 @@ import org.example.project.dtos.CreatePhraseDto
 import org.example.project.dtos.PhraseDto
 import org.example.project.dtos.WordDto
 import org.example.project.dtos.DialogParticipantDTO
-import org.example.project.models.Dialog
-import org.example.project.models.Level
-import org.example.project.viewModel.DialogViewModel
-import org.example.project.viewModel.ParticipantsViewModel
-import org.example.project.viewModel.PhraseViewModel
-import org.example.project.viewModel.PhraseWordViewModel
-import org.example.project.viewModel.WordViewModel
+
+import org.example.project.viewModel.DialogDetailsViewModel
+
 
 
 class DialogDetails(
-    private val dialogId: Int?,
+    private val dialogId: Int,
 ) : Screen {
     override val key = uniqueScreenKey
 
     @Composable
     override fun Content() {
         val vm = rememberScreenModel {
-            DialogViewModel(RepositoryProvider.dialogsRepository)
+            DialogDetailsViewModel(
+                dialogId,
+                RepositoryProvider.dialogsRepository,
+                RepositoryProvider.participantsRepository,
+                RepositoryProvider.phrasesRepository,
+                RepositoryProvider.wordsRepository,
+                RepositoryProvider.phraseWordRepository
+            )
         }
-        val vmParticipants = rememberScreenModel {
-            ParticipantsViewModel(RepositoryProvider.participantsRepository, dialogId ?: -1)
-        }
-        val vmPhrase = rememberScreenModel {
-            PhraseViewModel(RepositoryProvider.phrasesRepository)
-        }
-        val vmWords = rememberScreenModel {
-            WordViewModel(RepositoryProvider.wordsRepository)
-        }
-        val vmPhraseWords = rememberScreenModel {
-            PhraseWordViewModel(RepositoryProvider.phraseWordRepository)
-        }
-        var level by remember { mutableStateOf<Level?>(null) }
-        var levels by remember { mutableStateOf<List<Level>>(emptyList()) }
-        var dialog by remember { mutableStateOf<Dialog?>(null) }
-        var isLoading by remember { mutableStateOf(true) }
-        var error by remember { mutableStateOf<String?>(null) }
+        val ui by vm.state.collectAsState()
+
+        val isLoading by remember { mutableStateOf(true) }
+        val error by remember { mutableStateOf<String?>(null) }
         var editing by remember { mutableStateOf(false) }
         var confirmDelete by remember { mutableStateOf(false) }
 
@@ -113,31 +103,6 @@ class DialogDetails(
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         val navigator = LocalNavigator.currentOrThrow
 
-        LaunchedEffect(navigator.lastItem) {
-
-            try {
-                isLoading = true
-                dialog = dialogId?.let {
-                    RepositoryProvider.dialogsRepository.getDialogById(dialogId)
-                        ?: throw IllegalArgumentException("Dialog not found")
-                }
-                level = dialog?.let {
-                    RepositoryProvider.levelRepository.getLevelById(it.levelId)
-                        ?: throw IllegalArgumentException("Level not found for dialog")
-                }
-
-                error = null
-            } catch (e: Exception) {
-                error = e.message
-            } finally {
-                isLoading = false
-            }
-        }
-        LaunchedEffect(editing) {
-            if (editing) {
-                levels = RepositoryProvider.levelRepository.getAllLevels()
-            }
-        }
         ModalNavigationDrawer(
             drawerState = drawerState,
             drawerContent = {
@@ -165,26 +130,26 @@ class DialogDetails(
                 ) {
                     Text("Detalles del Nivel", style = MaterialTheme.typography.headlineMedium)
                     Spacer(modifier = Modifier.padding(8.dp))
-                    dialog?.let { dlg ->
+                    ui.fullDialog?.let { dlg ->
                         Card(
                             modifier = Modifier.padding(bottom = 16.dp)
                         ) {
 
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    "Nombre: ${dlg.name}",
+                                    "Nombre: ${dlg.dialog.name}",
                                     style = MaterialTheme.typography.titleMedium
                                 )
                                 Text(
-                                    "Descripción: ${dlg.description}",
+                                    "Descripción: ${dlg.dialog.description}",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
-                                    "Dificultad: ${dlg.difficulty}",
+                                    "Dificultad: ${dlg.dialog.difficulty}",
                                     style = MaterialTheme.typography.bodySmall
                                 )
                                 Text(
-                                    "Nivel asociado: ${level?.name ?: "Desconocido"}",
+                                    "Nivel asociado: ${ui.level?.name ?: "Desconocido"}",
                                     style = MaterialTheme.typography.bodySmall
                                 )
                                 Row {
@@ -199,52 +164,37 @@ class DialogDetails(
 
 
                         }
-                        Spacer(modifier = Modifier.padding(4.dp))
-                        Card(
-                            modifier = Modifier
-                                .padding(vertical = 6.dp)
-                                .fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-
-                            }
-                        }
-
                         // Sección Participantes
                         Text("Participantes", style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.padding(4.dp))
-                        val participants: List<DialogParticipantDTO> =
-                            vmParticipants.state.value.participants
+
                         Column(
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            participants.forEach { participant ->
-                                Card(
-                                    modifier = Modifier.weight(1f).fillMaxWidth()
+                            ui.fullDialog?.participants?.forEach { dto ->
+
+                                Column(
+                                    modifier = Modifier.padding(8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Column(
-                                        modifier = Modifier.padding(8.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text(participant.name)
-                                        Row {
-                                            IconButton({ showEditParticipant = participant }) {
-                                                Icon(
-                                                    Icons.Default.Edit,
-                                                    contentDescription = "Editar participante"
-                                                )
-                                            }
-                                            IconButton({ showDeleteParticipant = participant }) {
-                                                Icon(
-                                                    Icons.Default.Delete,
-                                                    contentDescription = "Eliminar participante"
-                                                )
-                                            }
+                                    Text(dto.participant.name)
+                                    Row {
+                                        IconButton({ showEditParticipant = dto.participant }) {
+                                            Icon(
+                                                Icons.Default.Edit,
+                                                contentDescription = "Editar participante"
+                                            )
+                                        }
+                                        IconButton({ showDeleteParticipant = dto.participant }) {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = "Eliminar participante"
+                                            )
                                         }
                                     }
                                 }
                             }
-                            if (participants.size < 5) {
+                            if ((ui.fullDialog?.participants?.size ?: 0) < 5) {
                                 Button(onClick = { showAddParticipant = true }) {
                                     Text("Agregar participante")
                                 }
@@ -255,9 +205,8 @@ class DialogDetails(
                         // Sección Frases
                         Text("Frases", style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.padding(4.dp))
-                        val phrases = vmPhrase.state.value.phrases.filter { it.isActive }
-                        phrases.forEach { phrase ->
-                            val participant = participants.find { it.id == phrase.participantId }
+                        ui.phrases.forEach { phrase ->
+                            val participant = ui.participants.find { it.id == phrase.participantId }
                             val isSaved = phrase.spanishText?.isNotEmpty() == true
                             Card(
                                 modifier = Modifier
@@ -328,10 +277,10 @@ class DialogDetails(
                             Box {
                                 Button(
                                     onClick = { expanded = true },
-                                    enabled = participants.isNotEmpty(),
+                                    enabled = ui.participants.isNotEmpty(),
                                 ) {
                                     Text(
-                                        participants.find { it.id == selectedParticipantId }?.name
+                                        ui.participants.find { it.id == selectedParticipantId }?.name
                                             ?: "Selecciona participante"
                                     )
                                 }
@@ -339,7 +288,7 @@ class DialogDetails(
                                     expanded = expanded,
                                     onDismissRequest = { expanded = false }
                                 ) {
-                                    participants.forEach { participant ->
+                                    ui.participants.forEach { participant ->
                                         DropdownMenuItem(
                                             text = { Text(participant.name) },
                                             onClick = {
@@ -371,14 +320,15 @@ class DialogDetails(
                                     )
                                     // Guardar frase solo si tiene traducción
                                     if (phraseSpanishInput.isNotBlank()) {
-                                        vmPhrase.createPhrase(selectedParticipantId!!, phraseDto)
+                                        selectedParticipantId?.let {
+                                            vm.createPhrase(it, phraseDto)
+                                        }
                                         phraseOrder += 1
                                         phraseInput = ""
                                         phraseSpanishInput = ""
                                         pendingWords = emptyList()
                                         pendingPhrase = null
                                     } else {
-                                        // Frase pendiente, no guardar en BD
                                         pendingPhrase = PhraseDto(
                                             id = -1,
                                             participantId = selectedParticipantId!!,
@@ -391,7 +341,7 @@ class DialogDetails(
                                         // Separar palabras
                                         pendingWords = phraseInput.split(" ")
                                             .filter { it.isNotBlank() }
-                                            .mapIndexed { idx, word ->
+                                            .mapIndexed { _, word ->
                                                 WordDto(
                                                     id = -1,
                                                     english = word,
@@ -424,7 +374,7 @@ class DialogDetails(
                                         "Frase pendiente: ${phrase.englishText}",
                                         color = Color(0xFFFFA000)
                                     )
-                                    Text("Participante: ${participants.find { it.id == phrase.participantId }?.name ?: "?"}")
+                                    Text("Participante: ${ui.participants.find { it.id == phrase.participantId }?.name ?: "?"}")
                                     Text("Traducción pendiente")
                                 }
                             }
@@ -480,7 +430,7 @@ class DialogDetails(
                         modifier = Modifier
                             .padding(vertical = 4.dp)
                             .fillMaxWidth()
-                            .clickable { navigator.push(LevelDetails(level?.id)) }
+                            .clickable { navigator.push(LevelDetails(ui.level?.id)) }
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -488,7 +438,7 @@ class DialogDetails(
                                 .padding(12.dp)
                                 .fillMaxWidth()
                         ) {
-                            level?.let { it1 ->
+                            ui.level?.let { it1 ->
                                 Text(
                                     it1.name,
                                     style = MaterialTheme.typography.bodyMedium
@@ -503,15 +453,17 @@ class DialogDetails(
                         }
                     }
                     if (editing) {
-                        EditDialogDialog(
-                            initial = dialog!!,
-                            levels = levels,
-                            onSave = { update ->
-                                update.id?.let { vm.updateDialog(it, update) }
-                                editing = false
-                            },
-                            onDismiss = { editing = false }
-                        )
+                        ui.fullDialog?.dialog?.let { it1 ->
+                            EditDialogDialog(
+                                initial = it1,
+                                levels = ui.levels,
+                                onSave = { update ->
+                                    update.id?.let { vm.updateDialog(it, update) }
+                                    editing = false
+                                },
+                                onDismiss = { editing = false }
+                            )
+                        }
                     }
                     if (confirmDelete) {
                         AlertDialog(
@@ -520,7 +472,10 @@ class DialogDetails(
                             text = { Text("¿Seguro de eliminar este diálogo?") },
                             confirmButton = {
                                 TextButton(onClick = {
-                                    dialog?.id?.let(vm::deleteDialog)
+                                    ui.fullDialog?.dialog?.id?.let{
+                                        vm.deleteDialog(it)
+                                        navigator.pop()
+                                    }
                                     confirmDelete = false
                                 }) { Text("Eliminar") }
                             },
@@ -539,11 +494,12 @@ class DialogDetails(
                 AddEditParticipantDialog(
                     onSave = { dto ->
                         if (dialogId != null) {
-                            vmParticipants.addParticipant(
+                            vm.createParticipant(
+                                dialogId,
                                 CreateParticipantDTO(
-                                    name = dto.name,
+                                    name = dto.name
                                 )
-                                , dialogId)
+                            )
                         }
                         showAddParticipant = false
                     },
@@ -554,9 +510,9 @@ class DialogDetails(
                 AddEditParticipantDialog(
                     initial = participant,
                     onSave = { updatedParticipant ->
-                        vmParticipants.updateParticipant(
+                        vm.updateParticipant(
                             updatedParticipant.id,
-                            updatedParticipant = CreateParticipantDTO(
+                            CreateParticipantDTO(
                                 name = updatedParticipant.name,
                             )
                         )
@@ -572,7 +528,7 @@ class DialogDetails(
                     text = { Text("¿Seguro de eliminar este participante?") },
                     confirmButton = {
                         TextButton(onClick = {
-                            participant.let { vmParticipants.deleteParticipant(it.id) }
+                            participant.let { vm.deleteParticipant(it.id) }
                             showDeleteParticipant = null
                         }) { Text("Eliminar") }
                     },
@@ -587,7 +543,7 @@ class DialogDetails(
                 EditPhraseDialog(
                     initial = phrase,
                     onSave = { dto ->
-                        phrase.id.let { vmPhrase.updatePhrase(it, dto) }
+                        phrase.id.let { vm.updatePhrase(it, dto) }
                         showEditPhrase = null
                     },
                     onDismiss = { showEditPhrase = null }
@@ -600,7 +556,7 @@ class DialogDetails(
                     text = { Text("¿Seguro de eliminar esta frase?") },
                     confirmButton = {
                         TextButton(onClick = {
-                            phrase.id.let { vmPhrase.deletePhrase(it) }
+                            phrase.id.let { vm.deletePhrase(it) }
                             showDeletePhrase = null
                         }) { Text("Eliminar") }
                     },
@@ -610,7 +566,6 @@ class DialogDetails(
                 )
             }
 
-            // ...existing code for editar/eliminar diálogo...
         }
     }
 }

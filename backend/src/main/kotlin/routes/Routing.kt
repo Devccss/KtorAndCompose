@@ -12,8 +12,10 @@ import com.example.dtos.UpdateParticipantDTO
 import com.example.dtos.OrderPhraseDto
 import com.example.dtos.ParticipantDetailDTO
 import com.example.dtos.PhraseDetailDTO
+import com.example.dtos.ProgressDto
 import com.example.dtos.StandbyDto
 import com.example.dtos.StandbyUpdateDto
+import com.example.dtos.updateUserDto
 import com.example.services.DialogParticipantsService
 import com.example.services.DialogService
 import com.example.services.PhraseService
@@ -139,10 +141,18 @@ fun Application.configureRouting() {
                     val user = userService.createUser(dto)
                     call.respond(HttpStatusCode.Created, user)
                 }
+                post("progress/{userId}") {
+                    val userId = call.parameters["userId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid User ID")
+                    val dto = call.receive<ProgressDto>()
+                    val progress = userService.createProgress(userId, dto)
+                    call.respond(progress)
+
+                }
                 put("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
-                    val dto = call.receive<CreateUserDto>()
+                    val dto = call.receive<updateUserDto>()
                     val updatedUser = userService.updateUser(id, dto)
                     if (updatedUser != null) {
                         call.respond(updatedUser)
@@ -222,17 +232,13 @@ fun Application.configureRouting() {
                     val phrase = phraseService.getPhraseById(id)
                     call.respond(phrase)
                 }
+
                 post("{participantId}") {
                     val dto = call.receive<CreatePhraseDto>()
                     val participantId = call.parameters["participantId"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid Participant ID")
                     val phrase = phraseService.createPhrase(dto, participantId)
                     call.respond(HttpStatusCode.Created, phrase)
-                }
-                post("/order") {
-                    val phraseOrder = call.receive<OrderPhraseDto>()
-                    val success = phraseService.cretePhraseOrder(phraseOrder)
-                    call.respond(success)
                 }
                 put("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
@@ -251,7 +257,28 @@ fun Application.configureRouting() {
                         throw NotFoundException("Phrase not found")
                     }
                 }
+                get("/participant/{participantId}") {
+                    val participantId = call.parameters["participantId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Participant ID")
+                    val phrases = phraseService.getPhrasesByParticipantId(participantId)
+                    call.respond(phrases)
 
+                }
+                get("/order/{phraseId}") {
+                    val phraseId = call.request.queryParameters["phraseId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Phrase ID")
+                    val order = phraseService.getOrderPhraseByPhraseId(phraseId)
+                    if (order != null) {
+                        call.respond(order)
+                    } else {
+                        throw NotFoundException("Order for Phrase not found")
+                    }
+                }
+                post("/order") {
+                    val phraseOrder = call.receive<OrderPhraseDto>()
+                    val success = phraseService.cretePhraseOrder(phraseOrder)
+                    call.respond(success)
+                }
                 put("/order") {
                     val dto = call.receive<OrderPhraseDto>()
                     val success = phraseService.orderPhrase(dto)
@@ -262,16 +289,6 @@ fun Application.configureRouting() {
                         )
                     } else {
                         throw NotFoundException("Failed to order phrase")
-                    }
-                }
-                get("/order/{phraseId}") {
-                    val phraseId = call.request.queryParameters["phraseId"]?.toIntOrNull()
-                        ?: throw BadRequestException("Invalid Phrase ID")
-                    val order = phraseService.getOrderPhraseByPhraseId(phraseId)
-                    if (order != null) {
-                        call.respond(order)
-                    } else {
-                        throw NotFoundException("Order for Phrase not found")
                     }
                 }
             }
@@ -383,12 +400,40 @@ fun Application.configureRouting() {
                     val dialog = dialogService.getDialogById(id)
                     call.respond(dialog)
                 }
+                get("full/{dialogId}") {
+                    val dialogId = call.parameters["dialogId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid dialog ID")
+                    val dialog = dialogService.getDialogById(dialogId)
+                    val participants = dialogParticipants.getParticipantsByDialogId(dialogId)
+                    val participantDetails = participants.map { participant ->
+                        val phrases = phraseService.getPhrasesByParticipantId(participant.id)
+                        val phraseDetails = phrases.map { phrase ->
+                            val words = wordService.getWordsByPhraseId(phrase.id)
+                            val order = phraseService.getOrderPhraseByPhraseId(phrase.id)
+                            PhraseDetailDTO(phrase, words, order)
+                        }
+                        ParticipantDetailDTO(participant, phraseDetails)
+                    }
+                    val dialogDetail = DialogDetailDTO(dialog, participantDetails)
+                    call.respond(dialogDetail)
+                }
                 get("level/{levelId}") {
                     val levelId = call.parameters["levelId"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid Level ID")
                     val dialogs = dialogService.getDialogsByLevelId(levelId)
                     call.respond(dialogs)
                 }
+                get("level/dialog/{dialogId}") {
+                    val dialogId = call.parameters["dialogId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Dialog ID")
+                    val level = dialogService.getLevelByDialogId(dialogId)
+                    if (level != null) {
+                        call.respond(level)
+                    } else {
+                        throw NotFoundException("Level not found for Dialog ID $dialogId")
+                    }
+                }
+
                 post("{levelId}") {
                     val dto = call.receive<CreateDialogDTO>()
                     val idLevel = call.parameters["levelId"]?.toIntOrNull()
@@ -416,6 +461,21 @@ fun Application.configureRouting() {
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
+                    val participants = dialogParticipants.getParticipantsByDialogId(id)
+                    if (participants.isNotEmpty()) {
+                        participants.forEach { participant ->
+                            val phrases = phraseService.getPhrasesByParticipantId(participant.id)
+                            if (phrases.isNotEmpty()) {
+                                phrases.forEach { phrase ->
+
+                                    phraseWordService.deletePhraseWordsByPhraseId(phrase.id)
+                                    phraseService.deleteOrderPhraseByPhraseId(phrase.id)
+                                    phraseService.deletePhrase(phrase.id)
+                                }
+                            }
+                            dialogParticipants.deleteDialogParticipant(participant.id)
+                        }
+                    }
                     val success = dialogService.deleteDialog(id)
                     if (success) {
                         call.respond(HttpStatusCode.NoContent)
@@ -495,6 +555,10 @@ fun Application.configureRouting() {
                 }
             }
 
+            route("/admin") {
+
+            }
+
             route("/student") {
                 // Obtener datos del usuario por ID
                 get("{userId}") {
@@ -509,11 +573,15 @@ fun Application.configureRouting() {
                 }
 
                 // Obtener progreso del usuario (niveles y diálogos completados/actuales)
-                get("{userId}/progress") {
+                get("/progress/{userId}") {
                     val userId = call.parameters["userId"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid user ID")
                     val progress = userService.getUserProgress(userId)
-                    call.respond(progress)
+                    if (progress != null) {
+                        call.respond(progress)
+                    } else {
+                        throw NotFoundException("Progress not found for user")
+                    }
                 }
 
                 // Obtener todos los diálogos completados o actuales del usuario
@@ -522,25 +590,6 @@ fun Application.configureRouting() {
                         ?: throw BadRequestException("Invalid user ID")
                     val dialogs = userService.getUserDialogs(userId)
                     call.respond(dialogs)
-                }
-
-                // Ver el contenido completo de un diálogo (participantes, frases, palabras)
-                get("dialog/{dialogId}/full") {
-                    val dialogId = call.parameters["dialogId"]?.toIntOrNull()
-                        ?: throw BadRequestException("Invalid dialog ID")
-                    val dialog = dialogService.getDialogById(dialogId)
-                    val participants = dialogParticipants.getParticipantsByDialogId(dialogId)
-                    val participantDetails = participants.map { participant ->
-                        val phrases = phraseService.getPhrasesByParticipantId(participant.id)
-                        val phraseDetails = phrases.map { phrase ->
-                            val words = wordService.getWordsByPhraseId(phrase.id)
-                            val order = phraseService.getOrderPhraseByPhraseId(phrase.id)
-                            PhraseDetailDTO(phrase, words, order)
-                        }
-                        ParticipantDetailDTO(participant, phraseDetails)
-                    }
-                    val dialogDetail = DialogDetailDTO(dialog, participantDetails)
-                    call.respond(dialogDetail)
                 }
 
                 // CRUD de frases en standby del usuario
@@ -553,7 +602,7 @@ fun Application.configureRouting() {
                         call.respond(standbyPhrases)
                     }
                     // Agregar frase a standby
-                    post {
+                    post("{userId}/add/{phraseId}") {
                         val userId = call.parameters["userId"]?.toIntOrNull()
                             ?: throw BadRequestException("Invalid user ID")
                         val phraseId = call.request.queryParameters["phraseId"]?.toIntOrNull()
@@ -562,7 +611,7 @@ fun Application.configureRouting() {
                         call.respond(HttpStatusCode.Created, standbyPhrase)
                     }
 
-                    put("{standbyId}") {
+                    put("standby/{standbyId}") {
                         val standbyId = call.parameters["standbyId"]?.toIntOrNull()
                             ?: throw BadRequestException("Invalid standby ID")
                         val updateDto =
@@ -573,7 +622,7 @@ fun Application.configureRouting() {
                         } ?: throw NotFoundException("Standby phrase not found")
                     }
                     // Eliminar frase en standby
-                    delete("{standbyId}") {
+                    delete("standby/{standbyId}") {
                         val standbyId = call.parameters["standbyId"]?.toIntOrNull()
                             ?: throw BadRequestException("Invalid standby ID")
                         val success = userService.deleteStandbyPhrase(standbyId)

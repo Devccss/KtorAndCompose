@@ -8,16 +8,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.example.project.models.Dialog
 import org.example.project.models.Level
-import org.example.project.repository.dialogsRepository.KtorDialogsRepository
+import org.example.project.repository.dialogsRepository.DialogsRepository
 
 data class DialogsUiState(
     val dialogs: List<Dialog> = emptyList(),
     val levels: List<Level> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    var error: String? = null
 )
 
-class DialogViewModel(private val repo: KtorDialogsRepository) : ViewModel(), ScreenModel {
+class DialogViewModel(
+    private val repoDialog: DialogsRepository,
+
+    ) : ViewModel(), ScreenModel {
     private val _state = MutableStateFlow(DialogsUiState(isLoading = true))
     val state: StateFlow<DialogsUiState> = _state
 
@@ -31,7 +34,7 @@ class DialogViewModel(private val repo: KtorDialogsRepository) : ViewModel(), Sc
         println("addDialog: Intentando crear diálogo con levelId=$idLevel y datos=$newDialog")
         launchCatching(
             block = {
-                val result = repo.createDialog(newDialog, idLevel) as Dialog
+                val result = repoDialog.createDialog(newDialog, idLevel) as Dialog
                 println("addDialog: Diálogo creado exitosamente: $result")
                 result
             },
@@ -46,7 +49,7 @@ class DialogViewModel(private val repo: KtorDialogsRepository) : ViewModel(), Sc
 
     fun updateDialog(id: Int, updatedDialog: Dialog) {
         launchCatching(
-            block = { repo.updateDialog(id, updatedDialog) as Dialog },
+            block = { repoDialog.updateDialog(id, updatedDialog) as Dialog },
             onSuccess = { updated ->
                 _state.value = _state.value.copy(
                     dialogs = _state.value.dialogs.map { if (it.id == id) updated else it }
@@ -57,7 +60,7 @@ class DialogViewModel(private val repo: KtorDialogsRepository) : ViewModel(), Sc
 
     fun deleteDialog(id: Int) {
         launchCatching(
-            block = { repo.deleteDialog(id) },
+            block = { repoDialog.deleteDialog(id) },
             onSuccess = { success ->
                 if (success) {
                     _state.value = _state.value.copy(
@@ -73,8 +76,8 @@ class DialogViewModel(private val repo: KtorDialogsRepository) : ViewModel(), Sc
     private fun refresh() {
         launchCatching(
             block = {
-                val dialogs = repo.getAllDialogs()
-                val levels = repo.getAllLevelsFromDialogsRepo()
+                val dialogs = repoDialog.getAllDialogs()
+                val levels = repoDialog.getAllLevelsFromDialogsRepo()
                 Pair<List<Dialog>, List<Level>>(dialogs, levels)
             },
             onSuccess = { (dialogs, levels) ->
@@ -86,7 +89,7 @@ class DialogViewModel(private val repo: KtorDialogsRepository) : ViewModel(), Sc
     private fun refreshLevels() {
         viewModelScope.launch {
             try {
-                val levels = repo.getAllLevelsFromDialogsRepo()
+                val levels = repoDialog.getAllLevelsFromDialogsRepo()
                 _state.value = _state.value.copy(levels = levels)
             } catch (e: Exception) {
                 _state.value = _state.value.copy(error = e.message)

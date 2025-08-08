@@ -123,5 +123,9 @@ class PhraseRepository {
         }
         updatedRows > 0
     }
+    fun deleteOrderPhraseByPhraseId(phraseId: Int): Boolean = transaction {
+        val deletedRows = PhraseOrder.deleteWhere { PhraseOrder.phraseId eq phraseId }
+        deletedRows > 0
+    }
 
 }

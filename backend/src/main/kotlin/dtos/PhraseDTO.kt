@@ -31,5 +31,5 @@ data class OrderPhraseDto (
 data class PhraseDetailDTO(
     val phrase: PhraseDto,
     val words: List<WordDto>,
-    val oreder: Int? = null
+    val order: Int? = null
 )

@@ -40,7 +40,6 @@ class LevelRepository(private val dialogRepository: DialogRepository) {
         Levels.selectAll().where { Levels.id eq id }.singleOrNull()?.let(::resultRowToLevel)
     }
 
-
     fun createLevelSmart(
         dto: LevelCreationDTO,
         beforeId: Int? = null,

@@ -39,10 +39,20 @@ class DialogsScreen(private val levelId: Int?) : Screen {
         var editing by remember { mutableStateOf<Dialog?>(null) }
         var showAddDialog by remember { mutableStateOf(false) }
         var confirmDelete by remember { mutableStateOf<Dialog?>(null) }
+        val snackbarHostState = remember { SnackbarHostState() }
+        LaunchedEffect(ui.error) {
+            ui.error?.let {
+                snackbarHostState.showSnackbar(it)
+            }
+        }
 
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         val scope = rememberCoroutineScope()
         val navigator = LocalNavigator.currentOrThrow
+
+        LaunchedEffect(ui.error){
+
+        }
 
         ModalNavigationDrawer(
             drawerState = drawerState,
@@ -66,7 +76,8 @@ class DialogsScreen(private val levelId: Int?) : Screen {
                     FloatingActionButton(onClick = { showAddDialog = true }) {
                         Icon(Icons.Default.Add, contentDescription = "Agregar diálogo")
                     }
-                }
+                },
+                snackbarHost = { SnackbarHost(snackbarHostState) }
             )  { padding ->
                 Box(Modifier.fillMaxSize().padding(padding), Alignment.Center) {
                     when {
@@ -76,7 +87,18 @@ class DialogsScreen(private val levelId: Int?) : Screen {
                             items(ui.dialogs) { dialog ->
                                 DialogCard(
                                     dialog = dialog,
-                                    onClick = {navigator.push(DialogDetails(dialog.id))},
+                                    onClick = {
+                                        if (dialog.id != null) {
+                                            navigator.push(
+                                                DialogDetails(
+                                                    dialogId = dialog.id,
+                                                )
+                                            )
+                                        }else {
+                                            ui.error = "ID de diálogo no disponible"
+                                        }
+
+                                    },
                                     onEdit = { editing = it },
                                     levels = ui.levels,
                                     onDelete = { confirmDelete = it }

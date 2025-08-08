@@ -4,10 +4,12 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.contentType
+import org.example.project.dtos.DialogDetailDTO
 import org.example.project.models.Dialog
+import org.example.project.models.Level
 import org.example.project.repository.levelRepository.LevelRepository
 
-class KtorDialogsRepository(
+class DialogsRepository(
     private val httpClient: HttpClient,
     private val baseUrl: String,
     private val levelsRepo: LevelRepository
@@ -22,6 +24,9 @@ class KtorDialogsRepository(
     suspend fun getDialogsByLevelId(levelId: Int): List<Dialog> =
         httpClient.get("$baseUrl/api/v1/dialogs/level/$levelId").body()
 
+    suspend fun getFullDialogById(id: Int): DialogDetailDTO {
+        return httpClient.get("$baseUrl/api/v1/dialogs/full/$id").body()
+    }
 
     suspend fun createDialog(dialog: Dialog, idLevel: Int): Dialog {
         return httpClient.post("$baseUrl/api/v1/dialogs/$idLevel") {
@@ -45,6 +50,10 @@ class KtorDialogsRepository(
     suspend fun deleteDialog(id: Int): Boolean {
         val response = httpClient.delete("$baseUrl/api/v1/dialogs/$id")
         return response.status == io.ktor.http.HttpStatusCode.NoContent
+    }
+
+    suspend fun getLevelByDialogId(id: Int): Level? {
+        return httpClient.get("$baseUrl/api/v1/dialogs/level/dialog/$id").body()
     }
 
     suspend fun getAllLevelsFromDialogsRepo() = levelsRepo.getAllLevels()

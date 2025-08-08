@@ -45,3 +45,24 @@ data class LoginDto(
     val email: String,
     val password: String
 )
+
+@Serializable
+data class updateUserDto(
+    val name: String? = null,
+    val email: String? = null,
+    val password: String? = null,
+    val preferences: String? = null,
+    val provider: String? = null,
+    val providerId: String? = null,
+    val currentLevelId: Int? = null,
+    val role: Role? = Role.STUDENT
+)
+
+@Serializable
+data class ProgressDto(
+    val id : Int? = null,
+    val completedDialogs: Int,
+    val totalDialogs: Int,
+    val testScore: Int? = null,
+    val lastAccessed: String? = null,
+)

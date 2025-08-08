@@ -1,5 +1,6 @@
 package com.example.services
 
+import LevelDTO
 import com.example.dtos.CreateDialogDTO
 import com.example.dtos.DialogDTOs
 import com.example.dtos.UpdateDialogDTO
@@ -17,6 +18,9 @@ class DialogService(private val dialogsRepository: DialogRepository) {
     }
     fun getDialogsByLevelId(levelId: Int): List<DialogDTOs> {
         return dialogsRepository.getDialogsByLevelId(levelId)
+    }
+    fun getLevelByDialogId(id: Int): LevelDTO? {
+        return dialogsRepository.getLevelByDialogId(id)
     }
 
     fun createDialog(dialog: CreateDialogDTO, idLevel:Int): DialogDTOs {

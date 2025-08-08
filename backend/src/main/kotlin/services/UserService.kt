@@ -2,9 +2,11 @@ package com.example.services
 
 import com.example.dtos.CreateUserDto
 import com.example.dtos.LoginDto
+import com.example.dtos.ProgressDto
 import com.example.dtos.StandbyDto
 import com.example.dtos.StandbyUpdateDto
 import com.example.dtos.UsersDto
+import com.example.dtos.updateUserDto
 import com.example.repositories.UsersRepository
 
 class UserService(private val userRepository: UsersRepository) {
@@ -15,6 +17,10 @@ class UserService(private val userRepository: UsersRepository) {
     fun createUser(dto: CreateUserDto): UsersDto {
         return userRepository.createUser(dto)
     }
+    fun createProgress(userId: Int,dto:ProgressDto): Any {
+        return userRepository.createProgress(userId, dto)
+    }
+
     fun getAllUsers(): List<UsersDto> {
         return userRepository.getAllUsers()
     }
@@ -24,13 +30,13 @@ class UserService(private val userRepository: UsersRepository) {
     fun getUserByEmail(email: String): UsersDto? {
         return userRepository.getUserByEmail(email)
     }
-    fun updateUser(id: Int, dto: CreateUserDto): UsersDto? {
+    fun updateUser(id: Int, dto: updateUserDto): UsersDto? {
         return userRepository.updateUser(id, dto)
     }
     fun deleteUser(id: Int): Boolean {
         return userRepository.deleteUser(id)
     }
-    fun getUserProgress(userId: Int): Any {
+    fun getUserProgress(userId: Int): ProgressDto? {
         return userRepository.getUserProgress(userId)
     }
 

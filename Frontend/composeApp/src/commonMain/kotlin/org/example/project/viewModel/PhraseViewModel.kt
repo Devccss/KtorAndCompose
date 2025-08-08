@@ -114,7 +114,7 @@ class PhraseViewModel(private val repo: PhraseRepository) : ViewModel(), ScreenM
         launchCatching(
             block = { repo.orderPhrase(orderDto) },
             onSuccess = { success ->
-                if (!success) {
+                success?.let {
                     _state.value = _state.value.copy(error = "Failed to order phrase")
                 }
             },

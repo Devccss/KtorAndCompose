@@ -115,4 +115,12 @@ class PhraseWordRepository {
     } catch (e: Exception) {
         throw BadRequestException("Error deleting PhraseWord: ${e.message}")
     }
+    fun deletePhraseWordsByPhraseId(phraseId: Int): Boolean = try {
+        transaction {
+            val deletedRows = PhraseWords.deleteWhere { PhraseWords.phraseId eq phraseId }
+            deletedRows > 0
+        }
+    } catch (e: Exception) {
+        throw BadRequestException("Error deleting PhraseWords by Phrase ID: ${e.message}")
+    }
 }

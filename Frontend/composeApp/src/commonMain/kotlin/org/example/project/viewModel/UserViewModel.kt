@@ -12,8 +12,6 @@ import kotlinx.coroutines.launch
 import org.example.project.dtos.CreateUserDto
 import org.example.project.dtos.LoginDto
 import org.example.project.dtos.UsersDto
-import org.example.project.models.Role
-
 import org.example.project.models.Users
 import org.example.project.repository.UsersRepository.UserRepo
 

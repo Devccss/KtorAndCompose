@@ -40,7 +40,7 @@ class LevelService(private val levelRepository: LevelRepository) {
         return levelRepository.deleteLevel(id)
     }
 
-     fun getLevelsByDifficulty(difficulty: DifficultyLevel): List<LevelDTO> {
+    fun getLevelsByDifficulty(difficulty: DifficultyLevel): List<LevelDTO> {
         return levelRepository.getLevelsByDifficulty(difficulty)
     }
 
