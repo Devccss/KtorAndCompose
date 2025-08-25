@@ -16,12 +16,10 @@ class DialogService(private val dialogsRepository: DialogRepository) {
     fun getDialogById(id: Int): DialogDTOs {
         return dialogsRepository.getDialogById(id) ?: throw NotFoundException("Dialog not found")
     }
-    fun getDialogsByLevelId(levelId: Int): List<DialogDTOs> {
-        return dialogsRepository.getDialogsByLevelId(levelId)
+    fun getDialogLevel(levelId: Int): LevelDTO {
+        return dialogsRepository.getDialogLevelByLevelId(levelId) ?: throw NotFoundException("Level not found")
     }
-    fun getLevelByDialogId(id: Int): LevelDTO? {
-        return dialogsRepository.getLevelByDialogId(id)
-    }
+
 
     fun createDialog(dialog: CreateDialogDTO, idLevel:Int): DialogDTOs {
         validateDialogCreation(dialog)

@@ -31,15 +31,12 @@ class DialogViewModel(
 
     /** === PUBLIC API === */
     fun addDialog(newDialog: Dialog, idLevel: Int) {
-        println("addDialog: Intentando crear diálogo con levelId=$idLevel y datos=$newDialog")
         launchCatching(
             block = {
-                val result = repoDialog.createDialog(newDialog, idLevel) as Dialog
-                println("addDialog: Diálogo creado exitosamente: $result")
+                val result = repoDialog.createDialog(newDialog, idLevel)
                 result
             },
             onSuccess = { added ->
-                println("addDialog: onSuccess ejecutado con $added")
                 _state.value = _state.value.copy(
                     dialogs = _state.value.dialogs + added
                 )

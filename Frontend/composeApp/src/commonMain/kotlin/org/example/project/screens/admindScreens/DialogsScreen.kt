@@ -139,8 +139,6 @@ class DialogsScreen(private val levelId: Int?) : Screen {
                         ),
                         levels = ui.levels,
                         onSave = { newDialog ->
-                            println("EditDialogDialog: onSave llamado con $newDialog")
-                            println("EditDialogDialog: Llamando a vm.addDialog con levelId=${newDialog.levelId}")
                             vm.addDialog(newDialog, newDialog.levelId)
                             showAddDialog = false
                         },
@@ -280,7 +278,7 @@ fun EditDialogDialog(
         },
         confirmButton = {
             TextButton(onClick = {
-                println("EditDialogDialog: Botón Guardar presionado. name=$name, levelId=$levelId")
+
                 if (name.isNotBlank()) {
                     onSave(initial.copy(name = name, description = description, levelId = levelId))
                 }

@@ -420,18 +420,8 @@ fun Application.configureRouting() {
                 get("level/{levelId}") {
                     val levelId = call.parameters["levelId"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid Level ID")
-                    val dialogs = dialogService.getDialogsByLevelId(levelId)
-                    call.respond(dialogs)
-                }
-                get("level/dialog/{dialogId}") {
-                    val dialogId = call.parameters["dialogId"]?.toIntOrNull()
-                        ?: throw BadRequestException("Invalid Dialog ID")
-                    val level = dialogService.getLevelByDialogId(dialogId)
-                    if (level != null) {
-                        call.respond(level)
-                    } else {
-                        throw NotFoundException("Level not found for Dialog ID $dialogId")
-                    }
+                    val level = dialogService.getDialogLevel(levelId)
+                    call.respond(level)
                 }
 
                 post("{levelId}") {

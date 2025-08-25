@@ -17,7 +17,7 @@ class ParticipantsRepository(private val httpClient: HttpClient,private val base
         httpClient.get("$baseUrl/api/v1/participants/$dialogId").body()
 
     suspend fun createParticipant(dialogId: Int,participant:CreateParticipantDTO): DialogParticipantDTO =
-        httpClient.post("$baseUrl/api/v1/participants$dialogId") {
+        httpClient.post("$baseUrl/api/v1/participants/$dialogId") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(participant)
         }.body()

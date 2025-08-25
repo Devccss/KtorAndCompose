@@ -4,8 +4,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class DialogParticipantDTO(
-    val id: Int,
-    val dialogId: Int,
+    val id: Int? = null,
+    val dialogId: Int? = null,
     val name: String,
     val createdAt: String? = null
 )

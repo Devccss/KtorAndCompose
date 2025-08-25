@@ -16,21 +16,23 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import java.time.LocalDateTime
 
+fun resultRowToLevel(row: ResultRow): LevelDTO {
+    return LevelDTO(
+        id = row[Levels.id].value,
+        accent = row[Levels.accent],
+        difficulty = row[Levels.difficulty],
+        name = row[Levels.name],
+        description = row[Levels.description],
+        orderLevel = row[Levels.orderLevel],
+        isActive = row[Levels.isActive],
+        createdAt = row[Levels.createdAt].toString()
+    )
+}
+
 class LevelRepository(private val dialogRepository: DialogRepository) {
 
 
-    private fun resultRowToLevel(row: ResultRow): LevelDTO {
-        return LevelDTO(
-            id = row[Levels.id].value,
-            accent = row[Levels.accent],
-            difficulty = row[Levels.difficulty],
-            name = row[Levels.name],
-            description = row[Levels.description],
-            orderLevel = row[Levels.orderLevel],
-            isActive = row[Levels.isActive],
-            createdAt = row[Levels.createdAt].toString()
-        )
-    }
+
 
     fun getAllLevels(): List<LevelDTO> = transaction {
         Levels.selectAll().orderBy(Levels.orderLevel).map(::resultRowToLevel)

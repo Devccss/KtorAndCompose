@@ -52,8 +52,8 @@ class DialogsRepository(
         return response.status == io.ktor.http.HttpStatusCode.NoContent
     }
 
-    suspend fun getLevelByDialogId(id: Int): Level? {
-        return httpClient.get("$baseUrl/api/v1/dialogs/level/dialog/$id").body()
+    suspend fun getDialogLevelByLevelId(id: Int): Level? {
+        return httpClient.get("$baseUrl/api/v1/dialogs/level/$id").body()
     }
 
     suspend fun getAllLevelsFromDialogsRepo() = levelsRepo.getAllLevels()

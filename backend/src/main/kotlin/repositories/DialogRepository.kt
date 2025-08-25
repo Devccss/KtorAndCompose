@@ -12,10 +12,12 @@ import org.jetbrains.exposed.v1.core.ResultRow;
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import java.time.LocalDateTime
+import repositories.resultRowToLevel
 
 class DialogRepository() {
 
@@ -40,23 +42,13 @@ class DialogRepository() {
     fun getDialogById(id: Int): DialogDTOs? = transaction {
         Dialogs.selectAll().where { Dialogs.id eq id }.singleOrNull()?.let(::resultRowToDialog)
     }
+    fun getDialogLevelByLevelId(levelId: Int): LevelDTO? = transaction {
+        Levels.selectAll().where{ Levels.id eq levelId }.singleOrNull()?.let (::resultRowToLevel)
+    }
     fun getDialogsByLevelId(levelId: Int): List<DialogDTOs> = transaction {
-        Dialogs.selectAll().where { Dialogs.levelId eq levelId }.map(::resultRowToDialog)
+        Dialogs.select( Dialogs.levelId eq levelId).map(::resultRowToDialog)
     }
-    fun getLevelByDialogId(id: Int): LevelDTO? = transaction {
-        Levels.selectAll().where { Levels.id eq id }.singleOrNull()?.let {
-            LevelDTO(
-                id = it[Levels.id].value,
-                name = it[Levels.name],
-                description = it[Levels.description],
-                isActive = it[Levels.isActive],
-                createdAt = it[Levels.createdAt].toString(),
-                accent = it[Levels.accent],
-                difficulty = it[Levels.difficulty],
-                orderLevel = it[Levels.orderLevel]
-            )
-        }
-    }
+
     fun createDialog(dto: CreateDialogDTO,idLevel:Int ): DialogDTOs = try {
         transaction {
 

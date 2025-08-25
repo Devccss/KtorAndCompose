@@ -49,15 +49,22 @@ class DialogDetailsViewModel(
             launchCatching(
                 block = { dialogsRepository.getFullDialogById(dialogId) },
                 onSuccess = { fullDialog ->
-                    getLevelByDialogId(dialogId)
+                    getDialogLevel(fullDialog.dialog.levelId)
                     _state.value = _state.value.copy(
                         fullDialog = fullDialog,
                         phrases = fullDialog.participants.flatMap { it.phrases }.map { it.phrase },
                         participants = fullDialog.participants.map { it.participant },
                         words = fullDialog.participants.flatMap { it.phrases }.flatMap { it.words },
-                        phraseOrder = fullDialog.participants.flatMap { it.phrases }.mapNotNull { phrases ->
-                            phrases.order?.let { OrderPhraseDto(dialogId, phrases.phrase.id, it) }
-                        }
+                        phraseOrder = fullDialog.participants.flatMap { it.phrases }
+                            .mapNotNull { phrases ->
+                                phrases.order?.let {
+                                    OrderPhraseDto(
+                                        dialogId,
+                                        phrases.phrase.id,
+                                        it
+                                    )
+                                }
+                            }
                     )
 
                 }
@@ -68,9 +75,10 @@ class DialogDetailsViewModel(
     }
 
 
-    private fun getLevelByDialogId(id: Int) {
+    private fun getDialogLevel(id: Int) {
         launchCatching(
-            block = { dialogsRepository.getLevelByDialogId(id) },
+            block = { val result = dialogsRepository.getDialogLevelByLevelId(id)
+                    result},
             onSuccess = { level ->
                 _state.value = _state.value.copy(
                     level = level
@@ -126,10 +134,14 @@ class DialogDetailsViewModel(
 
     fun createParticipant(dialogId: Int, participant: CreateParticipantDTO) {
         launchCatching(
-            block = { repoParticipant.createParticipant(dialogId, participant) },
+            block = {
+                val result = repoParticipant.createParticipant(dialogId, participant)
+                result
+            },
             onSuccess = { newParticipant ->
-                val updatedParticipants = _state.value.participants + newParticipant
-                _state.value = _state.value.copy(participants = updatedParticipants)
+                _state.value =
+                    _state.value.copy(participants = _state.value.participants + newParticipant)
+
             }
         )
     }

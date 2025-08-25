@@ -7,15 +7,17 @@ import androidx.compose.runtime.*
 import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.Navigator
+import org.example.project.screens.admindScreens.AdminDashboard
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @OptIn(InternalVoyagerApi::class)
 @Composable
-
 fun App() {
 
     MaterialTheme{
-        Navigator(screen = LoginScreen())
+        Navigator(screen = AdminDashboard(
+            adminName = "Deivid"
+        ))
     }
 
 }
