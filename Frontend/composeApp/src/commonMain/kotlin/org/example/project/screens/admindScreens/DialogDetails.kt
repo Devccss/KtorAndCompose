@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -28,6 +29,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,12 +55,14 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.core.screen.uniqueScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import io.ktor.utils.io.core.Input
 import kotlinx.coroutines.launch
 import org.example.project.dtos.CreateParticipantDTO
 import org.example.project.dtos.CreatePhraseDto
 import org.example.project.dtos.PhraseDto
 import org.example.project.dtos.WordDto
 import org.example.project.dtos.DialogParticipantDTO
+import org.example.project.models.Phrase
 
 import org.example.project.viewModel.DialogDetailsViewModel
 
@@ -93,9 +97,9 @@ class DialogDetails(
         var showDeleteParticipant by remember { mutableStateOf<DialogParticipantDTO?>(null) }
         var showEditPhrase by remember { mutableStateOf<PhraseDto?>(null) }
         var showDeletePhrase by remember { mutableStateOf<PhraseDto?>(null) }
-        var selectedParticipantId by remember { mutableStateOf<Int?>(null) }
-        var phraseInput by remember { mutableStateOf("") }
-        var phraseSpanishInput by remember { mutableStateOf("") }
+        val selectedParticipantId by remember { mutableStateOf<Int?>(null) }
+        val phraseInput by remember { mutableStateOf("") }
+        val phraseSpanishInput by remember { mutableStateOf<String>("") }
         var phraseOrder by remember { mutableStateOf(1) }
         var pendingWords by remember { mutableStateOf<List<WordDto>>(emptyList()) }
         var pendingPhrase by remember { mutableStateOf<PhraseDto?>(null) }
@@ -127,15 +131,17 @@ class DialogDetails(
                     )
                 },
             ) {
-                Spacer(modifier = Modifier.height(8.dp))
                 Column(
                     modifier = Modifier
                         .verticalScroll(rememberScrollState())
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(it)
+                        .padding(horizontal = 16.dp)
                         .padding(WindowInsets.safeDrawing.asPaddingValues())
                 ) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    ui.error?.let { err ->
+                        println("----Error en: err $err")
+                    }
                     ui.fullDialog?.let { dlg ->
                         Card(
                             modifier = Modifier.padding(bottom = 16.dp)
@@ -173,14 +179,14 @@ class DialogDetails(
                                         Icon(
                                             Icons.Default.Edit,
                                             contentDescription = "Editar",
-                                            tint = Color(777899) // Azul suave
+                                            tint = Color(50, 77, 186, 1000) // Azul suave
                                         )
                                     }
                                     IconButton({ confirmDelete = true }) {
                                         Icon(
                                             Icons.Default.Delete,
                                             contentDescription = "Eliminar",
-                                            tint = Color(777899) // Rojo suave
+                                            tint = Color(212, 69, 57, 1000) // Rojo suave
                                         )
                                     }
                                 }
@@ -189,7 +195,7 @@ class DialogDetails(
                         // Sección Participantes
                         Text("Participantes", style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(4.dp))
-                        if ((ui.fullDialog?.participants?.size ?: 0) < 5) {
+                        if ((ui.participants.size) < 5) {
                             Button(onClick = { showAddParticipant = true }) {
                                 Text("Agregar participante")
                             }
@@ -235,7 +241,7 @@ class DialogDetails(
                         ) {
                             Text("Frases", style = MaterialTheme.typography.titleMedium)
                             Spacer(modifier = Modifier.width(0.5.dp))
-                            IconButton(onClick = { showHelpAddPhrase = true } ) {
+                            IconButton(onClick = { showHelpAddPhrase = true }) {
                                 Icon(
                                     modifier = Modifier.weight(0.1f),
                                     imageVector = Icons.AutoMirrored.Filled.Help,
@@ -255,12 +261,12 @@ class DialogDetails(
                                 }
                             )
                         }
-                        if(ui.phrases.isEmpty()) {
+                        if (ui.phrases.isEmpty()) {
                             Button(onClick = { showAddPhraseSection = true }) {
                                 Text("Agregar frase")
 
                             }
-                        }else{
+                        } else {
                             Button(onClick = { showAddPhraseSection = true }) {
                                 Text("+")
                             }
@@ -300,7 +306,7 @@ class DialogDetails(
                         // Sección Nivel asociado
                         Spacer(modifier = Modifier.height(8.dp))
                         Text("Nivel asociado", style = MaterialTheme.typography.titleMedium)
-                         ui.level?.let{ level ->
+                        ui.level?.let { level ->
                             Card(
                                 modifier = Modifier
                                     .padding(vertical = 4.dp)
@@ -310,7 +316,7 @@ class DialogDetails(
                                             navigator.push(
                                                 LevelDetails(level.id)
                                             )
-                                        }else {
+                                        } else {
                                             error = "El diálogo no tiene ID"
                                         }
                                     }
@@ -454,7 +460,7 @@ class DialogDetails(
                     onSave = { dto ->
                         dto.id?.let {
                             vm.updateParticipant(
-                                it,
+                                participantId = it,
                                 participant = CreateParticipantDTO(name = dto.name)
                             )
                         }
@@ -463,49 +469,122 @@ class DialogDetails(
                     onDismiss = { showEditParticipant = null }
                 )
             }
-        }
-    }
-}
 
-
-
-@Composable
-fun AddEditParticipantDialog(
-    initial: DialogParticipantDTO? = null,
-    onSave: (DialogParticipantDTO) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var name by remember { mutableStateOf(initial?.name ?: "") }
-    val id = initial?.id
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) "Agregar participante" else "Editar participante") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Nombre") }
+            showAddPhraseSection.takeIf { it }?.let {
+                AddPhraseSection(
+                    phrase = Phrase(
+                        id = null,
+                        participantId = selectedParticipantId ?: 0,
+                        audioUrl = null,
+                        isActive = true,
+                        createdAt = null
+                    ),
+                    onDismiss = { showAddPhraseSection = false },
                 )
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onSave(
-                        DialogParticipantDTO(
-                            id = id,
-                            name = name,
-                            dialogId = initial?.dialogId,
-                            createdAt = initial?.createdAt
-                        )
+        }
+    }
+
+
+    @Composable
+    fun AddEditParticipantDialog(
+        initial: DialogParticipantDTO? = null,
+        onSave: (DialogParticipantDTO) -> Unit,
+        onDismiss: () -> Unit
+    ) {
+        var name by remember { mutableStateOf(initial?.name ?: "") }
+        val id = initial?.id
+
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(if (initial == null) "Agregar participante" else "Editar participante") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Nombre") }
                     )
                 }
-            ) { Text("Guardar") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onSave(
+                            DialogParticipantDTO(
+                                id = id,
+                                name = name,
+                                dialogId = initial?.dialogId,
+                                createdAt = initial?.createdAt
+                            )
+                        )
+                    }
+                ) { Text("Guardar") }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) { Text("Cancelar") }
+            }
+        )
+    }
+
+    @Composable
+    fun AddPhraseSection(
+        phrase: Phrase,
+        onDismiss: () -> Unit,
+
+    ) {
+        var englishText by remember { mutableStateOf(phrase.englishText ?: "") }
+        var phraseSpanish by remember { mutableStateOf("") }
+
+        // Separar palabras en tiempo real
+        val words = remember(englishText) {
+            englishText.split(" ").filter { it.isNotBlank() }
         }
-    )
+
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Agregar frase") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = englishText,
+                        onValueChange = { englishText = it },
+                        label = { Text("Frase en inglés") }
+                    )
+                    // Mostrar palabras en pequeño debajo del input
+                    if (words.isNotEmpty()) {
+                        FlowRow(
+                            modifier = Modifier.padding(top = 4.dp),
+
+                        ) {
+                            words.forEach { word ->
+                                Text(
+                                    text = word,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier
+                                        .background(Color.LightGray)
+                                        .padding(horizontal = 2.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = phraseSpanish,
+                        onValueChange = { phraseSpanish = it },
+                        label = { Text("Traducción al español (opcional)") }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        // Lógica para guardar la frase
+                    }
+                ) { Text("Guardar") }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) { Text("Cancelar") }
+            }
+        )
+    }
 }

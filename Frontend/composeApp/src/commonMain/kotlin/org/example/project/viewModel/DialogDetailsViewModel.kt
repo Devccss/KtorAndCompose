@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import cafe.adriel.voyager.core.model.ScreenModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.example.project.dtos.CreateParticipantDTO
 import org.example.project.dtos.CreatePhraseDto
@@ -77,8 +78,7 @@ class DialogDetailsViewModel(
 
     private fun getDialogLevel(id: Int) {
         launchCatching(
-            block = { val result = dialogsRepository.getDialogLevelByLevelId(id)
-                    result},
+            block = { dialogsRepository.getDialogLevelByLevelId(id) },
             onSuccess = { level ->
                 _state.value = _state.value.copy(
                     level = level
@@ -135,8 +135,7 @@ class DialogDetailsViewModel(
     fun createParticipant(dialogId: Int, participant: CreateParticipantDTO) {
         launchCatching(
             block = {
-                val result = repoParticipant.createParticipant(dialogId, participant)
-                result
+                repoParticipant.createParticipant(dialogId, participant)
             },
             onSuccess = { newParticipant ->
                 _state.value =
@@ -146,17 +145,43 @@ class DialogDetailsViewModel(
         )
     }
 
+    private fun getParticipantById(participantId: Int) {
+        launchCatching(
+            block = { repoParticipant.getParticipantById(participantId) },
+            onSuccess = { participant ->
+                _state.update { currentState ->
+
+                    val updatedParticipants = currentState.participants.map { p ->
+                        if (p.id == participantId) participant else p
+                    }
+
+                    currentState.copy( participants = updatedParticipants )
+                }
+            }
+        )
+    }
+    private fun getParticipantsByDialogId(dialogId: Int) {
+        launchCatching(
+            block = { repoParticipant.getParticipantsByDialogId(dialogId) },
+            onSuccess = { participants ->
+                _state.value = _state.value.copy(participants = participants)
+            }
+        )
+    }
+
     fun updateParticipant(participantId: Int, participant: CreateParticipantDTO) {
         launchCatching(
-            block = { repoParticipant.updateParticipant(participantId, participant) },
-            onSuccess = { getFullDialogById(dialogId) }
+            block = {
+                repoParticipant.updateParticipant(participantId, participant)
+            },
+            onSuccess = {getParticipantById(participantId)}
         )
     }
 
     fun deleteParticipant(participantId: Int) {
         launchCatching(
             block = { repoParticipant.deleteParticipant(participantId) },
-            onSuccess = { getFullDialogById(dialogId) }
+            onSuccess = { getParticipantsByDialogId(dialogId) }
         )
     }
 
