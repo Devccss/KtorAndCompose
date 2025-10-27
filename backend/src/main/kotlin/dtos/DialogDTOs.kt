@@ -13,15 +13,17 @@ data class DialogDTOs(
     val difficulty: DifficultyLevel,
     val description: String? = null,
     val audioUrl: String? = null,
-    val isActive: Boolean = true,
+    val isActive: Boolean? = false,
     val createdAt: String? = null
 )
 
 @Serializable
 data class CreateDialogDTO(
+    val levelId: Int,
     val name: String,
     val difficulty: DifficultyLevel,
     val description: String,
+    val isActive: Boolean? = false,
     val audioUrl: String? = null
 )
 

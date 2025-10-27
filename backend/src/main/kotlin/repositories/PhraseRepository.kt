@@ -128,4 +128,22 @@ class PhraseRepository {
         deletedRows > 0
     }
 
+    fun addPhraseToTranslate(dialogId: Int, phraseId: Int): Boolean = transaction {
+        val existing = models.PhraseToTranslate.selectAll()
+            .where { (models.PhraseToTranslate.dialogId eq dialogId) and (models.PhraseToTranslate.phraseId eq phraseId) }
+            .singleOrNull()
+        if (existing != null) {
+            return@transaction false
+        }
+        models.PhraseToTranslate.insert {
+            it[models.PhraseToTranslate.dialogId] = dialogId
+            it[models.PhraseToTranslate.phraseId] = phraseId
+        }
+        true
+    }
+    fun deletePhraseToTranslate(dialogId: Int, phraseId: Int): Boolean = transaction {
+        val deletedRows = models.PhraseToTranslate.deleteWhere { (models.PhraseToTranslate.dialogId eq dialogId) and (models.PhraseToTranslate.phraseId eq phraseId) }
+        deletedRows > 0
+    }
+
 }

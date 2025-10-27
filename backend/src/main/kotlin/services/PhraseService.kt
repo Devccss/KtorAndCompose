@@ -33,7 +33,7 @@ class PhraseService(private val phraseRepository: PhraseRepository) {
     fun updatePhrase(id: Int, phrase: CreatePhraseDto): PhraseDto {
         validatePhrase(phrase)
         phraseRepository.updatePhrase(id, phrase)
-        return phraseRepository.getPhraseById(id) ?: throw NotFoundException("Phrase not found")
+        return phraseRepository.getPhraseById(id) ?: throw NotFoundException("No se encontró la frase")
     }
 
     fun deletePhrase(id: Int): Boolean {
@@ -55,4 +55,10 @@ class PhraseService(private val phraseRepository: PhraseRepository) {
         return phraseRepository.deleteOrderPhraseByPhraseId(phraseId)
     }
 
+    fun addPhraseToTranslate(dialogId: Int, phraseId: Int): Boolean {
+        return phraseRepository.addPhraseToTranslate(dialogId, phraseId)
+    }
+    fun deletePhraseToTranslate(dialogId: Int, phraseId: Int): Boolean {
+        return phraseRepository.deletePhraseToTranslate(dialogId, phraseId)
+    }
 }

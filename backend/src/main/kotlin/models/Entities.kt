@@ -17,9 +17,6 @@ object Users : IntIdTable() {
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
     val role = enumerationByName<Role>("role", 20).default(Role.STUDENT)
 }
-object GoogleUser: IntIdTable(){
-
-}
 
 enum class Role { ADMIN, CONTENT_EDITOR, STUDENT }
 
@@ -41,7 +38,7 @@ object Dialogs : IntIdTable() {
     val difficulty = enumerationByName<DifficultyLevel>("difficulty", 10)
     val description = text("description").nullable()
     val audioUrl = varchar("audio_url", 255).nullable()
-    val isActive = bool("is_active").default(true)
+    val isActive = bool("is_active").default(false)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }
 
@@ -58,6 +55,11 @@ object Phrase : IntIdTable() {
     val spanishText = text("spanish_text").nullable()
     val isActive = bool("is_active").default(true)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
+}
+
+object PhraseToTranslate : IntIdTable() {
+    val dialogId = integer("dialog_id").references(Dialogs.id)
+    val phraseId = integer("phrase_id").references(Phrase.id)
 }
 
 object PhraseWords : IntIdTable() {
@@ -91,13 +93,16 @@ object UserPhraseStandby : IntIdTable() {
 
 object Tests : IntIdTable() {
     val levelId = integer("level_id").references(Levels.id)
-    val phraseIds = text("phrase_ids")
     val name = varchar("name", 100)
     val description = text("description").nullable()
-    val testType = TestType.entries
-    val difficulty = enumerationByName<DifficultyLevel>("difficulty", 10)
-    val isActive = bool("is_active").default(true)
+    val testType = enumerationByName<TestType>("test_type", 20)
+    val isActive = bool("is_active").default(false)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
+}
+
+object DialogsTests : IntIdTable() {
+    val dialogId = integer("dialog_id").references(Dialogs.id)
+    val testId = integer("test_id").references(Tests.id)
 }
 
 enum class TestType { ALTERNATIVES, TRANSLATION, LISTENING, READING }

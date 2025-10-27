@@ -20,6 +20,13 @@ class DialogService(private val dialogsRepository: DialogRepository) {
         return dialogsRepository.getDialogLevelByLevelId(levelId) ?: throw NotFoundException("Level not found")
     }
 
+    fun getDialogsByLevelId(levelId: Int): List<DialogDTOs> {
+        return dialogsRepository.getDialogsByLevelId(levelId)
+    }
+
+    fun getTestsDialogs(testId: Int): List<DialogDTOs> {
+        return dialogsRepository.getAllTestDialogs(testId)
+    }
 
     fun createDialog(dialog: CreateDialogDTO, idLevel:Int): DialogDTOs {
         validateDialogCreation(dialog)
@@ -40,7 +47,7 @@ class DialogService(private val dialogsRepository: DialogRepository) {
         if (dialog.name.isBlank()) {
             throw ValidationException("Dialog name cannot be empty")
         }
-        if (dialog.description.isBlank()) {
+        if (dialog.description?.isBlank() == true) {
             throw ValidationException("Dialog description cannot be empty")
         }
     }

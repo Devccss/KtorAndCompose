@@ -1,5 +1,6 @@
 package config
 import io.github.cdimascio.dotenv.dotenv
+import models.CompleteLevels
 import models.TestQuestions
 import models.Levels
 import models.UserPhraseStandby
@@ -8,6 +9,7 @@ import models.Users
 import models.Word
 import models.Tests
 import models.Dialogs
+import models.DialogsTests
 import models.PhraseWords
 import models.PhraseOrder
 import models.Phrase
@@ -33,7 +35,7 @@ fun configureDatabases() {
         SchemaUtils.create(
             Users, Levels, Dialogs, Phrase, PhraseOrder, Word,
             PhraseWords, UserPhraseStandby, Tests,
-            TestQuestions, UserProgress
+            TestQuestions, UserProgress,DialogsTests,CompleteLevels
         )
     }
 }

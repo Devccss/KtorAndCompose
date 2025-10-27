@@ -13,7 +13,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import java.time.LocalDateTime
 
-class DialogParticipantsRepository {
+class DialogParticipantsRepository(private val phraseRepository: PhraseRepository) {
     fun createDialogParticipants(dto: CreateParticipantDTO, dialogID: Int): DialogParticipantDTO =try{
         transaction {
             val newParticipant = DialogParticipants.insert {
@@ -55,6 +55,10 @@ class DialogParticipantsRepository {
             }
     }
     fun deleteDialogParticipant(participantId: Int): Boolean = transaction {
+        val phraseExist = phraseRepository.getPhrasesByParticipantId(participantId)
+        if(phraseExist.isNotEmpty()){
+            throw BadRequestException("No se puede eliminar el participante porque tiene frases asociadas.")
+        }
         DialogParticipants.deleteWhere { DialogParticipants.id eq participantId } > 0
     }
     fun updateDialogParticipant(participantId: Int, dto: UpdateParticipantDTO) = transaction {

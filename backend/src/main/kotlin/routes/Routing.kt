@@ -3,8 +3,10 @@ import com.example.dtos.CreateDialogDTO
 import com.example.dtos.CreateParticipantDTO
 import com.example.dtos.CreatePhraseDto
 import com.example.dtos.CreatePhraseWordDto
+import com.example.dtos.CreateTestDto
 import com.example.dtos.CreateUserDto
 import com.example.dtos.CreateWordDto
+import com.example.dtos.DialogDTOs
 import com.example.dtos.DialogDetailDTO
 import com.example.dtos.LoginDto
 import com.example.dtos.UpdateDialogDTO
@@ -20,6 +22,7 @@ import com.example.services.DialogParticipantsService
 import com.example.services.DialogService
 import com.example.services.PhraseService
 import com.example.services.PhraseWordService
+import com.example.services.TestService
 import com.example.services.UserService
 import com.example.services.WordService
 import io.ktor.http.HttpStatusCode
@@ -67,6 +70,7 @@ fun Application.configureRouting() {
     val wordService = get<WordService>()
     val phraseWordService = get<PhraseWordService>()
     val userService = get<UserService>()
+    val testService = get<TestService>()
 
     routing {
 
@@ -247,6 +251,7 @@ fun Application.configureRouting() {
                     val updatedPhrase = phraseService.updatePhrase(id, dto)
                     call.respond(updatedPhrase)
                 }
+
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
@@ -289,6 +294,36 @@ fun Application.configureRouting() {
                         )
                     } else {
                         throw NotFoundException("Failed to order phrase")
+                    }
+                }
+                post("/toTranslate/{dialogId}/{phraseId}") {
+                    val dialogId = call.parameters["dialogId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Dialog ID")
+                    val phraseId = call.parameters["phraseId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Phrase ID")
+                    val success = phraseService.addPhraseToTranslate(dialogId, phraseId)
+                    if (success) {
+                        call.respond(
+                            HttpStatusCode.Created,
+                            mapOf("status" to "Phrase added to translate successfully")
+                        )
+                    } else {
+                        throw NotFoundException("Failed to add phrase to translate")
+                    }
+
+                }
+                delete("/toTranslate/{dialogId}/{phraseId}") {
+                    val dialogId = call.parameters["dialogId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Dialog ID")
+                    val phraseId = call.parameters["phraseId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Phrase ID")
+                    val success = phraseService.deletePhraseToTranslate(dialogId, phraseId)
+                    if (success) {
+                        call.respond(
+                            HttpStatusCode.NoContent
+                        )
+                    } else {
+                        throw NotFoundException("Failed to remove phrase to translate")
                     }
                 }
             }
@@ -424,6 +459,19 @@ fun Application.configureRouting() {
                     call.respond(level)
                 }
 
+                get("DialogsOflevelId/{levelId}") {
+                    val levelId = call.parameters["levelId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Level ID")
+                    val dialogs = dialogService.getDialogsByLevelId(levelId)
+                    call.respond(dialogs)
+                }
+                get("/testDialogs/{testId}"){
+                    val testId = call.parameters["testId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Test ID")
+                    val dialogs = dialogService.getTestsDialogs(testId)
+                    call.respond(dialogs)
+                }
+
                 post("{levelId}") {
                     val dto = call.receive<CreateDialogDTO>()
                     val idLevel = call.parameters["levelId"]?.toIntOrNull()
@@ -446,7 +494,7 @@ fun Application.configureRouting() {
                     }
                     dialog.levelId.let { levelService.getLevelById(it) }
                     val updatedDialog = dialogService.updateDialog(id, dialog)
-                    call.respond(updatedDialog)
+                    call.respond(HttpStatusCode.OK, mapOf("status" to "Dialogo actualizado exitosamente"))
                 }
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
@@ -454,21 +502,12 @@ fun Application.configureRouting() {
                     val participants = dialogParticipants.getParticipantsByDialogId(id)
                     if (participants.isNotEmpty()) {
                         participants.forEach { participant ->
-                            val phrases = phraseService.getPhrasesByParticipantId(participant.id)
-                            if (phrases.isNotEmpty()) {
-                                phrases.forEach { phrase ->
-
-                                    phraseWordService.deletePhraseWordsByPhraseId(phrase.id)
-                                    phraseService.deleteOrderPhraseByPhraseId(phrase.id)
-                                    phraseService.deletePhrase(phrase.id)
-                                }
-                            }
                             dialogParticipants.deleteDialogParticipant(participant.id)
                         }
                     }
                     val success = dialogService.deleteDialog(id)
                     if (success) {
-                        call.respond(HttpStatusCode.NoContent)
+                        call.respond(HttpStatusCode.OK,mapOf("status" to "Dialogo eliminado exitosamente"))
                     } else {
                         throw NotFoundException("Dialog not found")
                     }
@@ -496,14 +535,10 @@ fun Application.configureRouting() {
                     call.respond(level)
                 }
 
-                // POST /levels - Crear nuevo nivel
                 post() {
                     val dto = call.receive<LevelCreationDTO>()
                     val beforeId = call.request.queryParameters["beforeId"]?.toIntOrNull()
                     val afterId = call.request.queryParameters["afterId"]?.toIntOrNull()
-
-                    println("beforeId: $beforeId")
-                    println("afterId: $afterId")
 
                     val level = levelService.createLevel(dto, beforeId, afterId)
                     call.respond(HttpStatusCode.Created, level)
@@ -545,9 +580,6 @@ fun Application.configureRouting() {
                 }
             }
 
-            route("/admin") {
-
-            }
 
             route("/student") {
                 // Obtener datos del usuario por ID
@@ -562,19 +594,6 @@ fun Application.configureRouting() {
                     }
                 }
 
-                // Obtener progreso del usuario (niveles y diálogos completados/actuales)
-                get("/progress/{userId}") {
-                    val userId = call.parameters["userId"]?.toIntOrNull()
-                        ?: throw BadRequestException("Invalid user ID")
-                    val progress = userService.getUserProgress(userId)
-                    if (progress != null) {
-                        call.respond(progress)
-                    } else {
-                        throw NotFoundException("Progress not found for user")
-                    }
-                }
-
-                // Obtener todos los diálogos completados o actuales del usuario
                 get("{userId}/dialogs") {
                     val userId = call.parameters["userId"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid user ID")
@@ -582,7 +601,6 @@ fun Application.configureRouting() {
                     call.respond(dialogs)
                 }
 
-                // CRUD de frases en standby del usuario
                 route("{userId}/standby") {
                     // Obtener todas las frases en standby
                     get {
@@ -591,7 +609,7 @@ fun Application.configureRouting() {
                         val standbyPhrases = userService.getUserStandbyPhrases(userId)
                         call.respond(standbyPhrases)
                     }
-                    // Agregar frase a standby
+
                     post("{userId}/add/{phraseId}") {
                         val userId = call.parameters["userId"]?.toIntOrNull()
                             ?: throw BadRequestException("Invalid user ID")
@@ -611,7 +629,7 @@ fun Application.configureRouting() {
                             call.respond(it)
                         } ?: throw NotFoundException("Standby phrase not found")
                     }
-                    // Eliminar frase en standby
+
                     delete("standby/{standbyId}") {
                         val standbyId = call.parameters["standbyId"]?.toIntOrNull()
                             ?: throw BadRequestException("Invalid standby ID")
@@ -624,6 +642,83 @@ fun Application.configureRouting() {
                     }
                 }
             }
+
+            route("/test") {
+                post("{levelId}") {
+                    try {
+                        val levelid = call.parameters["levelId"]?.toIntOrNull()
+                            ?: throw BadRequestException("Invalid Level ID")
+                        levelService.getLevelById(levelid)
+                        val dto = call.receive<CreateTestDto>()
+                        val test = testService.createTest(dto, levelid)
+                        print("Enviando test: $test")
+                        call.respond(HttpStatusCode.Created, test)
+                    }catch (error:Exception){
+                        print("Error creating test in routing: $error")
+                    }
+
+                }
+                post("addDialog/{dialogId}/{testId}") {
+                    val dialogId = call.parameters["dialogId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Dialog ID")
+                    val testId = call.parameters["testId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Test ID")
+
+                    dialogService.getDialogById(dialogId)
+                    val success = testService.addDialogTest(dialogId, testId)
+                    call.respond(success)
+                }
+                get("{id}") {
+                    val testId = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Test ID")
+                    val test = testService.getTestById(testId)
+                    if (test != null) {
+                        call.respond(test)
+                    } else {
+                        throw NotFoundException("Test no encontrado")
+                    }
+                }
+                get {
+                    val tests = testService.getAllTests()
+                    call.respond(tests)
+                }
+                put("{id}") {
+                    val testId = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Test ID")
+                    val dto = call.receive<CreateTestDto>()
+                    val success = testService.editTest(testId, dto)
+                    if (success) {
+                        call.respond(
+                            HttpStatusCode.OK
+                        )
+                    } else {
+                        throw NotFoundException("Error al actualizar el test")
+                    }
+                }
+                delete("{id}") {
+                    val testId = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Test ID")
+
+                    val success = testService.deleteTest(testId)
+
+                    call.respond(success)
+
+
+                }
+                delete("removeDialogTest/{idDialog}/{idTest}") {
+                    val dialogId = call.parameters["idDialog"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Dialog ID")
+                    val testId = call.parameters["idTest"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Test ID")
+
+                    val success = testService.deleteDialogTest(dialogId,testId)
+
+                    call.respond(success)
+
+
+                }
+            }
+
         }
     }
 }

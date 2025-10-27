@@ -6,6 +6,7 @@ import com.example.dtos.CreateDialogDTO
 import com.example.dtos.DialogDTOs;
 import com.example.dtos.UpdateDialogDTO
 import io.ktor.server.plugins.BadRequestException
+import models.DialogsTests
 import models.Levels
 
 import org.jetbrains.exposed.v1.core.ResultRow;
@@ -46,7 +47,19 @@ class DialogRepository() {
         Levels.selectAll().where{ Levels.id eq levelId }.singleOrNull()?.let (::resultRowToLevel)
     }
     fun getDialogsByLevelId(levelId: Int): List<DialogDTOs> = transaction {
-        Dialogs.select( Dialogs.levelId eq levelId).map(::resultRowToDialog)
+        Dialogs.selectAll().where { Dialogs.levelId eq levelId }.map(::resultRowToDialog)
+    }
+
+    fun getAllTestDialogs(testId: Int): List<DialogDTOs> = transaction {
+        DialogsTests.selectAll()
+            .where { DialogsTests.testId eq testId }
+            .map { it[DialogsTests.dialogId] }
+            .distinct()
+            .mapNotNull { dialogId ->
+                Dialogs.selectAll().where { Dialogs.id eq dialogId }
+                    .singleOrNull()
+                    ?.let(::resultRowToDialog)
+            }
     }
 
     fun createDialog(dto: CreateDialogDTO,idLevel:Int ): DialogDTOs = try {
@@ -57,6 +70,7 @@ class DialogRepository() {
                 it[name] = dto.name
                 it[difficulty] = dto.difficulty
                 it[description] = dto.description
+                it[isActive] = dto.isActive ?: false
                 it[audioUrl] = dto.audioUrl
             }[Dialogs.id]
 

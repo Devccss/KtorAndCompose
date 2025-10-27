@@ -2,12 +2,14 @@ package com.example.plugins
 import com.example.repositories.DialogParticipantsRepository
 import com.example.repositories.PhraseRepository
 import com.example.repositories.PhraseWordRepository
+import com.example.repositories.TestRepository
 import com.example.repositories.UsersRepository
 import com.example.repositories.WordRepository
 import com.example.services.DialogParticipantsService
 import com.example.services.DialogService
 import com.example.services.PhraseService
 import com.example.services.PhraseWordService
+import com.example.services.TestService
 import com.example.services.UserService
 import com.example.services.WordService
 import repositories.LevelRepository
@@ -26,11 +28,12 @@ import repositories.DialogRepository
 val repositoryModule = module {
     single { LevelRepository(get()) }
     single { DialogRepository() }
-    single { DialogParticipantsRepository() }
+    single { DialogParticipantsRepository(get()) }
     single { PhraseRepository() }
     single { WordRepository() }
     single { PhraseWordRepository() }
     single { UsersRepository() }
+    single { TestRepository() }
 }
 
 val serviceModule = module {
@@ -41,6 +44,7 @@ val serviceModule = module {
     single { WordService(get()) }
     single { PhraseWordService(get()) }
     single { UserService(get()) }
+    single { TestService(get()) }
 }
 
 fun Application.configureKoin() {
