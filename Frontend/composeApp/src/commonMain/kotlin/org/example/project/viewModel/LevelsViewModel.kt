@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.example.project.models.Level
-import org.example.project.repository.levelRepository.LevelRepository
+import org.example.project.repository.KtorLevelRepository
 
 data class LevelsUiState(
     val levels: List<Level> = emptyList(),
@@ -16,7 +16,7 @@ data class LevelsUiState(
     val error: String? = null
 )
 
-class LevelsViewModel(private val repo: LevelRepository) : ViewModel(), ScreenModel {
+class LevelsViewModel(private val repo: KtorLevelRepository) : ViewModel(), ScreenModel {
 
     private val _state = MutableStateFlow(LevelsUiState(isLoading = true))
     val state: StateFlow<LevelsUiState> = _state

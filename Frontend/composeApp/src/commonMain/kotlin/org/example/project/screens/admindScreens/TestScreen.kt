@@ -3,15 +3,53 @@ package org.example.project.screens.admindScreens
 import RepositoryProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -19,38 +57,44 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.core.screen.uniqueScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlinx.coroutines.launch
-import org.example.project.dtos.CreateDialogDTO
-import org.example.project.models.Dialog
-import org.example.project.models.DifficultyLevel
+import org.example.project.dtos.CreateTest
 import org.example.project.models.Level
-import org.example.project.viewModel.DialogViewModel
+import org.example.project.models.Test
+import org.example.project.models.TestType
 
-class DialogsScreen(private val levelId: Int?) : Screen {
-    override val key = uniqueScreenKey
+import org.example.project.viewModel.TestViewModel
+
+
+class TestScreen:Screen {
 
     @Composable
     override fun Content() {
         val vm = rememberScreenModel {
-            DialogViewModel(RepositoryProvider.dialogsRepository)
+            TestViewModel(RepositoryProvider.testRepository)
         }
+
         val ui by vm.state.collectAsState()
-        var editing by remember { mutableStateOf<Dialog?>(null) }
-        var showAddDialog by remember { mutableStateOf(false) }
-        var confirmDelete by remember { mutableStateOf<Dialog?>(null) }
+
         val snackbarHostState = remember { SnackbarHostState() }
+        val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+        val scope = rememberCoroutineScope()
+        val navigator = LocalNavigator.currentOrThrow
+
+        var editing by remember { mutableStateOf<Test?>(null) }
+        var confirmDelete by remember { mutableStateOf<Test?>(null) }
+        var showAddDialog by remember { mutableStateOf(false) }
+
         LaunchedEffect(ui.error) {
             ui.error?.let {
                 snackbarHostState.showSnackbar(it)
             }
         }
-
-        val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-        val scope = rememberCoroutineScope()
-        val navigator = LocalNavigator.currentOrThrow
+        LaunchedEffect(Unit) {
+            vm.refresh()
+        }
 
         ModalNavigationDrawer(
             drawerState = drawerState,
@@ -64,42 +108,47 @@ class DialogsScreen(private val levelId: Int?) : Screen {
             Scaffold(
                 topBar = {
                     AdminTopBar(
-                        currentPage = "dialogs",
-                        titlePage = "Administrar Diálogos",
+                        currentPage = "Tests",
+                        titlePage = "Gestion de Tests",
                         onBack = { navigator.pop() },
                         onMenuClick = { scope.launch { drawerState.open() } }
                     )
+
                 },
                 floatingActionButton = {
                     FloatingActionButton(onClick = { showAddDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Agregar diálogo")
+                        Icon(Icons.Default.Add, contentDescription = "Agregar Test")
                     }
                 },
                 snackbarHost = { SnackbarHost(snackbarHostState) }
-            ) { padding ->
+            ){padding ->
                 Box(Modifier.fillMaxSize().padding(padding), Alignment.Center) {
                     when {
                         ui.isLoading -> CircularProgressIndicator()
                         ui.error != null -> Text("Error: ${ui.error}")
                         else -> LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
-                            items(ui.dialogs) { dialog ->
-                                DialogCard(
-                                    dialog = dialog,
+                            if (ui.tests.isEmpty()) {
+                                item {
+                                    Text("No hay tests disponibles.", style = MaterialTheme.typography.bodyMedium)
+                                    Spacer(Modifier.height(8.dp))
+                                }
+                            }
+                            items(ui.tests) { test ->
+                                TestCard(
+                                    test = test,
                                     onClick = {
-                                        if (dialog.id != null) {
+                                        if (test.id != null) {
                                             navigator.push(
-                                                DialogDetails(
-                                                    dialogId = dialog.id,
-                                                )
+                                                TestDetailsScreen(testId = test.id)
                                             )
                                         } else {
-                                            ui.error = "ID de diálogo no disponible"
+                                            ui.error = "ID de Test no disponible"
                                         }
 
                                     },
-                                    onEdit = { editing = it },
+                                    onEdit = { editing = test },
                                     levels = ui.levels,
-                                    onDelete = { confirmDelete = it }
+                                    onDelete = { confirmDelete = test }
                                 )
                                 Spacer(Modifier.height(12.dp))
                             }
@@ -107,58 +156,61 @@ class DialogsScreen(private val levelId: Int?) : Screen {
                     }
                 }
 
-                // Editar diálogo
-                editing?.let { dialog ->
-                    EditDialogDialog(
-                        initial = dialog,
-                        levels = ui.levels, // Asegúrate de pasar la lista de niveles
+
+                editing?.let { test ->
+                    EditTestDialog(
+                        initial = test,
                         onSave = { updated ->
                             updated.id?.let { id ->
-                                vm.updateDialog(id, updated)
+                                vm.editTest(CreateTest(
+                                    name = updated.name,
+                                    description = updated.description,
+                                    testType = updated.testType
+                                ) ,id)
                             }
                             editing = null
                         },
+                        levels = ui.levels,
                         onDismiss = { editing = null }
                     )
                 }
 
-                // Agregar diálogo
+
                 if (showAddDialog) {
-                    EditDialogDialog(
-                        initial = Dialog(
-                            id = null,
-                            levelId = levelId ?: 0,
+                    EditTestDialog(
+                        initial = Test(
                             name = "",
-                            difficulty = DifficultyLevel.A1,
                             description = "",
-                            audioUrl = "",
-                            isActive = true,
-                            createdAt = null
+                            testType = TestType.TRANSLATION,
+                            id = 0,
+                            isActive = false,
+                            levelId = 0
                         ),
                         levels = ui.levels,
-                        onSave = { newDialog ->
-                            vm.addDialog(CreateDialogDTO(
-                                name = newDialog.name,
-                                difficulty = newDialog.difficulty,
-                                description = newDialog.description,
-                                audioUrl = newDialog.audioUrl,
-                                levelId = newDialog.levelId
-                            ), newDialog.levelId)
+                        onSave = { newTest ->
+                            vm.createTest(CreateTest(
+                                name = newTest.name,
+                                description = newTest.description,
+                                testType = newTest.testType,
+                                isActive = newTest.isActive
+                            ), newTest.levelId)
+
                             showAddDialog = false
+
                         },
                         onDismiss = { showAddDialog = false }
                     )
                 }
 
                 // Eliminar diálogo
-                confirmDelete?.let { dialog ->
+                confirmDelete?.let { test ->
                     AlertDialog(
                         onDismissRequest = { confirmDelete = null },
-                        title = { Text("Eliminar diálogo") },
-                        text = { Text("¿Seguro de eliminar este diálogo?") },
+                        title = { Text("Eliminar Test") },
+                        text = { Text("¿Seguro de eliminar este Test?") },
                         confirmButton = {
                             TextButton(onClick = {
-                                dialog.id?.let(vm::deleteDialog)
+                                test.id?.let { vm.deleteTest(it) }
                                 confirmDelete = null
                             }) { Text("Eliminar") }
                         },
@@ -167,20 +219,22 @@ class DialogsScreen(private val levelId: Int?) : Screen {
                         }
                     )
                 }
+
             }
         }
     }
 }
 
 @Composable
-fun DialogCard(
-    dialog: Dialog,
+fun TestCard(
+    test: Test,
     levels: List<Level>,
     onClick: () -> Unit = {},
-    onEdit: (Dialog) -> Unit,
-    onDelete: (Dialog) -> Unit
+    onEdit: (Test) -> Unit,
+    onDelete: (Test) -> Unit
 ) {
-    val levelName = levels.find { it.id == dialog.levelId }?.name ?: "Desconocido"
+    val levelName = levels.find { it.id == test.levelId }?.name ?: "Desconocido"
+
     Card(
         Modifier.fillMaxWidth().clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -199,13 +253,13 @@ fun DialogCard(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(dialog.id?.toString() ?: "N", color = Color.White)
+                    Text(test.id?.toString() ?: "N", color = Color.White)
                 }
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
                     Row {
                         Text(
-                            dialog.name,
+                            test.name,
                             style = MaterialTheme.typography.titleMedium
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -217,9 +271,9 @@ fun DialogCard(
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
                             Text(
-                                text = (if (dialog.isActive == true) "Activo" else "Inactivo"),
+                                text = (if (test.isActive == true) "Activo" else "Inactivo"),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (dialog.isActive == true) Color(
+                                color = if (test.isActive == true) Color(
                                     34,
                                     139,
                                     34
@@ -229,52 +283,55 @@ fun DialogCard(
                             )
                         }
                     }
-                    Text("Nivel: $levelName", style = MaterialTheme.typography.labelSmall)
-                    Text(
-                        "Dificultad: ${dialog.difficulty}",
-                        style = MaterialTheme.typography.labelSmall
-                    )
+
                 }
                 IconButton(
-                    onClick = { onEdit(dialog) },
+                    onClick = { onEdit(test) },
                     modifier = Modifier.size(18.dp)
                 ) {
                     Icon(Icons.Default.Edit, contentDescription = "Editar")
                 }
                 Spacer( Modifier.width(8.dp))
                 IconButton(
-                    onClick = { onDelete(dialog) },
+                    onClick = { onDelete(test) },
                     modifier = Modifier.size(18.dp)
                 ) {
                     Icon(Icons.Default.Delete, contentDescription = "Eliminar")
                 }
             }
+
             Spacer(Modifier.height(8.dp))
-            Text("Descripción: ${dialog.description}", style = MaterialTheme.typography.bodySmall)
+            Text("Nivel: $levelName", style = MaterialTheme.typography.labelSmall)
+            Spacer(Modifier.height(4.dp))
+            Text("Descripción: ${test.description}", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditDialogDialog(
-    initial: Dialog,
+fun EditTestDialog(
+    initial: Test,
     levels: List<Level>,
-    onSave: (Dialog) -> Unit,
+    onSave: (Test) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(initial.name) }
     var description by remember { mutableStateOf(initial.description) }
     var levelId by remember { mutableStateOf(initial.levelId) }
+    var testTypeSelected by remember { mutableStateOf(initial.testType) }
     var expanded by remember { mutableStateOf(false) }
-    var activeExpandend by remember { mutableStateOf(false) }
-    var activeDialog by remember { mutableStateOf(initial.isActive ?: false) }
-
+    var activeExpanded by remember { mutableStateOf(false) }
+    var activeTest by remember { mutableStateOf(initial.isActive ?: false) }
+    var typeExpanded by remember { mutableStateOf(false) }
     val selectedLevel = levels.find { it.id == levelId }
+
+    val testTypes = TestType.entries
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initial.id == null) "Nuevo Diálogo" else "Editar Diálogo") },
+        title = { Text(if (initial.id == null) "Nuevo Test" else "Editar Test") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(name, { name = it }, label = { Text("Nombre") })
@@ -314,11 +371,11 @@ fun EditDialogDialog(
 
                 }
                 ExposedDropdownMenuBox(
-                    expanded = activeExpandend,
-                    onExpandedChange = { activeExpandend = !activeExpandend }
+                    expanded = activeExpanded,
+                    onExpandedChange = { activeExpanded = !activeExpanded }
                 ) {
                     OutlinedTextField(
-                        value = activeDialog.let { if (it) "Activo" else "Inactivo" },
+                        value = activeTest.let { if (it) "Activo" else "Inactivo" },
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Estado") },
@@ -326,28 +383,58 @@ fun EditDialogDialog(
                             MenuAnchorType.PrimaryNotEditable,
                             enabled = true
                         ).fillMaxWidth(),
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = activeExpandend) }
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = activeExpanded) }
                     )
                     ExposedDropdownMenu(
-                        expanded = activeExpandend,
-                        onDismissRequest = { activeExpandend = false }
+                        expanded = activeExpanded,
+                        onDismissRequest = { activeExpanded = false }
                     ) {
 
                         DropdownMenuItem(
                             text = { Text("Activo") },
                             onClick = {
-                                activeDialog = true
-                                activeExpandend = false
+                                activeTest = true
+                                activeExpanded = false
                             }
                         )
                         DropdownMenuItem(
                             text = { Text("Inactivo") },
                             onClick = {
-                                activeDialog = false
-                                activeExpandend = false
+                                activeTest = false
+                                activeExpanded = false
                             }
                         )
 
+                    }
+                }
+                ExposedDropdownMenuBox(
+                    expanded = typeExpanded,
+                    onExpandedChange = { typeExpanded = !typeExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = testTypeSelected?.name ?: "Selecciona un tipo",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Tipo") },
+                        modifier = Modifier.menuAnchor(
+                            MenuAnchorType.PrimaryNotEditable,
+                            enabled = true
+                        ).fillMaxWidth(),
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) }
+                    )
+                    ExposedDropdownMenu(
+                        expanded = typeExpanded,
+                        onDismissRequest = { typeExpanded = false }
+                    ) {
+                        testTypes.forEach { type ->
+                            DropdownMenuItem(
+                                text = { Text(type.name) },
+                                onClick = {
+                                    testTypeSelected = type
+                                    typeExpanded = false
+                                }
+                            )
+                        }
                     }
                 }
 
@@ -361,8 +448,9 @@ fun EditDialogDialog(
                         initial.copy(
                             name = name,
                             description = description,
+                            isActive = activeTest,
                             levelId = levelId,
-                            isActive = activeDialog
+                            testType = testTypeSelected
                         )
                     )
                 }

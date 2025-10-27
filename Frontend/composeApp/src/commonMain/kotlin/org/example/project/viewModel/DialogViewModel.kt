@@ -6,9 +6,10 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.example.project.dtos.CreateDialogDTO
 import org.example.project.models.Dialog
 import org.example.project.models.Level
-import org.example.project.repository.dialogsRepository.DialogsRepository
+import org.example.project.repository.DialogsRepository
 
 data class DialogsUiState(
     val dialogs: List<Dialog> = emptyList(),
@@ -30,13 +31,14 @@ class DialogViewModel(
     }
 
     /** === PUBLIC API === */
-    fun addDialog(newDialog: Dialog, idLevel: Int) {
+    fun addDialog(newDialog: CreateDialogDTO, idLevel: Int) {
         launchCatching(
             block = {
                 val result = repoDialog.createDialog(newDialog, idLevel)
                 result
             },
             onSuccess = { added ->
+
                 _state.value = _state.value.copy(
                     dialogs = _state.value.dialogs + added
                 )

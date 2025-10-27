@@ -26,7 +26,7 @@ import org.example.project.viewModel.LevelsViewModel
 class AdminLevelsScreen : Screen {
     override val key = uniqueScreenKey
 
-    @OptIn(ExperimentalMaterial3Api::class)
+
     @Composable
     override fun Content() {
         val vm = rememberScreenModel {
@@ -49,6 +49,9 @@ class AdminLevelsScreen : Screen {
             ui.error?.let {
                 snackbarHostState.showSnackbar(it)
             }
+        }
+        LaunchedEffect(Unit) {
+            vm.refresh()
         }
 
         ModalNavigationDrawer(
@@ -79,19 +82,18 @@ class AdminLevelsScreen : Screen {
             ) { padding ->
                 Column(modifier = Modifier.padding(16.dp).padding(WindowInsets.safeDrawing.asPaddingValues())) {
                     Text("Gestión de Niveles", style = MaterialTheme.typography.headlineMedium)
-                    Text("Administra los niveles y evaluaciones", style = MaterialTheme.typography.bodySmall)
                 }
                 Box(Modifier.fillMaxSize().padding(padding), Alignment.Center) {
                     when {
                         ui.isLoading -> CircularProgressIndicator()
 
                         else -> LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
-                            val levels = ui.levels
 
-                            items(levels.size + 1) { index ->
+
+                            items(ui.levels.size + 1) { index ->
                                 // Si estamos al final de la lista, no hay siguiente
-                                val before = levels.getOrNull(index - 1)
-                                val after = levels.getOrNull(index)
+                                val before = ui.levels.getOrNull(index - 1)
+                                val after = ui.levels.getOrNull(index)
 
                                 AddButton(onClick = {
                                     insertBeforeId = before?.id
@@ -104,9 +106,9 @@ class AdminLevelsScreen : Screen {
                                         level = level,
                                         onEdit = {
                                             editing = it
-                                            val idx = levels.indexOf(it)
-                                            insertBeforeId = levels.getOrNull(idx - 1)?.id
-                                            insertAfterId = levels.getOrNull(idx + 1)?.id
+                                            val idx = ui.levels.indexOf(it)
+                                            insertBeforeId = ui.levels.getOrNull(idx - 1)?.id
+                                            insertAfterId = ui.levels.getOrNull(idx + 1)?.id
                                         },
                                         onDelete = { confirmDelete = it },
                                         onClick = { navigator.push(LevelDetails(level.id)) }
@@ -116,7 +118,6 @@ class AdminLevelsScreen : Screen {
                             }
                         }
                     }
-                    println("Mensaje de error: ${ui.error}")
                 }
 
                 editing?.let {
@@ -200,7 +201,32 @@ fun LevelCard(level: Level, onEdit: (Level) -> Unit, onDelete: (Level) -> Unit, 
                 }
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(level.name, style = MaterialTheme.typography.titleMedium)
+                    Row {
+                        Text(
+                            level.name,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Card(
+                            modifier = Modifier
+                                .padding(end = 4.dp, bottom = 4.dp)
+                                .background(Color(220, 220, 220)),
+                            shape = MaterialTheme.shapes.small,
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Text(
+                                text = (if (level.isActive) "Activo" else "Inactivo"),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (level.isActive) Color(
+                                    34,
+                                    139,
+                                    34
+                                ) else Color(178, 34, 34),
+                                modifier = Modifier
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
                     Text("Dificultad: ${level.difficulty}", style = MaterialTheme.typography.labelSmall)
                 }
                 IconButton(onClick = { onEdit(level) }) {
@@ -224,6 +250,8 @@ fun EditLevelDialog(initial: Level, onSave: (Level) -> Unit, onDismiss: () -> Un
     var difficulty by remember { mutableStateOf(initial.difficulty) }
 
     var expanded by remember { mutableStateOf(false) }
+    var activeExpanded by remember { mutableStateOf(false) }
+    var activeDialog by remember { mutableStateOf(initial.isActive ) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -263,11 +291,50 @@ fun EditLevelDialog(initial: Level, onSave: (Level) -> Unit, onDismiss: () -> Un
                         }
                     }
                 }
+                ExposedDropdownMenuBox(
+                    expanded = activeExpanded,
+                    onExpandedChange = { activeExpanded = !activeExpanded }
+                ) {
+
+
+                    OutlinedTextField(
+                        value = (if (activeDialog) "Activo" else "Inactivo"),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Status") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = activeExpanded)
+                        },
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = activeExpanded,
+                        onDismissRequest = { activeExpanded = false }
+                    ) {
+
+                        DropdownMenuItem(
+                            text = { Text("Activo") },
+                            onClick = {
+                                activeDialog = true
+                                activeExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Inactivo") },
+                            onClick = {
+                                activeDialog = false
+                                activeExpanded = false
+                            }
+                        )
+
+                    }
+                }
             }
         },
         confirmButton = {
             TextButton(onClick = {
-                onSave(initial.copy(name = name, description = desc, difficulty = difficulty))
+                onSave(initial.copy(name = name, description = desc, difficulty = difficulty, isActive = activeDialog))
             }) { Text("Guardar") }
         },
         dismissButton = {

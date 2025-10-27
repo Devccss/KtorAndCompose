@@ -20,7 +20,7 @@ import org.example.project.repository.ParticipantsRepository
 import org.example.project.repository.PhraseRepository
 import org.example.project.repository.PhraseWordRepository
 import org.example.project.repository.WordRepository
-import org.example.project.repository.dialogsRepository.DialogsRepository
+import org.example.project.repository.DialogsRepository
 
 data class DialogDetailsUIState(
     val fullDialog: DialogDetailDTO? = null,
@@ -181,7 +181,14 @@ class DialogDetailsViewModel(
     fun deleteParticipant(participantId: Int) {
         launchCatching(
             block = { repoParticipant.deleteParticipant(participantId) },
-            onSuccess = { getParticipantsByDialogId(dialogId) }
+            onSuccess = {result ->
+                if (result is Boolean){
+                    getParticipantsByDialogId(dialogId)
+                }else{
+                    _state.value = _state.value.copy(error = (result as Exception).message)
+                }
+            }
+
         )
     }
 

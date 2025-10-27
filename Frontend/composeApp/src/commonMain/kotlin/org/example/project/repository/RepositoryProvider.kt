@@ -1,12 +1,13 @@
-import org.example.project.repository.levelRepository.KtorLevelRepository
+import org.example.project.repository.KtorLevelRepository
 import org.example.project.network.createHttpClient
 import org.example.project.repository.ParticipantsRepository
 import org.example.project.repository.PhraseRepository
 import org.example.project.repository.PhraseWordRepository
 import org.example.project.repository.StudentRepository
-import org.example.project.repository.UsersRepository.UserRepo
+import org.example.project.repository.UserRepo
 import org.example.project.repository.WordRepository
-import org.example.project.repository.dialogsRepository.DialogsRepository
+import org.example.project.repository.DialogsRepository
+import org.example.project.repository.TestRepository
 
 object RepositoryProvider {
     private val httpClient = createHttpClient()
@@ -33,5 +34,8 @@ object RepositoryProvider {
     ) }
     val studentRepository by lazy { StudentRepository(
         httpClient, baseUrl
+    ) }
+    val testRepository by lazy { TestRepository(
+        httpClient, baseUrl, levelRepository = levelRepository, dialogsRepository = dialogsRepository
     ) }
 }

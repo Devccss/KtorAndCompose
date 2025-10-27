@@ -1,14 +1,12 @@
 package org.example.project.dtos
 
 import kotlinx.serialization.Serializable
-import org.example.project.models.DifficultyLevel
+import org.example.project.models.TestType
 
 @Serializable
-data class CreateDialogDTO(
-    val levelId: Int,
+data class CreateTest (
     val name: String,
-    val difficulty: DifficultyLevel,
     val description: String,
+    val testType: TestType? = TestType.TRANSLATION,
     val isActive: Boolean? = false,
-    val audioUrl: String? = null
 )

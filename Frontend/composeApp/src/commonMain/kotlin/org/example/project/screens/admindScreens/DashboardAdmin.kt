@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -20,9 +19,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlinx.coroutines.launch
-import org.example.project.repository.UsersRepository.UserRepo
 import org.example.project.screens.LoginScreen
-import org.example.project.viewModel.UserViewModel
 
 data class WeeklyStats(val day: String, val users: Int, val lessons: Int)
 data class PopularContent(val title: String, val completions: Int, val category: String)
@@ -155,20 +152,17 @@ fun DrawerContent(onNavigate: (Screen) -> Unit) {
         NavigationDrawerItem(label = { Text("Dashboard") }, selected = false, onClick = { onNavigate(
             AdminDashboard("Admin")
         ) })
-        NavigationDrawerItem(label = { Text("Usuarios") }, selected = false, onClick = { onNavigate(
-            LoginScreen()
+        NavigationDrawerItem(label = { Text("Administrar Usuarios") }, selected = false, onClick = { onNavigate(
+            UsersScreen()
         ) })
-        NavigationDrawerItem(label = { Text("Niveles") }, selected = false, onClick = { onNavigate(
+        NavigationDrawerItem(label = { Text("Administrar Niveles") }, selected = false, onClick = { onNavigate(
             AdminLevelsScreen()
         ) })
-        NavigationDrawerItem(label = { Text("Diálogos") }, selected = false, onClick = { onNavigate(
+        NavigationDrawerItem(label = { Text("Administrar Diálogos") }, selected = false, onClick = { onNavigate(
             DialogsScreen(null)
         ) })
-        NavigationDrawerItem(label = { Text("Frases") }, selected = false, onClick = { onNavigate(
-            LoginScreen()
-        ) })
-        NavigationDrawerItem(label = { Text("Palabras") }, selected = false, onClick = { onNavigate(
-            LoginScreen()
+        NavigationDrawerItem(label = { Text("Administrar Tests") }, selected = false, onClick = { onNavigate(
+            TestScreen()
         ) })
         NavigationDrawerItem(label = { Text("Cerrar Sesión") }, selected = false, onClick = {
 

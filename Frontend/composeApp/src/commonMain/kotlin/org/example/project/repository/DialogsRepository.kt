@@ -1,18 +1,18 @@
-package org.example.project.repository.dialogsRepository
+package org.example.project.repository
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.contentType
+import org.example.project.dtos.CreateDialogDTO
 import org.example.project.dtos.DialogDetailDTO
 import org.example.project.models.Dialog
 import org.example.project.models.Level
-import org.example.project.repository.levelRepository.LevelRepository
 
 class DialogsRepository(
     private val httpClient: HttpClient,
     private val baseUrl: String,
-    private val levelsRepo: LevelRepository
+    private val levelsRepo: KtorLevelRepository
 )  {
 
     suspend fun getAllDialogs(): List<Dialog> =
@@ -21,14 +21,14 @@ class DialogsRepository(
     suspend fun getDialogById(id: Int): Dialog? =
         httpClient.get("$baseUrl/api/v1/dialogs/$id").body()
 
-    suspend fun getDialogsByLevelId(levelId: Int): List<Dialog> =
-        httpClient.get("$baseUrl/api/v1/dialogs/level/$levelId").body()
+    suspend fun getAllDialogsOfLevelId(levelId: Int): List<Dialog> =
+        httpClient.get("$baseUrl/api/v1/dialogs/DialogsOflevelId/$levelId").body()
 
     suspend fun getFullDialogById(id: Int): DialogDetailDTO {
         return httpClient.get("$baseUrl/api/v1/dialogs/full/$id").body()
     }
 
-    suspend fun createDialog(dialog: Dialog, idLevel: Int): Dialog {
+    suspend fun createDialog(dialog: CreateDialogDTO, idLevel: Int): Dialog {
         return httpClient.post("$baseUrl/api/v1/dialogs/$idLevel") {
             println("KtorDialogsRepository: createDialog llamado con dialog=$dialog, levelId=$idLevel")
 
@@ -57,5 +57,8 @@ class DialogsRepository(
     }
 
     suspend fun getAllLevelsFromDialogsRepo() = levelsRepo.getAllLevels()
+
+    suspend fun getAllTestDialogs(testId: Int): List<Dialog> =
+        httpClient.get("$baseUrl/api/v1/dialogs/testDialogs/$testId").body()
 
 }

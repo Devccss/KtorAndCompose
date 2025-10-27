@@ -13,7 +13,7 @@ import org.example.project.dtos.CreateUserDto
 import org.example.project.dtos.LoginDto
 import org.example.project.dtos.UsersDto
 import org.example.project.models.Users
-import org.example.project.repository.UsersRepository.UserRepo
+import org.example.project.repository.UserRepo
 
 
 data class UsersUiState(

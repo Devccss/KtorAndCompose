@@ -1,4 +1,4 @@
-package org.example.project.repository.levelRepository
+package org.example.project.repository
 
 
 import io.ktor.client.*
@@ -8,16 +8,15 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.*
 import org.example.project.models.Level
 
-class KtorLevelRepository(private val httpClient: HttpClient, private val baseUrl: String) :
-    LevelRepository {
+class KtorLevelRepository(private val httpClient: HttpClient, private val baseUrl: String) {
 
-    override suspend fun getAllLevels(): List<Level> =
+     suspend fun getAllLevels(): List<Level> =
         httpClient.get("$baseUrl/api/v1/levels").body()
 
-    override suspend fun getLevelById(id: Int): Level? =
+    suspend fun getLevelById(id: Int): Level? =
         httpClient.get("$baseUrl/api/v1/levels/$id").body()
 
-    override suspend fun addLevel(level: Level, beforeId: Int?, afterId: Int?): Level {
+    suspend fun addLevel(level: Level, beforeId: Int?, afterId: Int?): Level {
         val urlBuilder = StringBuilder("$baseUrl/api/v1/levels")
 
         val queryParams = listOfNotNull(
@@ -36,13 +35,13 @@ class KtorLevelRepository(private val httpClient: HttpClient, private val baseUr
         }.body()
     }
 
-    override suspend fun updateLevel(id: Int, level: Level, beforeId: Int?, afterId: Int?): Level =
+    suspend fun updateLevel(id: Int, level: Level, beforeId: Int?, afterId: Int?): Level =
         httpClient.put("$baseUrl/api/v1/levels/$id") {
             contentType(ContentType.Application.Json)
             setBody(level)
         }.body()
 
-    override suspend fun deleteLevel(id: Int): Result<Unit> {
+    suspend fun deleteLevel(id: Int): Result<Unit> {
         return try {
             val response = httpClient.delete("$baseUrl/api/v1/levels/$id")
             if (response.status == HttpStatusCode.NoContent) {
@@ -56,6 +55,6 @@ class KtorLevelRepository(private val httpClient: HttpClient, private val baseUr
         }
     }
 
-    override suspend fun getLevelsByDifficulty(difficulty: String): List<Level> =
+    suspend fun getLevelsByDifficulty(difficulty: String): List<Level> =
         httpClient.get("$baseUrl/api/v1/levels/difficulty/$difficulty").body()
 }

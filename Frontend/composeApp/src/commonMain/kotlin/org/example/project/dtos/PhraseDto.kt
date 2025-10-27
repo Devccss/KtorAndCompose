@@ -15,6 +15,7 @@ data class PhraseDto(
 
 @Serializable
 data class CreatePhraseDto (
+    val participantId: Int,
     val audioUrl: String? =null,
     val englishText : String,
     val spanishText: List<String>? = emptyList()

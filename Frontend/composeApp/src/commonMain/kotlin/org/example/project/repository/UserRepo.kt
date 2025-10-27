@@ -1,13 +1,11 @@
-package org.example.project.repository.UsersRepository
+package org.example.project.repository
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
-import io.ktor.client.statement.HttpResponse
 import io.ktor.http.contentType
-import io.ktor.http.isSuccess
 import org.example.project.dtos.CreateUserDto
 import org.example.project.dtos.LoginDto
 import org.example.project.dtos.UsersDto

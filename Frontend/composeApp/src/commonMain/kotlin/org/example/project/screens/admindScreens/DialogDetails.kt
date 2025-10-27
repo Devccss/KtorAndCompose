@@ -3,10 +3,10 @@ package org.example.project.screens.admindScreens
 import RepositoryProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -24,22 +25,29 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,21 +57,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.core.screen.uniqueScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import io.ktor.utils.io.core.Input
 import kotlinx.coroutines.launch
 import org.example.project.dtos.CreateParticipantDTO
 import org.example.project.dtos.CreatePhraseDto
+import org.example.project.dtos.DialogParticipantDTO
 import org.example.project.dtos.PhraseDto
 import org.example.project.dtos.WordDto
-import org.example.project.dtos.DialogParticipantDTO
 import org.example.project.models.Phrase
-
 import org.example.project.viewModel.DialogDetailsViewModel
 
 
@@ -104,12 +111,20 @@ class DialogDetails(
         var pendingWords by remember { mutableStateOf<List<WordDto>>(emptyList()) }
         var pendingPhrase by remember { mutableStateOf<PhraseDto?>(null) }
         var showAddPhraseSection by remember { mutableStateOf(false) }
+        var showEditPhraseSection by remember { mutableStateOf(false) }
         var showHelpAddPhrase by remember { mutableStateOf(false) }
 
         val scope = rememberCoroutineScope()
 
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         val navigator = LocalNavigator.currentOrThrow
+        val snackbarHostState = remember { SnackbarHostState() }
+
+        LaunchedEffect(ui.error) {
+            ui.error?.let {
+                snackbarHostState.showSnackbar(it)
+            }
+        }
 
         ModalNavigationDrawer(
             drawerState = drawerState,
@@ -130,6 +145,7 @@ class DialogDetails(
                         onMenuClick = { scope.launch { drawerState.open() } },
                     )
                 },
+                snackbarHost = { SnackbarHost(snackbarHostState) }
             ) {
                 Column(
                     modifier = Modifier
@@ -139,9 +155,6 @@ class DialogDetails(
                         .padding(horizontal = 16.dp)
                         .padding(WindowInsets.safeDrawing.asPaddingValues())
                 ) {
-                    ui.error?.let { err ->
-                        println("----Error en: err $err")
-                    }
                     ui.fullDialog?.let { dlg ->
                         Card(
                             modifier = Modifier.padding(bottom = 16.dp)
@@ -155,10 +168,32 @@ class DialogDetails(
                                 Column(
                                     modifier = Modifier.weight(1f)
                                 ) {
-                                    Text(
-                                        "Nombre: ${dlg.dialog.name}",
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
+                                    Row {
+                                        Text(
+                                            "Nombre: ${dlg.dialog.name}",
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Card(
+                                            modifier = Modifier
+                                                .padding(end = 4.dp, bottom = 4.dp)
+                                                .background(Color(220, 220, 220)),
+                                            shape = MaterialTheme.shapes.small,
+                                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = (if (dlg.dialog.isActive == true) "Activo" else "Inactivo"),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = if (dlg.dialog.isActive == true) Color(
+                                                    34,
+                                                    139,
+                                                    34
+                                                ) else Color(178, 34, 34),
+                                                modifier = Modifier
+                                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                    }
                                     Text(
                                         "Descripción: ${dlg.dialog.description}",
                                         style = MaterialTheme.typography.bodyMedium
@@ -175,29 +210,51 @@ class DialogDetails(
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    IconButton({ editing = true }) {
+                                    IconButton({ editing = true },
+                                        modifier = Modifier.size(18.dp)) {
                                         Icon(
                                             Icons.Default.Edit,
                                             contentDescription = "Editar",
-                                            tint = Color(50, 77, 186, 1000) // Azul suave
-                                        )
+
+                                            )
                                     }
-                                    IconButton({ confirmDelete = true }) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    IconButton({ confirmDelete = true },
+                                        modifier = Modifier.size(18.dp)) {
                                         Icon(
                                             Icons.Default.Delete,
                                             contentDescription = "Eliminar",
-                                            tint = Color(212, 69, 57, 1000) // Rojo suave
-                                        )
+
+                                            )
                                     }
                                 }
                             }
                         }
                         // Sección Participantes
-                        Text("Participantes", style = MaterialTheme.typography.titleMedium)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        if ((ui.participants.size) < 5) {
-                            Button(onClick = { showAddParticipant = true }) {
-                                Text("Agregar participante")
+                        Row(
+                            modifier = Modifier.fillMaxWidth().align(Alignment.CenterHorizontally)
+                        ) {
+                            Text(
+                                "Participantes",
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.align(Alignment.CenterVertically)
+                            )
+                            Spacer(modifier = Modifier.weight(0.1f))
+                            if ((ui.participants.size) < 5) {
+                                TextButton(
+                                    onClick = { showAddParticipant = true },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.Transparent,
+                                        contentColor = Color.Black
+                                    )
+                                ) {
+                                    Text(
+                                        "Agregar participante",
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            textDecoration = TextDecoration.Underline
+                                        )
+                                    )
+                                }
                             }
                         }
                         ui.participants.forEach { dto ->
@@ -218,13 +275,20 @@ class DialogDetails(
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        IconButton({ showEditParticipant = dto }) {
+                                        IconButton(
+                                            { showEditParticipant = dto },
+                                            modifier = Modifier.size(18.dp)
+                                        ) {
                                             Icon(
                                                 Icons.Default.Edit,
                                                 contentDescription = "Editar participante"
                                             )
                                         }
-                                        IconButton({ showDeleteParticipant = dto }) {
+                                        Spacer( modifier = Modifier.width(6.dp))
+                                        IconButton(
+                                            { showDeleteParticipant = dto },
+                                            modifier = Modifier.size(18.dp)
+                                        ) {
                                             Icon(
                                                 Icons.Default.Delete,
                                                 contentDescription = "Eliminar participante"
@@ -248,6 +312,37 @@ class DialogDetails(
                                     contentDescription = "Ayuda para agregar frase"
                                 )
                             }
+                            if (ui.phrases.isEmpty()) {
+                                TextButton(
+                                    onClick = { showAddPhraseSection = true },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.Transparent,
+                                        contentColor = Color.Black
+                                    )
+                                ) {
+                                    Text(
+                                        "Agregar Frase",
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            textDecoration = TextDecoration.Underline
+                                        )
+                                    )
+                                }
+                            } else {
+                                TextButton(
+                                    onClick = { showAddPhraseSection = true },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.Transparent,
+                                        contentColor = Color.Black
+                                    )
+                                ) {
+                                    Text(
+                                        "Agregar Frase",
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            textDecoration = TextDecoration.Underline
+                                        )
+                                    )
+                                }
+                            }
                         }
                         if (showHelpAddPhrase) {
                             AlertDialog(
@@ -261,41 +356,79 @@ class DialogDetails(
                                 }
                             )
                         }
-                        if (ui.phrases.isEmpty()) {
-                            Button(onClick = { showAddPhraseSection = true }) {
-                                Text("Agregar frase")
 
+                        ui.phrases.forEach { phrase ->
+                            val phraseParticipant = ui.participants.find { participant ->
+                                phrase.participantId == participant.id
                             }
-                        } else {
-                            Button(onClick = { showAddPhraseSection = true }) {
-                                Text("+")
-                            }
-                            ui.phrases.forEach { phrase ->
-                                Card(
+                            Card(
+                                modifier = Modifier
+                                    .padding(4.dp)
+                                    .fillMaxWidth()
+                            ) {
+                                Row(
                                     modifier = Modifier
-                                        .padding(4.dp)
-                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    Column(
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+
+                                        Text("${phraseParticipant?.name ?: "Participante desconocido"}: ${phrase.englishText}")
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            "Traducciones: ",
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                        FlowRow(
+                                            modifier = Modifier.padding(top = 4.dp),
+                                        ) {
+
+                                            phrase.spanishText?.forEach { spanishPhrase ->
+
+                                                Card(
+                                                    modifier = Modifier
+                                                        .padding(end = 4.dp, bottom = 4.dp)
+                                                        .background(Color(220, 220, 220)),
+                                                    shape = MaterialTheme.shapes.small,
+                                                    elevation = CardDefaults.cardElevation(
+                                                        defaultElevation = 2.dp
+                                                    )
+                                                ) {
+                                                    Text(
+                                                        text = spanishPhrase,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        modifier = Modifier
+                                                            .padding(
+                                                                horizontal = 8.dp,
+                                                                vertical = 4.dp
+                                                            )
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                     Row(
-                                        modifier = Modifier
-                                            .padding(8.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Column(
-                                            modifier = Modifier.weight(1f)
+                                        Button(
+                                            onClick = {
+                                                showEditPhrase = phrase
+                                                showEditPhraseSection = true
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color.Transparent,
+                                                contentColor = Color.Black
+                                            )
                                         ) {
-
-                                            Text("Frase: ${phrase.englishText}")
-                                            Text("Traducción: ${phrase.spanishText}")
-                                        }
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Button(
-                                                onClick = { showEditPhrase = phrase }
-                                            ) {
-                                                Text("...")
-                                            }
+                                            Text(
+                                                "editar",
+                                                modifier = Modifier.align(Alignment.CenterVertically),
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    textDecoration = TextDecoration.Underline
+                                                )
+                                            )
                                         }
                                     }
                                 }
@@ -332,7 +465,7 @@ class DialogDetails(
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.List,
                                         contentDescription = "Ver detalles",
-                                        tint = MaterialTheme.colorScheme.primary
+                                        tint = Color.Black
                                     )
                                 }
                             }
@@ -479,8 +612,53 @@ class DialogDetails(
                         isActive = true,
                         createdAt = null
                     ),
+                    participants = ui.participants,
                     onDismiss = { showAddPhraseSection = false },
+                    onSave = { phraseDto ->
+                        vm.createPhrase(
+                            participantId = phraseDto.participantId,
+                            phrase = CreatePhraseDto(
+                                participantId = phraseDto.participantId,
+                                englishText = phraseDto.englishText,
+                                spanishText = phraseDto.spanishText,
+                                audioUrl = null,
+                            )
+                        )
+                        showAddPhraseSection = false
+                    }
                 )
+            }
+            showEditPhraseSection.takeIf { it }?.let {
+                showEditPhrase?.let { phrase ->
+                    AddPhraseSection(
+                        phrase = Phrase(
+                            id = phrase.id,
+                            participantId = phrase.participantId,
+                            audioUrl = phrase.audioUrl,
+                            englishText = phrase.englishText,
+                            spanishText = phrase.spanishText,
+                            isActive = phrase.isActive,
+                            createdAt = phrase.createdAt
+                        ),
+                        participants = ui.participants,
+                        onDismiss = { showEditPhraseSection = false },
+                        onSave = { phraseDto ->
+                            phrase.id.let {
+                                vm.updatePhrase(
+                                    phraseId = it,
+                                    phrase = CreatePhraseDto(
+                                        participantId = phraseDto.participantId,
+                                        englishText = phraseDto.englishText,
+                                        spanishText = phraseDto.spanishText,
+                                        audioUrl = null,
+                                    )
+                                )
+                            }
+                            showEditPhraseSection = false
+                        },
+                        isEdit = true
+                    )
+                }
             }
         }
     }
@@ -527,60 +705,187 @@ class DialogDetails(
         )
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun AddPhraseSection(
         phrase: Phrase,
+        participants: List<DialogParticipantDTO>,
         onDismiss: () -> Unit,
-
+        onSave: (CreatePhraseDto) -> Unit,
+        isEdit: Boolean = false
     ) {
         var englishText by remember { mutableStateOf(phrase.englishText ?: "") }
         var phraseSpanish by remember { mutableStateOf("") }
+        var listSpanish by remember {
+            mutableStateOf<List<String>>(
+                phrase.spanishText ?: emptyList()
+            )
+        }
+
+        var participantId by remember { mutableStateOf<Int?>(phrase.participantId) }
+        var expanded by remember { mutableStateOf(false) }
 
         // Separar palabras en tiempo real
-        val words = remember(englishText) {
-            englishText.split(" ").filter { it.isNotBlank() }
-        }
+        val words = remember(englishText) { englishText.split(" ").filter { it.isNotBlank() } }
+        val participantSelect = participants.find { it.id == participantId }
+        var showError by remember { mutableStateOf(false) }
+        var errorString by remember { mutableStateOf<String?>(null) }
 
         AlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text("Agregar frase") },
+            title = { Text(if (isEdit) "Editar frase" else "Agregar frase") },
             text = {
                 Column {
                     OutlinedTextField(
                         value = englishText,
-                        onValueChange = { englishText = it },
+                        onValueChange = { newValue ->
+                            // Permite letras, espacios y símbolos, pero no números
+                            if (newValue.all { !it.isDigit() }) {
+                                englishText = newValue
+                            }
+                        },
                         label = { Text("Frase en inglés") }
                     )
-                    // Mostrar palabras en pequeño debajo del input
+
                     if (words.isNotEmpty()) {
                         FlowRow(
                             modifier = Modifier.padding(top = 4.dp),
-
                         ) {
-                            words.forEach { word ->
+                            words.filter { it.all { char -> char.isLetter() } }.forEach { word ->
+                                Card(
+                                    modifier = Modifier
+                                        .padding(end = 4.dp, bottom = 4.dp)
+                                        .background(Color(220, 220, 220)),
+                                    shape = MaterialTheme.shapes.small,
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                ) {
+                                    Text(
+                                        text = word,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = phraseSpanish,
+                            onValueChange = { phraseSpanish = it },
+                            label = { Text("Traducción/nes al español") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        Button(
+                            onClick = {
+                                if (phraseSpanish.isNotBlank()) {
+                                    listSpanish = listSpanish + phraseSpanish
+                                    phraseSpanish = ""
+                                }
+                            },
+                            modifier = Modifier
+                                .padding(start = 8.dp)
+                                .height(40.dp)
+                                .width(40.dp),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text("+")
+                        }
+                    }
+                    Text("Traducciones agregadas:", style = MaterialTheme.typography.bodyMedium)
+                    FlowRow(
+                        modifier = Modifier.padding(top = 4.dp),
+                    ) {
+                        listSpanish.forEach { phrase ->
+                            Card(
+                                modifier = Modifier
+                                    .padding(end = 4.dp, bottom = 4.dp)
+                                    .background(Color(220, 220, 220)),
+                                shape = MaterialTheme.shapes.small,
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            ) {
                                 Text(
-                                    text = word,
+                                    text = phrase,
                                     style = MaterialTheme.typography.labelSmall,
                                     modifier = Modifier
-                                        .background(Color.LightGray)
-                                        .padding(horizontal = 2.dp, vertical = 2.dp)
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
                         }
                     }
-                    OutlinedTextField(
-                        value = phraseSpanish,
-                        onValueChange = { phraseSpanish = it },
-                        label = { Text("Traducción al español (opcional)") }
-                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
+                    ) {
+                        OutlinedTextField(
+                            value = participantSelect?.name ?: "Selecciona un Participante",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Participante") },
+                            modifier = Modifier
+                                .menuAnchor(
+                                    MenuAnchorType.PrimaryNotEditable,
+                                    enabled = true
+                                )
+                                .fillMaxWidth(),
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            participants.forEach { participant ->
+                                DropdownMenuItem(
+                                    text = { Text(participant.name) },
+                                    onClick = {
+                                        participantId = participant.id
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Column {
+                        Text("Agregar audio")
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(100.dp)
+                                .background(Color(240, 240, 240)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Área para subir o grabar audio (pendiente de implementar)")
+                        }
+                    }
                 }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        // Lógica para guardar la frase
+                        if (englishText.isBlank()) {
+                            showError = true
+                        } else if (participantId == null) {
+                            showError = true
+                        } else {
+                            onSave(
+                                CreatePhraseDto(
+                                    participantId = participantId ?: 0,
+                                    englishText = englishText,
+                                    spanishText = listSpanish,
+                                    audioUrl = null,
+                                )
+                            )
+                        }
                     }
-                ) { Text("Guardar") }
+                ) { Text(if (isEdit) "Actualizar" else "Guardar") }
             },
             dismissButton = {
                 TextButton(onClick = onDismiss) { Text("Cancelar") }
