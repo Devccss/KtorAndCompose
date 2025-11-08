@@ -102,7 +102,7 @@ class UsersRepository {
             if (Users.selectAll().where { Users.email eq dto.email }.any()) {
                 throw BadRequestException("El usuario con el email ${dto.email} ya existe")
             }
-            if (dto.password.isBlank()) {
+            if (dto.password.isBlank() or dto.password.isEmpty()) {
                 throw BadRequestException("La contraseña no puede estar en blanco")
             }
             if (dto.name.isBlank()) {
@@ -170,6 +170,7 @@ class UsersRepository {
                     id = row[Users.id].value,
                     name = row[Users.name],
                     email = row[Users.email],
+                    password = if (row[Users.password]?.isNotEmpty() == true) "Password" else null,
                     preferences = row[Users.preferences],
                     currentLevelId = row[Users.currentLevelId],
                     createdAt = row[Users.createdAt].toString(),
@@ -208,6 +209,7 @@ class UsersRepository {
                     email = row[Users.email],
                     preferences = row[Users.preferences],
                     currentLevelId = row[Users.currentLevelId],
+                    password = row[Users.password],
                     createdAt = row[Users.createdAt].toString(),
                     role = row[Users.role]
                 )
@@ -249,15 +251,16 @@ class UsersRepository {
 
     fun getUserProgress(userId: Int): ProgressDto? = try {
         transaction {
-            UserProgress.selectAll().where{UserProgress.userId eq userId}.singleOrNull()?.let { row ->
-                ProgressDto(
-                    id = row[UserProgress.id].value,
-                    completedDialogs = row[UserProgress.completedDialogs],
-                    totalDialogs = row[UserProgress.totalDialogs],
-                    testScore = row[UserProgress.testScore],
-                    lastAccessed = row[UserProgress.lastAccessed].toString()
-                )
-            }
+            UserProgress.selectAll().where { UserProgress.userId eq userId }.singleOrNull()
+                ?.let { row ->
+                    ProgressDto(
+                        id = row[UserProgress.id].value,
+                        completedDialogs = row[UserProgress.completedDialogs],
+                        totalDialogs = row[UserProgress.totalDialogs],
+                        testScore = row[UserProgress.testScore],
+                        lastAccessed = row[UserProgress.lastAccessed].toString()
+                    )
+                }
         }
     } catch (e: Exception) {
         throw BadRequestException("Error fetching user progress: ${e.message}")

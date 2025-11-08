@@ -168,11 +168,7 @@ fun Application.configureRouting() {
                     val id = call.parameters["id"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
                     val success = userService.deleteUser(id)
-                    if (success) {
-                        call.respond(HttpStatusCode.NoContent)
-                    } else {
-                        throw NotFoundException("User not found")
-                    }
+                    call.respond(success)
                 }
             }
 

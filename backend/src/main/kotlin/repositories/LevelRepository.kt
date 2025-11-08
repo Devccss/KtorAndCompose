@@ -35,7 +35,7 @@ class LevelRepository(private val dialogRepository: DialogRepository) {
 
 
     fun getAllLevels(): List<LevelDTO> = transaction {
-        Levels.selectAll().orderBy(Levels.orderLevel).map(::resultRowToLevel)
+        Levels.selectAll().map(::resultRowToLevel)
     }
 
     fun getLevelById(id: Int): LevelDTO? = transaction {
