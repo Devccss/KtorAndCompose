@@ -1,5 +1,6 @@
 package org.example.project.screens.admindScreens
 
+import RepositoryProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,7 +58,7 @@ class RegisterScreen() : Screen {
         val navigator = LocalNavigator.currentOrThrow
 
         val userViewModel =
-            rememberScreenModel { UserViewModel(RepositoryProvider.usersRepository) }
+            rememberScreenModel { UserViewModel(RepositoryProvider.usersRepository, RepositoryProvider.levelRepository) }
         val uiState by userViewModel.state.collectAsState()
 
         var name: String by remember { mutableStateOf("") }

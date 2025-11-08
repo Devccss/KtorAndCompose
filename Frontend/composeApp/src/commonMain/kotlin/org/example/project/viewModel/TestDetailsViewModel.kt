@@ -33,7 +33,7 @@ class TestDetailsViewModel(private val testId:Int, private val testRepository: T
         getTestById(testId)
         getAllDialogs()
         getDialogsAssignedToTest(testId)
-
+        getLevels()
     }
 
     fun editTest(test: CreateTest) {
@@ -145,6 +145,14 @@ class TestDetailsViewModel(private val testId:Int, private val testRepository: T
                 )
                 getDialogsAssignedToTest(testId)
             }
+        )
+    }
+    private fun getLevels() {
+        launchCatching(
+            block = {
+                testRepository.getAllLevelsFromTestRepo()
+            },
+            onSuccess = { levels -> _state.value = _state.value.copy(levels = levels) }
         )
     }
 

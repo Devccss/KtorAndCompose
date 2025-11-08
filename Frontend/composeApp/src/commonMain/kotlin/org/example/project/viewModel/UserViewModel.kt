@@ -12,20 +12,23 @@ import kotlinx.coroutines.launch
 import org.example.project.dtos.CreateUserDto
 import org.example.project.dtos.LoginDto
 import org.example.project.dtos.UsersDto
+import org.example.project.models.Level
 import org.example.project.models.Users
+import org.example.project.repository.KtorLevelRepository
 import org.example.project.repository.UserRepo
 
 
 data class UsersUiState(
-    val users: List<Users>? = emptyList(),
+    val users: List<Users> = emptyList(),
+    val levels: List<Level> = emptyList(),
     val currentUser: UsersDto? = null,
     val isLoading: Boolean = false,
     val registerUser: CreateUserDto? = null,
-    val error: String? = null,
+    var error: String? = null,
 
     )
 
-class UserViewModel(private val repo: UserRepo) : ViewModel(), ScreenModel {
+class UserViewModel(private val repo: UserRepo, private val levelRepo: KtorLevelRepository) : ViewModel(), ScreenModel {
     private val _state = MutableStateFlow(
         UsersUiState(
             isLoading = true,
@@ -40,48 +43,90 @@ class UserViewModel(private val repo: UserRepo) : ViewModel(), ScreenModel {
     }
 
     init {
-        loadUsers()
-    }
-
-
-    private fun loadUsers() {
         launchCatching(
-            block = { repo.getAllUsers() },
-            onSuccess = { users ->
-                _state.value = UsersUiState(
-                    users = users,
-                    isLoading = false
-                )
+            block = { levelRepo.getAllLevels()},
+            onSuccess = { levels ->
+
+                _state.value = _state.value.copy(levels = levels)
+                loadUsers()
             },
             onError = { error ->
-                _state.value = _state.value.copy(
-                    error = error.message,
-                    isLoading = false
-                )
+                _state.value = _state.value.copy(error = error.message, levels = emptyList())
             }
         )
     }
 
-    fun getUserByEmail(email: String) {
+
+     private fun getAllLevels() {
         launchCatching(
-            block = { repo.getUserByEmail(email) },
-            onSuccess = { user ->
-                if (user != null) {
+            block = { levelRepo.getAllLevels() },
+            onSuccess = { levels ->
+                if(levels.isNotEmpty()){
                     _state.value = _state.value.copy(
-                        currentUser = user,
-                        isLoading = false
+                        levels = levels,
                     )
-                } else {
+                }else{
+
                     _state.value = _state.value.copy(
-                        error = "User not found",
-                        isLoading = false
+                        error = "No se encontraron niveles",
+                        levels = emptyList()
                     )
                 }
             },
             onError = { error ->
                 _state.value = _state.value.copy(
                     error = error.message,
-                    isLoading = false
+
+                )
+            }
+        )
+    }
+
+     private fun loadUsers() {
+        launchCatching(
+            block = { repo.getAllUsers() },
+            onSuccess = { users ->
+                _state.value = _state.value.copy(
+                    users = users,
+                )
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(
+                    error = error.message,
+
+                )
+            }
+        )
+    }
+
+    private fun getUserByEmail(email: String) {
+        launchCatching(
+            block = { repo.getUserByEmail(email) },
+            onSuccess = { user ->
+                if (user != null) {
+                    _state.value = _state.value.copy(
+                        users = _state.value.users.map {
+                            if (it.id == user.id) Users(
+                                id = user.id,
+                                name = user.name,
+                                email = user.email,
+                                password = user.password,
+                                currentLevelId = user.currentLevelId,
+                                createdAt = user.createdAt
+                            ) else it
+                        },
+                    )
+                } else {
+                    _state.value = _state.value.copy(
+                        error = "User not found",
+
+                    )
+                }
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(
+                    error = error.message,
+
                 )
             }
         )
@@ -103,15 +148,15 @@ class UserViewModel(private val repo: UserRepo) : ViewModel(), ScreenModel {
             },
             onSuccess = { added ->
                 _state.value = _state.value.copy(
-                    users = _state.value.users?.plus(added),
+                    users = _state.value.users.plus(added),
                     registerUser = newUser,
-                    isLoading = false
+
                 )
             },
             onError = { error ->
                 _state.value = _state.value.copy(
                     error = error.message,
-                    isLoading = false
+
                 )
             }
         )
@@ -128,14 +173,12 @@ class UserViewModel(private val repo: UserRepo) : ViewModel(), ScreenModel {
 
                     _state.value = _state.value.copy(
                         currentUser = user,
-                        isLoading = false
                     )
                 }
             },
             onError = { error ->
                 _state.value = _state.value.copy(
                     error = error.message,
-                    isLoading = false
                 )
             }
         )
@@ -145,9 +188,7 @@ class UserViewModel(private val repo: UserRepo) : ViewModel(), ScreenModel {
         launchCatching(
             block = { repo.updateUser(id, updatedUser) },
             onSuccess = { updated ->
-                _state.value = _state.value.copy(
-                    currentUser = if (_state.value.currentUser?.id == id) updated else _state.value.currentUser
-                )
+                getUserByEmail(updated.email)
             },
             onError = { error ->
                 _state.value = _state.value.copy(error = error.message)
@@ -160,15 +201,12 @@ class UserViewModel(private val repo: UserRepo) : ViewModel(), ScreenModel {
             block = { repo.deleteUser(id) },
             onSuccess = { success ->
                 if (success) {
-                    _state.value =
-                        (if (_state.value.currentUser?.id == id) null else _state.value.currentUser)?.let { it ->
-                            _state.value.copy(
-                                users = _state.value.users?.filterNot { it.id == id },
-                                currentUser = it
-                            )
-                        }!!
+                    _state.value = _state.value.copy(
+                        users = _state.value.users.filterNot { it.id == id },
+                        currentUser = if (_state.value.currentUser?.id == id) null else _state.value.currentUser
+                    )
                 } else {
-                    _state.value = _state.value.copy(error = "Failed to delete user")
+                    _state.value = _state.value.copy(error = "Error al eliminar el usuario")
                 }
             },
             onError = { error ->

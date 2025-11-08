@@ -2,8 +2,10 @@ package org.example.project.repository
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.contentType
 import org.example.project.dtos.CreateUserDto
@@ -29,23 +31,23 @@ class UserRepo(private val httpClient: HttpClient, private val baseUrl: String) 
             setBody(dto)
         }.body()
 
-    suspend fun createUser(user: CreateUserDto): Users =
+    suspend fun createUser(user: CreateUserDto): Users = try {
         httpClient.post("$baseUrl/api/v1/users/register") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(user)
         }.body()
+    } catch (e: Exception) {
+        throw e
+    }
 
     suspend fun updateUser(id: Int, user: Users): UsersDto =
-        httpClient.post("$baseUrl/api/v1/users/$id") {
+        httpClient.put("$baseUrl/api/v1/users/$id") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(user)
         }.body()
 
-    suspend fun deleteUser(id: Int): Boolean {
-        val response = httpClient.post("$baseUrl/api/v1/users/$id") {
-            contentType(io.ktor.http.ContentType.Application.Json)
-        }
-        return response.status.value == 204
-    }
+    suspend fun deleteUser(id: Int): Boolean =
+        httpClient.delete("$baseUrl/api/v1/users/$id").body()
+
 
 }

@@ -10,7 +10,7 @@ data class Level(
     val id: Int? = null,
     val accent: Int,
     val difficulty: DifficultyLevel,
-    val name: String,
+    var name: String,
     val description: String,
     val orderLevel: Float,
     val isActive: Boolean = true,

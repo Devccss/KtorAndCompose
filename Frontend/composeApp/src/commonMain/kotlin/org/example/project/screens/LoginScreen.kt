@@ -34,7 +34,7 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
         val navigator = LocalNavigator.currentOrThrow
 
         // Instancia del ViewModel
-        val userViewModel = rememberScreenModel {UserViewModel(RepositoryProvider.usersRepository)}
+        val userViewModel = rememberScreenModel {UserViewModel(RepositoryProvider.usersRepository, RepositoryProvider.levelRepository) }
         val uiState by userViewModel.state.collectAsState()
 
         var email by remember { mutableStateOf("") }
