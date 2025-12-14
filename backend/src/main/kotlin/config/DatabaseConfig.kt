@@ -2,15 +2,14 @@ package config
 import io.github.cdimascio.dotenv.dotenv
 import models.CompleteLevels
 import models.TestQuestions
-import models.Levels
+import models.Units
 import models.UserPhraseStandby
-import models.UserProgress
 import models.Users
 import models.Word
 import models.Tests
-import models.Dialogs
+import models.Exercises
 import models.DialogsTests
-import models.PhraseWords
+import models.ExerciseWords
 import models.PhraseOrder
 import models.Phrase
 import org.jetbrains.exposed.v1.jdbc.Database
@@ -33,9 +32,9 @@ fun configureDatabases() {
 
     transaction {
         SchemaUtils.create(
-            Users, Levels, Dialogs, Phrase, PhraseOrder, Word,
-            PhraseWords, UserPhraseStandby, Tests,
-            TestQuestions, UserProgress,DialogsTests,CompleteLevels
+            Users, Units, Exercises, Phrase, PhraseOrder, Word,
+            ExerciseWords, UserPhraseStandby, Tests,
+            TestQuestions, DialogsTests,CompleteLevels
         )
     }
 }

@@ -10,9 +10,8 @@ data class DialogDTOs(
     val id: Int,
     val levelId: Int,
     val name: String,
-    val difficulty: DifficultyLevel,
     val description: String? = null,
-    val audioUrl: String? = null,
+
     val isActive: Boolean? = false,
     val createdAt: String? = null
 )

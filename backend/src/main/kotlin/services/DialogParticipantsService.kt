@@ -3,7 +3,6 @@ package com.example.services
 import com.example.dtos.CreateParticipantDTO
 import com.example.dtos.DialogParticipantDTO
 import com.example.dtos.UpdateParticipantDTO
-import com.example.repositories.DialogParticipantsRepository
 
 class DialogParticipantsService(private val dialogParticipantsRepository: DialogParticipantsRepository) {
 

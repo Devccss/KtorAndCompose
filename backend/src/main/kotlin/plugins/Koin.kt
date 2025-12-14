@@ -1,5 +1,4 @@
 package com.example.plugins
-import com.example.repositories.DialogParticipantsRepository
 import com.example.repositories.PhraseRepository
 import com.example.repositories.PhraseWordRepository
 import com.example.repositories.TestRepository
@@ -28,7 +27,6 @@ import repositories.DialogRepository
 val repositoryModule = module {
     single { LevelRepository(get()) }
     single { DialogRepository() }
-    single { DialogParticipantsRepository(get()) }
     single { PhraseRepository() }
     single { WordRepository() }
     single { PhraseWordRepository() }
@@ -39,7 +37,6 @@ val repositoryModule = module {
 val serviceModule = module {
     single { LevelService(get()) }
     single { DialogService(get()) }
-    single { DialogParticipantsService(get()) }
     single { PhraseService(get()) }
     single { WordService(get()) }
     single { PhraseWordService(get()) }

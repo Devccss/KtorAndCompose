@@ -3,7 +3,6 @@ package com.example.repositories
 import com.example.dtos.CreateUserDto
 import com.example.dtos.GoogleUserDto
 import com.example.dtos.LoginDto
-import com.example.dtos.ProgressDto
 import com.example.dtos.StandbyDto
 import com.example.dtos.StandbyUpdateDto
 import com.example.dtos.UsersDto
@@ -11,7 +10,6 @@ import com.example.dtos.updateUserDto
 import io.ktor.server.plugins.BadRequestException
 import models.Role
 import models.UserPhraseStandby
-import models.UserProgress
 import models.Users
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
@@ -35,7 +33,7 @@ class UsersRepository {
                     password = row[Users.password],
                     provider = row[Users.provider],
                     providerId = row[Users.providerId].toString(),
-                    currentLevelId = row[Users.currentLevelId],
+                    currentLevelId = row[Users.currentUnitId],
                     createdAt = row[Users.createdAt].toString(),
                     role = row[Users.role]
                 )
@@ -57,7 +55,7 @@ class UsersRepository {
                         preferences = row[Users.preferences],
                         provider = row[Users.provider],
                         providerId = row[Users.providerId].toString(),
-                        currentLevelId = row[Users.currentLevelId],
+                        currentLevelId = row[Users.currentUnitId],
                         createdAt = row[Users.createdAt].toString(),
                         role = row[Users.role]
                     )
@@ -79,7 +77,7 @@ class UsersRepository {
                 it[preferences] = dto.preferences
                 it[provider] = dto.provider ?: "google"
                 it[providerId] = dto.providerId ?: "google-${dto.email}"
-                it[currentLevelId] = dto.currentLevelId ?: 0
+                it[currentUnitId] = dto.currentLevelId ?: 0
 
             }[Users.id]
 
@@ -120,7 +118,7 @@ class UsersRepository {
                 it[preferences] = dto.preferences
                 it[provider] = dto.provider ?: "local"
                 it[providerId] = dto.providerId ?: "local-${dto.email}"
-                it[currentLevelId] = dto.currentLevelId
+                it[currentUnitId] = dto.currentLevelId
                 it[role] = dto.role ?: Role.STUDENT
             }[Users.id]
 
@@ -144,25 +142,6 @@ class UsersRepository {
         return BCrypt.hashpw(password, BCrypt.gensalt())
     }
 
-    fun createProgress(userId: Int, dto: ProgressDto): Any = try {
-        transaction {
-            val existingUser = Users.selectAll().where { Users.id eq userId }.singleOrNull()
-            if (existingUser == null) {
-                throw BadRequestException("No user found with ID $userId")
-            }
-            val progressId = UserProgress.insert {
-                it[UserProgress.userId] = userId
-                it[completedDialogs] = dto.completedDialogs
-                it[totalDialogs] = dto.totalDialogs
-                it[testScore] = dto.testScore ?: 0
-                it[lastAccessed] = LocalDateTime.now()
-            }[UserProgress.id]
-            mapOf("id" to progressId.value)
-        }
-    } catch (e: Exception) {
-        throw BadRequestException("Error creating user progress: ${e.message}")
-    }
-
     fun getAllUsers(): List<UsersDto> = try {
         transaction {
             Users.selectAll().map { row ->
@@ -172,7 +151,7 @@ class UsersRepository {
                     email = row[Users.email],
                     password = if (row[Users.password]?.isNotEmpty() == true) "Password" else null,
                     preferences = row[Users.preferences],
-                    currentLevelId = row[Users.currentLevelId],
+                    currentLevelId = row[Users.currentUnitId],
                     createdAt = row[Users.createdAt].toString(),
                     role = row[Users.role]
                 )
@@ -190,7 +169,7 @@ class UsersRepository {
                     name = row[Users.name],
                     email = row[Users.email],
                     preferences = row[Users.preferences],
-                    currentLevelId = row[Users.currentLevelId],
+                    currentLevelId = row[Users.currentUnitId],
                     createdAt = row[Users.createdAt].toString(),
                     role = row[Users.role]
                 )
@@ -208,7 +187,7 @@ class UsersRepository {
                     name = row[Users.name],
                     email = row[Users.email],
                     preferences = row[Users.preferences],
-                    currentLevelId = row[Users.currentLevelId],
+                    currentLevelId = row[Users.currentUnitId],
                     password = row[Users.password],
                     createdAt = row[Users.createdAt].toString(),
                     role = row[Users.role]
@@ -231,7 +210,7 @@ class UsersRepository {
                     }
                 }
                 dto.preferences?.let { update[preferences] = it }
-                dto.currentLevelId?.let { update[currentLevelId] = it }
+                dto.currentLevelId?.let { update[currentUnitId] = it }
                 dto.role?.let { update[role] = it }
             }
 
@@ -249,38 +228,7 @@ class UsersRepository {
         throw BadRequestException("Error deleting user: ${e.message}")
     }
 
-    fun getUserProgress(userId: Int): ProgressDto? = try {
-        transaction {
-            UserProgress.selectAll().where { UserProgress.userId eq userId }.singleOrNull()
-                ?.let { row ->
-                    ProgressDto(
-                        id = row[UserProgress.id].value,
-                        completedDialogs = row[UserProgress.completedDialogs],
-                        totalDialogs = row[UserProgress.totalDialogs],
-                        testScore = row[UserProgress.testScore],
-                        lastAccessed = row[UserProgress.lastAccessed].toString()
-                    )
-                }
-        }
-    } catch (e: Exception) {
-        throw BadRequestException("Error fetching user progress: ${e.message}")
-    }
 
-    fun getUserDialogs(userId: Int): Any = try {
-        transaction {
-            UserProgress.select(UserProgress.userId eq userId)
-                .map { row ->
-                    val completedDialogs = row[UserProgress.completedDialogs]
-                    val totalDialogs = row[UserProgress.totalDialogs]
-                    mapOf(
-                        "completedDialogs" to completedDialogs,
-                        "totalDialogs" to totalDialogs
-                    )
-                }
-        }
-    } catch (e: Exception) {
-        throw BadRequestException("Error fetching user dialogs: ${e.message}")
-    }
 
     fun getUserStandbyPhrases(userId: Int): List<Any> = try {
         transaction {

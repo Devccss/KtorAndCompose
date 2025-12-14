@@ -17,9 +17,6 @@ class UserService(private val userRepository: UsersRepository) {
     fun createUser(dto: CreateUserDto): UsersDto {
         return userRepository.createUser(dto)
     }
-    fun createProgress(userId: Int,dto:ProgressDto): Any {
-        return userRepository.createProgress(userId, dto)
-    }
 
     fun getAllUsers(): List<UsersDto> {
         return userRepository.getAllUsers()
@@ -35,13 +32,6 @@ class UserService(private val userRepository: UsersRepository) {
     }
     fun deleteUser(id: Int): Boolean {
         return userRepository.deleteUser(id)
-    }
-    fun getUserProgress(userId: Int): ProgressDto? {
-        return userRepository.getUserProgress(userId)
-    }
-
-    fun getUserDialogs(userId: Int): Any {
-        return userRepository.getUserDialogs(userId)
     }
 
     fun getUserStandbyPhrases(userId: Int): List<Any> {

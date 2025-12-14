@@ -4,7 +4,7 @@ import LevelCreationDTO
 import LevelDTO
 import LevelUpdateDTO
 import models.DifficultyLevel
-import models.Levels
+import models.Units
 import io.ktor.server.plugins.BadRequestException
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
@@ -18,14 +18,13 @@ import java.time.LocalDateTime
 
 fun resultRowToLevel(row: ResultRow): LevelDTO {
     return LevelDTO(
-        id = row[Levels.id].value,
-        accent = row[Levels.accent],
-        difficulty = row[Levels.difficulty],
-        name = row[Levels.name],
-        description = row[Levels.description],
-        orderLevel = row[Levels.orderLevel],
-        isActive = row[Levels.isActive],
-        createdAt = row[Levels.createdAt].toString()
+        id = row[Units.id].value,
+        difficulty = row[Units.difficulty],
+        name = row[Units.name],
+        description = row[Units.description],
+        orderLevel = row[Units.orderUnit],
+        isActive = row[Units.isActive],
+        createdAt = row[Units.createdAt].toString()
     )
 }
 
@@ -35,11 +34,11 @@ class LevelRepository(private val dialogRepository: DialogRepository) {
 
 
     fun getAllLevels(): List<LevelDTO> = transaction {
-        Levels.selectAll().map(::resultRowToLevel)
+        Units.selectAll().map(::resultRowToLevel)
     }
 
     fun getLevelById(id: Int): LevelDTO? = transaction {
-        Levels.selectAll().where { Levels.id eq id }.singleOrNull()?.let(::resultRowToLevel)
+        Units.selectAll().where { Units.id eq id }.singleOrNull()?.let(::resultRowToLevel)
     }
 
     fun createLevelSmart(
@@ -51,23 +50,18 @@ class LevelRepository(private val dialogRepository: DialogRepository) {
             require(dto.name.isNotBlank()) { "El nombre no puede estar vacío" }
             require(dto.description.isNotBlank()) { "La descripción no puede estar vacía" }
 
-            val newAccent = Levels
-                .selectAll()
-                .map { it[Levels.accent] }
-                .maxOrNull()?.plus(1) ?: 1
-
-            val beforeOrder = Levels
-                .select(Levels.orderLevel)
-                .where(Levels.id eq beforeId)
-                .map { it[Levels.orderLevel] }
+            val beforeOrder = Units
+                .select(Units.orderUnit)
+                .where(Units.id eq beforeId)
+                .map { it[Units.orderUnit] }
                 .singleOrNull()
 
             println("beforeOrderRepository: $beforeOrder")
             val afterOrder = afterId?.let {
-                Levels
-                    .select(Levels.orderLevel)
-                    .where(Levels.id eq afterId)
-                    .map { it[Levels.orderLevel] }
+                Units
+                    .select(Units.orderUnit)
+                    .where(Units.id eq afterId)
+                    .map { it[Units.orderUnit] }
                     .singleOrNull()
             }
             println("afterOrderRepository: $afterOrder")
@@ -77,25 +71,23 @@ class LevelRepository(private val dialogRepository: DialogRepository) {
                 beforeOrder != null -> beforeOrder + 1f
                 afterOrder != null -> afterOrder - 1f
                 else -> {
-                    Levels
+                    Units
                         .selectAll()
-                        .filter { it[Levels.difficulty] == dto.difficulty }
-                        .map { it[Levels.orderLevel] }
+                        .filter { it[Units.difficulty] == dto.difficulty }
+                        .map { it[Units.orderUnit] }
                         .maxOrNull()?.plus(1f) ?: 1f
                 }
             }
 
-            val insertedId = Levels.insert {
-                it[accent] = newAccent
+            val insertedId = Units.insert {
                 it[difficulty] = dto.difficulty
                 it[name] = dto.name
                 it[description] = dto.description
-                it[orderLevel] = newOrder
-            }[Levels.id]
+                it[orderUnit] = newOrder
+            }[Units.id]
 
             LevelDTO(
                 id = insertedId.value,
-                accent = newAccent,
                 difficulty = dto.difficulty,
                 name = dto.name,
                 description = dto.description,
@@ -109,33 +101,32 @@ class LevelRepository(private val dialogRepository: DialogRepository) {
     }
 
     fun updateLevel(id: Int, level: LevelUpdateDTO): Boolean = transaction {
-        Levels.update({ Levels.id eq id }) { update ->
-            level.accent?.let { update[accent] = it }
+        Units.update({ Units.id eq id }) { update ->
             level.difficulty?.let { update[difficulty] = it }
             level.name?.let { update[name] = it }
             level.description?.let { update[description] = it }
 
             level.isActive?.let { update[isActive] = it }
-            level.orderLevel?.let { update[orderLevel] = it }
+            level.orderLevel?.let { update[orderUnit] = it }
         } > 0
     }
 
     fun deleteLevel(id: Int): Boolean = transaction {
-        if (Levels.select(Levels.id eq id).empty()) {
+        if (Units.select(Units.id eq id).empty()) {
             throw BadRequestException("No se encontró el nivel con ID: $id")
         }
         val dialogs = dialogRepository.getDialogsByLevelId(id)
         if (dialogs.isNotEmpty()) {
             throw BadRequestException("No se puede eliminar el nivel porque tiene diálogos asociados")
         }
-        Levels.deleteWhere { Levels.id eq id } > 0
+        Units.deleteWhere { Units.id eq id } > 0
     }
 
     fun getLevelsByDifficulty(difficulty: DifficultyLevel): List<LevelDTO> = transaction {
-        Levels
+        Units
             .selectAll()
-            .where { Levels.difficulty eq difficulty }
-            .orderBy(Levels.orderLevel)
+            .where { Units.difficulty eq difficulty }
+            .orderBy(Units.orderUnit)
             .map(::resultRowToLevel)
     }
 }

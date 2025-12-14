@@ -1,6 +1,6 @@
 package com.example.repositories
 
-import models.PhraseWords
+import models.ExerciseWords
 import com.example.dtos.CreatePhraseWordDto
 import com.example.dtos.PhraseWordDto
 import io.ktor.server.plugins.BadRequestException
@@ -14,11 +14,11 @@ import org.jetbrains.exposed.v1.jdbc.update
 class PhraseWordRepository {
     fun createPhraseWord(dto: CreatePhraseWordDto): PhraseWordDto = try {
         transaction {
-            val phraseWord = PhraseWords.insert {
+            val phraseWord = ExerciseWords.insert {
                 it[phraseId] = dto.phraseId
                 it[wordId] = dto.wordId
                 it[order] = dto.order
-            }[PhraseWords.id]
+            }[ExerciseWords.id]
 
             PhraseWordDto(
                 id = phraseWord.value,
@@ -33,13 +33,13 @@ class PhraseWordRepository {
 
     fun getAllPhraseWords(): List<PhraseWordDto> = try {
         transaction {
-            PhraseWords.selectAll().map { row ->
+            ExerciseWords.selectAll().map { row ->
                 PhraseWordDto(
-                    id = row[PhraseWords.id].value,
-                    phraseId = row[PhraseWords.phraseId],
-                    wordId = row[PhraseWords.wordId],
-                    select = row[PhraseWords.selectToTranslate],
-                    order = row[PhraseWords.order]
+                    id = row[ExerciseWords.id].value,
+                    phraseId = row[ExerciseWords.phraseId],
+                    wordId = row[ExerciseWords.wordId],
+                    select = row[ExerciseWords.selectToTranslate],
+                    order = row[ExerciseWords.order]
                 )
             }
         }
@@ -49,12 +49,12 @@ class PhraseWordRepository {
 
     fun getPhraseWordById(id: Int): PhraseWordDto? = try {
         transaction {
-            PhraseWords.selectAll().where { PhraseWords.id eq id }.singleOrNull()?.let { row ->
+            ExerciseWords.selectAll().where { ExerciseWords.id eq id }.singleOrNull()?.let { row ->
                 PhraseWordDto(
-                    id = row[PhraseWords.id].value,
-                    phraseId = row[PhraseWords.phraseId],
-                    wordId = row[PhraseWords.wordId],
-                    order = row[PhraseWords.order]
+                    id = row[ExerciseWords.id].value,
+                    phraseId = row[ExerciseWords.phraseId],
+                    wordId = row[ExerciseWords.wordId],
+                    order = row[ExerciseWords.order]
                 )
             }
         }
@@ -64,12 +64,12 @@ class PhraseWordRepository {
 
     fun getPhraseWordsByPhraseId(phraseId: Int): List<PhraseWordDto> = try {
         transaction {
-            PhraseWords.selectAll().where { PhraseWords.phraseId eq phraseId }.map { row ->
+            ExerciseWords.selectAll().where { ExerciseWords.phraseId eq phraseId }.map { row ->
                 PhraseWordDto(
-                    id = row[PhraseWords.id].value,
-                    phraseId = row[PhraseWords.phraseId],
-                    wordId = row[PhraseWords.wordId],
-                    order = row[PhraseWords.order]
+                    id = row[ExerciseWords.id].value,
+                    phraseId = row[ExerciseWords.phraseId],
+                    wordId = row[ExerciseWords.wordId],
+                    order = row[ExerciseWords.order]
                 )
             }
         }
@@ -80,12 +80,12 @@ class PhraseWordRepository {
 
     fun getPhraseWordsByWordId(wordId: Int): List<PhraseWordDto> = try {
         transaction {
-            PhraseWords.selectAll().where { PhraseWords.wordId eq wordId }.map { row ->
+            ExerciseWords.selectAll().where { ExerciseWords.wordId eq wordId }.map { row ->
                 PhraseWordDto(
-                    id = row[PhraseWords.id].value,
-                    phraseId = row[PhraseWords.phraseId],
-                    wordId = row[PhraseWords.wordId],
-                    order = row[PhraseWords.order]
+                    id = row[ExerciseWords.id].value,
+                    phraseId = row[ExerciseWords.phraseId],
+                    wordId = row[ExerciseWords.wordId],
+                    order = row[ExerciseWords.order]
                 )
             }
         }
@@ -95,7 +95,7 @@ class PhraseWordRepository {
 
     fun updatePhraseWord(id: Int, dto: CreatePhraseWordDto): PhraseWordDto? = try {
         transaction {
-            PhraseWords.update({ PhraseWords.id eq id }) {
+            ExerciseWords.update({ ExerciseWords.id eq id }) {
                 it[phraseId] = dto.phraseId
                 it[wordId] = dto.wordId
                 it[order] = dto.order
@@ -109,7 +109,7 @@ class PhraseWordRepository {
 
     fun deletePhraseWord(id: Int): Boolean = try {
         transaction {
-            val deletedRows = PhraseWords.deleteWhere { PhraseWords.id eq id }
+            val deletedRows = ExerciseWords.deleteWhere { ExerciseWords.id eq id }
             deletedRows > 0
         }
     } catch (e: Exception) {
@@ -117,7 +117,7 @@ class PhraseWordRepository {
     }
     fun deletePhraseWordsByPhraseId(phraseId: Int): Boolean = try {
         transaction {
-            val deletedRows = PhraseWords.deleteWhere { PhraseWords.phraseId eq phraseId }
+            val deletedRows = ExerciseWords.deleteWhere { ExerciseWords.phraseId eq phraseId }
             deletedRows > 0
         }
     } catch (e: Exception) {

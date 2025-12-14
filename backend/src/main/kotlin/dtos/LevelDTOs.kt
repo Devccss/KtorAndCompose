@@ -5,7 +5,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class LevelDTO(
     val id: Int,
-    val accent: Int,
     val difficulty: DifficultyLevel,
     val name: String,
     val description: String,

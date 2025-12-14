@@ -6,6 +6,8 @@ import java.time.LocalDateTime
 
 // src/main/kotlin/models/Entities.kt
 
+enum class Role { ADMIN, CONTENT_EDITOR, STUDENT }
+
 object Users : IntIdTable() {
     val name = varchar("name", 100)
     val email = varchar("email", 100).uniqueIndex()
@@ -13,66 +15,46 @@ object Users : IntIdTable() {
     val provider = varchar("provider",100).nullable()
     val providerId = text("providerId")
     val preferences = text("preferences").nullable()
-    val currentLevelId = integer("current_level_id").references(Levels.id).nullable()
+    val currentUnitId = integer("current_level_id").references(Units.id).nullable()
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
     val role = enumerationByName<Role>("role", 20).default(Role.STUDENT)
 }
 
-enum class Role { ADMIN, CONTENT_EDITOR, STUDENT }
+enum class DifficultyLevel { A1, A2, B1, B2, C1, C2 }
 
-object Levels : IntIdTable() {
-    val accent = integer("accent") // 1,2,3...
+object Units : IntIdTable() {
     val difficulty = enumerationByName<DifficultyLevel>("difficulty", 10)
     val name = varchar("name", 100)
     val description = text("description")
-    val orderLevel = float("orderLevel").uniqueIndex()
-    val isActive = bool("is_active").default(true)
-    val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
-}
-
-enum class DifficultyLevel { A1, A2, B1, B2, C1, C2 }
-
-object Dialogs : IntIdTable() {
-    val levelId = integer("level_id").references(Levels.id)
-    val name = varchar("name", 100)
-    val difficulty = enumerationByName<DifficultyLevel>("difficulty", 10)
-    val description = text("description").nullable()
-    val audioUrl = varchar("audio_url", 255).nullable()
+    val orderUnit = float("orderLevel").uniqueIndex()
     val isActive = bool("is_active").default(false)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }
 
-object DialogParticipants : IntIdTable() {
-    val dialogId = integer("dialog_id").references(Dialogs.id)
+
+object Exercises : IntIdTable() {
+    val levelId = integer("level_id").references(Units.id)
     val name = varchar("name", 100)
+    val description = text("description").nullable()
+    val isActive = bool("is_active").default(false)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }
 
-object Phrase : IntIdTable() {
-    val participantId = integer("participant_id").references(DialogParticipants.id)
+enum class TypeTextExercise { normal, bold, italic, underline }
+
+object ContentExercise : IntIdTable() {
+    val nameExercise = varchar("name_exercise", 100)
+    val typeText = enumerationByName<TypeTextExercise>("type_text", 10)
     val audioUrl = varchar("audio_url", 255).nullable()
-    val englishText = text("english_text")
-    val spanishText = text("spanish_text").nullable()
-    val isActive = bool("is_active").default(true)
+    val isActive = bool("is_active").default(false)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
+    val exerciseId = integer("exercise_id").references(Exercises.id)
+
 }
 
-object PhraseToTranslate : IntIdTable() {
-    val dialogId = integer("dialog_id").references(Dialogs.id)
-    val phraseId = integer("phrase_id").references(Phrase.id)
-}
-
-object PhraseWords : IntIdTable() {
-    val phraseId = integer("phrase_id").references(Phrase.id)
+object ExerciseWords : IntIdTable() {
+    val contentId = integer("content_id").references(ContentExercise.id)
     val wordId = integer("word_id").references(Word.id)
-    val selectToTranslate = bool("select_to_translate").default(false)
-    val order = integer("order")
-}
-
-object PhraseOrder : IntIdTable() {
-    val dialogId = integer("dialog_id").references(Dialogs.id)
-    val phraseId = integer("phrase_id").references(Phrase.id)
-    val order = integer("order")
 }
 
 object Word : IntIdTable() {
@@ -80,19 +62,24 @@ object Word : IntIdTable() {
     val spanish = varchar("spanish", 100)
     val phonetic = varchar("phonetic", 100).nullable()
     val description = text("description").nullable()
-    val isActive = bool("is_active").default(true)
+    val isActive = bool("is_active").default(false)
+    val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
+}
+
+object Questions : IntIdTable() {
+    val testId = integer("test_id").references(Tests.id)
+    val questionText = text("question_text")
+    val correctAnswer = text("correct_answer")
+    val options = text("options") // JSON con opciones para preguntas de alternativas
+    val orderLevel = integer("orderLevel")
+    val contentId = integer("content_id").references(ContentExercise.id).nullable()
 }
 
 
-object UserPhraseStandby : IntIdTable() {
-    val userId = integer("user_id").references(Users.id)
-    val phraseId = integer("phrase_id").references(Phrase.id)
-    val incorrectAttempts = integer("incorrect_attempts").default(0)
-    val addedAt = datetime("added_at").clientDefault { LocalDateTime.now() }
-}
+enum class TestType { ALTERNATIVES, TRANSLATION, LISTENING, READING }
 
 object Tests : IntIdTable() {
-    val levelId = integer("level_id").references(Levels.id)
+    val levelId = integer("level_id").references(Units.id)
     val name = varchar("name", 100)
     val description = text("description").nullable()
     val testType = enumerationByName<TestType>("test_type", 20)
@@ -100,31 +87,34 @@ object Tests : IntIdTable() {
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }
 
-object DialogsTests : IntIdTable() {
-    val dialogId = integer("dialog_id").references(Dialogs.id)
+object TestExercises : IntIdTable() {
     val testId = integer("test_id").references(Tests.id)
+    val exerciseId = integer("exercise_id").references(Exercises.id)
 }
 
-enum class TestType { ALTERNATIVES, TRANSLATION, LISTENING, READING }
 
-object TestQuestions : IntIdTable() {
+object CompleteUnits : IntIdTable() {
+    val userId = integer("user_id").references(Users.id)
+    val unitsId = integer("level_id").references(Units.id)
+    val completedAt = datetime("completed_at").clientDefault { LocalDateTime.now() }
+}
+
+object CompleteExercises : IntIdTable() {
+    val userId = integer("user_id").references(Users.id)
+    val dialogId = integer("dialog_id").references(Exercises.id)
+    val completedAt = datetime("completed_at").clientDefault { LocalDateTime.now() }
+}
+
+object AnsweredQuestions : IntIdTable() {
+    val userId = integer("user_id").references(Users.id)
+    val questionId = integer("question_id").references(Questions.id)
+    val isCorrect = bool("is_correct")
+    val answeredAt = datetime("answered_at").clientDefault { LocalDateTime.now() }
+}
+
+object CompleteTests : IntIdTable() {
+    val userId = integer("user_id").references(Users.id)
     val testId = integer("test_id").references(Tests.id)
-    val questionText = text("question_text")
-    val correctAnswer = text("correct_answer")
-    val options = text("options") // JSON con opciones para preguntas de alternativas
-    val orderLevel = integer("orderLevel")
-}
-
-object UserProgress : IntIdTable() {
-    val userId = integer("user_id").references(Users.id)
-    val completedDialogs = integer("completed_dialogs").default(0)
-    val totalDialogs = integer("total_dialogs")
-    val testScore = integer("test_score").nullable()
-    val lastAccessed = datetime("last_accessed").nullable()
-}
-
-object CompleteLevels : IntIdTable() {
-    val userId = integer("user_id").references(Users.id)
-    val levelId = integer("level_id").references(Levels.id)
+    val score = float("score")
     val completedAt = datetime("completed_at").clientDefault { LocalDateTime.now() }
 }
