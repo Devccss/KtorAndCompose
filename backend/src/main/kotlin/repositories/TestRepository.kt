@@ -1,103 +1,82 @@
-package com.example.repositories
+package repositories
 
 import com.example.dtos.CreateTestDto
 import com.example.dtos.TestDto
-import models.DialogsTests
-import models.TestType
+import com.example.dtos.UpdateTestDto
+import io.ktor.server.plugins.BadRequestException
 import models.Tests
+import models.TestType
+
+import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
+import java.time.LocalDateTime
 
 class TestRepository {
-    fun addDialogToTest(dialogId: Int, testId: Int):Boolean= transaction {
-        val existing = DialogsTests.selectAll()
-            .where { (DialogsTests.dialogId eq dialogId) and (DialogsTests.testId eq testId) }
-            .singleOrNull()
-        if (existing == null) {
-            DialogsTests.insert {
-                it[DialogsTests.dialogId] = dialogId
-                it[DialogsTests.testId] = testId
-            }
-            return@transaction true
-        }else{
-            return@transaction false
-        }
-    }
-    fun createTest(dto: CreateTestDto, levelId:Int ): TestDto = transaction {
 
-        print("Created test: $dto")
-        val newTest = Tests.insert {
-            it[name] = dto.name
-            it[description] = dto.description
-            it[testType] = dto.testType?: TestType.TRANSLATION
-            it[isActive] = dto.isActive?: false
-            it[Tests.levelId] = levelId
-        }[Tests.id]
-        val test = TestDto(
-            id = newTest.value,
-            name = dto.name,
-            description = dto.description,
-            testType = dto.testType,
-            isActive = dto.isActive?: false,
-            levelId = levelId
+    private fun resultRowToTest(row: ResultRow): TestDto {
+        return TestDto(
+            id = row[Tests.id].value,
+            unitId = row[Tests.unitId],
+            name = row[Tests.name],
+            description = row[Tests.description],
+            testType = row[Tests.testType],
+            isActive = row[Tests.isActive],
+            createdAt = row[Tests.createdAt].toString()
         )
-        print("Teste created: $test")
-        return@transaction test
-    }
-    fun editTest(id: Int, dto: CreateTestDto): Boolean = transaction {
-        val updatedRows = Tests.update({ Tests.id eq id }) {
-            it[name] = dto.name
-            it[description] = dto.description
-            it[testType] = dto.testType?: TestType.TRANSLATION
-        }
-        return@transaction updatedRows>0
-
     }
 
-    fun getTestById(id: Int): TestDto? = transaction {
-        Tests.selectAll().where { Tests.id eq id }.singleOrNull()?.let {
+    fun getAll(): List<TestDto> = transaction {
+        Tests.selectAll().orderBy(Tests.createdAt).map(::resultRowToTest)
+    }
+
+    fun getById(id: Int): TestDto? = transaction {
+        Tests.selectAll().where { Tests.id eq id }.singleOrNull()?.let(::resultRowToTest)
+    }
+
+    fun create(dto: CreateTestDto): TestDto = try {
+        transaction {
+            val newId = Tests.insert {
+                it[unitId] = dto.unitId
+                it[name] = dto.name
+                it[description] = dto.description
+                it[testType] = dto.testType
+                it[isActive] = dto.isActive ?: false
+            }[Tests.id]
+
             TestDto(
-                id = it[Tests.id].value,
-                name = it[Tests.name],
-                description = it[Tests.description] ?: "",
-                testType = it[Tests.testType],
-                isActive = it[Tests.isActive],
-                levelId = it[Tests.levelId]
+                id = newId.value,
+                unitId = dto.unitId,
+                name = dto.name,
+                description = dto.description,
+                testType = dto.testType,
+                isActive = dto.isActive ?: false,
+                createdAt = LocalDateTime.now().toString()
             )
         }
+    } catch (e: Exception) {
+        throw BadRequestException("Error al crear test: ${e.message}")
     }
-    fun getAllTests(): List<TestDto> = transaction {
-        Tests.selectAll().map {
-            TestDto(
-                id = it[Tests.id].value,
-                name = it[Tests.name],
-                description = it[Tests.description] ?: "",
-                testType = it[Tests.testType],
-                isActive = it[Tests.isActive],
-                levelId = it[Tests.levelId]
-            )
+
+    fun update(id: Int, dto: UpdateTestDto) {
+        transaction {
+            getById(id) ?: throw BadRequestException("Test con ID $id no existe.")
+            Tests.update({ Tests.id eq id }) { u ->
+                dto.unitId?.let { u[Tests.unitId] = it }
+                dto.name?.let { u[Tests.name] = it }
+                dto.description?.let { u[Tests.description] = it }
+                dto.testType?.let { u[Tests.testType] = it }
+                dto.isActive?.let { u[Tests.isActive] = it }
+            }
         }
     }
 
-    fun deleteTest(id: Int):Boolean = transaction {
-        val dialogsTest = DialogsTests.select(DialogsTests.testId eq id).count()
-        if (dialogsTest>0){
-            return@transaction false
-        }else{
-            val deleted = Tests.deleteWhere { Tests.id eq id }
-            return@transaction deleted > 0
-        }
+    fun delete(id: Int): Boolean = transaction {
+        getById(id) ?: throw BadRequestException("Test con ID $id no existe.")
+        Tests.deleteWhere { Tests.id eq id } > 0
     }
-
-    fun deleteDialogTest(dialogId: Int,testId:Int):Boolean = transaction {
-        val existing = DialogsTests.deleteWhere { DialogsTests.dialogId eq dialogId and (DialogsTests.testId eq testId) }
-        return@transaction existing >0
-    }
-
 }

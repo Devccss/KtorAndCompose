@@ -1,47 +1,62 @@
 package com.example.plugins
-import com.example.repositories.PhraseRepository
-import com.example.repositories.PhraseWordRepository
-import com.example.repositories.TestRepository
-import com.example.repositories.UsersRepository
-import com.example.repositories.WordRepository
-import com.example.services.DialogParticipantsService
-import com.example.services.DialogService
-import com.example.services.PhraseService
-import com.example.services.PhraseWordService
+import com.example.services.ContentExerciseService
+import com.example.services.ContentWordService
+import com.example.services.ExerciseOnHoldService
+import com.example.services.ExerciseService
+import com.example.services.NotificationsService
+import com.example.services.QuestionService
+import com.example.services.TestExerciseService
 import com.example.services.TestService
+import com.example.services.UnitService
 import com.example.services.UserService
 import com.example.services.WordService
-import repositories.LevelRepository
-import services.LevelService
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
-import org.koin.core.scope.get
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
-import repositories.DialogRepository
-
-// En backend/src/main/kotlin/plugins/Koin.kt
+import repositories.ContentExerciseRepository
+import repositories.ContentWordRepository
+import repositories.ExerciseOnHoldRepository
+import repositories.ExerciseRepository
+import repositories.NotificationsRepository
+import repositories.QuestionRepository
+import repositories.TestExerciseRepository
+import repositories.TestRepository
+import repositories.UnitRepository
+import repositories.UsersRepository
+import repositories.WordRepository
 
 
 val repositoryModule = module {
-    single { LevelRepository(get()) }
-    single { DialogRepository() }
-    single { PhraseRepository() }
-    single { WordRepository() }
-    single { PhraseWordRepository() }
+
     single { UsersRepository() }
+    single { UnitRepository() }
+    single { WordRepository() }
     single { TestRepository() }
+    single { TestExerciseRepository() }
+    single { QuestionRepository() }
+    single { NotificationsRepository() }
+    single { ExerciseRepository() }
+    single { ExerciseOnHoldRepository() }
+    single { ContentWordRepository()}
+    single { ContentExerciseRepository() }
+
 }
 
 val serviceModule = module {
-    single { LevelService(get()) }
-    single { DialogService(get()) }
-    single { PhraseService(get()) }
-    single { WordService(get()) }
-    single { PhraseWordService(get()) }
+
     single { UserService(get()) }
+    single { UnitService(get()) }
+    single { WordService(get()) }
     single { TestService(get()) }
+    single { TestExerciseService(get()) }
+    single { QuestionService(get()) }
+    single { NotificationsService(get()) }
+    single { ExerciseService(get()) }
+    single { ExerciseOnHoldService(get()) }
+    single { ContentWordService(get()) }
+    single { ContentExerciseService(get()) }
 }
 
 fun Application.configureKoin() {

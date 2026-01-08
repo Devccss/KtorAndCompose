@@ -1,17 +1,22 @@
 package config
+
 import io.github.cdimascio.dotenv.dotenv
-import models.CompleteLevels
-import models.TestQuestions
+import models.ContentExercises
+import models.ContentWords
+import models.ExerciseCompleted
 import models.Units
-import models.UserPhraseStandby
 import models.Users
-import models.Word
-import models.Tests
 import models.Exercises
-import models.DialogsTests
-import models.ExerciseWords
-import models.PhraseOrder
-import models.Phrase
+import models.ExercisesOnHold
+import models.Notifications
+import models.QuestionCompleted
+import models.Questions
+import models.TestCompleted
+import models.TestExercises
+import models.Tests
+import models.UnitsCompleted
+import models.Words
+
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -24,17 +29,15 @@ fun configureDatabases() {
     val dbPassword = dotenv["DB_PASSWORD"]
 
     Database.connect(
-        url = dbUrl,
-        driver = "org.postgresql.Driver",
-        user = dbUser,
-        password = dbPassword
+        url = dbUrl, driver = "org.postgresql.Driver", user = dbUser, password = dbPassword
     )
 
     transaction {
         SchemaUtils.create(
-            Users, Units, Exercises, Phrase, PhraseOrder, Word,
-            ExerciseWords, UserPhraseStandby, Tests,
-            TestQuestions, DialogsTests,CompleteLevels
+            Users, Units, Exercises, Notifications,
+            ContentExercises, ContentWords, Words, Questions,
+            Tests, TestExercises, ExercisesOnHold, UnitsCompleted,
+            ExerciseCompleted, TestCompleted, QuestionCompleted
         )
     }
 }

@@ -1,29 +1,14 @@
 package com.example.services
 
 import com.example.dtos.CreateWordDto
+import com.example.dtos.UpdateWordDto
 import com.example.dtos.WordDto
-import com.example.repositories.WordRepository
+import repositories.WordRepository
 
-class WordService(private val wordRepository: WordRepository) {
-    fun createWord(dto: CreateWordDto): WordDto {
-        return wordRepository.createWord(dto)
-    }
-
-    fun getAllWords(): List<WordDto> {
-        return wordRepository.getAllWords()
-    }
-
-    fun getWordById(id: Int): WordDto? {
-        return wordRepository.getWordById(id)
-    }
-
-    fun getWordsByPhraseId(phraseId: Int): List<WordDto> {
-        return wordRepository.getWordsByPhraseId(phraseId)
-    }
-    fun updateWord(id: Int, dto: CreateWordDto): WordDto? {
-        return wordRepository.updateWord(id, dto)
-    }
-    fun deleteWord(id: Int): Boolean {
-        return wordRepository.deleteWord(id)
-    }
+class WordService(private val repo: WordRepository) {
+    fun getAll(): List<WordDto> = repo.getAll()
+    fun getById(id: Int): WordDto? = repo.getById(id)
+    fun create(dto: CreateWordDto): WordDto = repo.create(dto)
+    fun update(id: Int, dto: UpdateWordDto) = repo.update(id, dto)
+    fun delete(id: Int): Boolean = repo.delete(id)
 }

@@ -1,305 +1,114 @@
-package com.example.repositories
+package repositories
 
 import com.example.dtos.CreateUserDto
-import com.example.dtos.GoogleUserDto
-import com.example.dtos.LoginDto
-import com.example.dtos.StandbyDto
-import com.example.dtos.StandbyUpdateDto
-import com.example.dtos.UsersDto
-import com.example.dtos.updateUserDto
+import com.example.dtos.UpdateUserDto
+import com.example.dtos.UserDto
 import io.ktor.server.plugins.BadRequestException
-import models.Role
-import models.UserPhraseStandby
 import models.Users
+
+import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.mindrot.jbcrypt.BCrypt
 import java.time.LocalDateTime
 
 class UsersRepository {
-    fun findOrCreateByEmail(email: String, dto: GoogleUserDto): UsersDto? = try {
-        transaction {
-            Users.selectAll().where { Users.email eq email }.singleOrNull()?.let { row ->
-                UsersDto(
-                    id = row[Users.id].value,
-                    name = row[Users.name],
-                    email = row[Users.email],
-                    preferences = row[Users.preferences],
-                    password = row[Users.password],
-                    provider = row[Users.provider],
-                    providerId = row[Users.providerId].toString(),
-                    currentLevelId = row[Users.currentUnitId],
-                    createdAt = row[Users.createdAt].toString(),
-                    role = row[Users.role]
-                )
-            } ?: createGoogleUser(dto)
-        }
-    } catch (e: Exception) {
-        throw BadRequestException("Error finding or creating user: ${e.message}")
 
+    private fun resultRowToUser(row: ResultRow): UserDto {
+        return UserDto(
+            id = row[Users.id].value,
+            email = row[Users.email],
+            name = row[Users.name],
+            password = "" , // no devolver contraseña
+            activeNow = row[Users.activeNow],
+            currentUnitId = row[Users.currentUnitId],
+            preferences = row[Users.preferences] ,
+            provider = row[Users.provider],
+            role = row[Users.role],
+            createdAt = row[Users.createdAt].toString()
+        )
     }
 
-    fun initSesion(dto: LoginDto): UsersDto = try {
-        transaction {
-            Users.selectAll().where { Users.email eq dto.email }.singleOrNull()?.let { row ->
-                if (BCrypt.checkpw(dto.password, row[Users.password])) {
-                    UsersDto(
-                        id = row[Users.id].value,
-                        name = row[Users.name],
-                        email = row[Users.email],
-                        preferences = row[Users.preferences],
-                        provider = row[Users.provider],
-                        providerId = row[Users.providerId].toString(),
-                        currentLevelId = row[Users.currentUnitId],
-                        createdAt = row[Users.createdAt].toString(),
-                        role = row[Users.role]
-                    )
-                } else {
-                    throw BadRequestException("Invalid credentials")
-                }
-            } ?: throw BadRequestException("Invalid email or user not found")
-        }
-
-    } catch (e: Exception) {
-        throw BadRequestException("Error initializing session: ${e.message}")
+    fun getAll(): List<UserDto> = transaction {
+        Users.selectAll().orderBy(Users.createdAt).map(::resultRowToUser)
     }
 
-    private fun createGoogleUser(dto: GoogleUserDto): UsersDto? = try {
+    fun getById(id: Int): UserDto? = transaction {
+        Users.selectAll().where { Users.id eq id }.singleOrNull()?.let(::resultRowToUser)
+    }
+
+    fun getByEmail(email: String): UserDto? = transaction {
+        Users.select ( Users.email eq email ).singleOrNull()?.let(::resultRowToUser)
+    }
+
+    fun createUser(dto: CreateUserDto): UserDto = try {
         transaction {
-            val newUser = Users.insert {
-                it[name] = dto.name
+            val hashed = BCrypt.hashpw(dto.password, BCrypt.gensalt())
+            val newId = Users.insert {
                 it[email] = dto.email
+                it[password] = hashed
+                it[name] = dto.name
                 it[preferences] = dto.preferences
-                it[provider] = dto.provider ?: "google"
-                it[providerId] = dto.providerId ?: "google-${dto.email}"
-                it[currentUnitId] = dto.currentLevelId ?: 0
-
+                it[provider] = dto.provider
+                it[currentUnitId] = dto.currentUnitId
+                it[role] = dto.role ?: models.Role.STUDENT
             }[Users.id]
 
-            UsersDto(
-                id = newUser.value,
-                name = dto.name,
+            UserDto(
+                id = newId.value,
                 email = dto.email,
-                preferences = dto.preferences,
-                currentLevelId = dto.currentLevelId,
-                createdAt = LocalDateTime.now().toString(),
-                role = Role.STUDENT
-            )
-        }
-    } catch (e: Exception) {
-        throw BadRequestException("Error creating Google user: ${e.message}")
-    }
-
-    fun createUser(dto: CreateUserDto): UsersDto = try {
-        transaction {
-            if (Users.selectAll().where { Users.email eq dto.email }.any()) {
-                throw BadRequestException("El usuario con el email ${dto.email} ya existe")
-            }
-            if (dto.password.isBlank() or dto.password.isEmpty()) {
-                throw BadRequestException("La contraseña no puede estar en blanco")
-            }
-            if (dto.name.isBlank()) {
-                throw BadRequestException("El nombre no puede estar en blanco")
-            }
-            if (dto.email.isBlank()) {
-                throw BadRequestException("El email no puede estar en blanco")
-            }
-
-            val hashedPassword = hashPassword(dto.password)
-            val newUser = Users.insert {
-                it[name] = dto.name
-                it[email] = dto.email
-                it[password] = hashedPassword
-                it[preferences] = dto.preferences
-                it[provider] = dto.provider ?: "local"
-                it[providerId] = dto.providerId ?: "local-${dto.email}"
-                it[currentUnitId] = dto.currentLevelId
-                it[role] = dto.role ?: Role.STUDENT
-            }[Users.id]
-
-            UsersDto(
-                id = newUser.value,
+                password = "",
                 name = dto.name,
-                email = dto.email,
                 preferences = dto.preferences,
-                provider = dto.provider ?: "local",
-                providerId = dto.providerId ?: "local-${dto.email}",
-                currentLevelId = dto.currentLevelId,
+                provider = dto.provider,
+                currentUnitId = dto.currentUnitId,
+                activeNow = false,
+                role = dto.role ?: models.Role.STUDENT,
                 createdAt = LocalDateTime.now().toString(),
-                role = dto.role ?: Role.STUDENT
             )
         }
     } catch (e: Exception) {
-        throw BadRequestException("Error creating user: ${e.message}")
+        throw BadRequestException("Error al crear usuario: ${e.message}")
     }
 
-    private fun hashPassword(password: String): String {
-        return BCrypt.hashpw(password, BCrypt.gensalt())
-    }
-
-    fun getAllUsers(): List<UsersDto> = try {
+    fun updateUser(id: Int, dto: UpdateUserDto) {
         transaction {
-            Users.selectAll().map { row ->
-                UsersDto(
-                    id = row[Users.id].value,
-                    name = row[Users.name],
-                    email = row[Users.email],
-                    password = if (row[Users.password]?.isNotEmpty() == true) "Password" else null,
-                    preferences = row[Users.preferences],
-                    currentLevelId = row[Users.currentUnitId],
-                    createdAt = row[Users.createdAt].toString(),
-                    role = row[Users.role]
-                )
-            }
-        }
-    } catch (e: Exception) {
-        throw BadRequestException("Error fetching users: ${e.message}")
-    }
-
-    fun getUserById(id: Int): UsersDto? = try {
-        transaction {
-            Users.selectAll().where { Users.id eq id }.singleOrNull()?.let { row ->
-                UsersDto(
-                    id = row[Users.id].value,
-                    name = row[Users.name],
-                    email = row[Users.email],
-                    preferences = row[Users.preferences],
-                    currentLevelId = row[Users.currentUnitId],
-                    createdAt = row[Users.createdAt].toString(),
-                    role = row[Users.role]
-                )
-            }
-        }
-    } catch (e: Exception) {
-        throw BadRequestException("Error fetching user by ID: ${e.message}")
-    }
-
-    fun getUserByEmail(email: String): UsersDto? = try {
-        transaction {
-            Users.selectAll().where { Users.email eq email }.singleOrNull()?.let { row ->
-                UsersDto(
-                    id = row[Users.id].value,
-                    name = row[Users.name],
-                    email = row[Users.email],
-                    preferences = row[Users.preferences],
-                    currentLevelId = row[Users.currentUnitId],
-                    password = row[Users.password],
-                    createdAt = row[Users.createdAt].toString(),
-                    role = row[Users.role]
-                )
-            }
-        }
-    } catch (e: Exception) {
-        throw BadRequestException("Error fetching user by email: ${e.message}")
-    }
-
-    fun updateUser(id: Int, dto: updateUserDto): UsersDto? = try {
-        transaction {
-            val hashedPassword = dto.password?.let { hashPassword(it) }
-            Users.update({ Users.id eq id }) { update ->
-                dto.name?.let { update[name] = it }
-                dto.email?.let { update[email] = it }
-                dto.password?.let {
-                    if (it.isNotBlank()) {
-                        update[password] = hashedPassword
-                    }
+            getById(id) ?: throw BadRequestException("Usuario con ID $id no existe.")
+            Users.update({ Users.id eq id }) { u ->
+                dto.email?.let { u[email] = it }
+                dto.password?.let { newPass ->
+                    u[password] = BCrypt.hashpw(newPass, BCrypt.gensalt())
                 }
-                dto.preferences?.let { update[preferences] = it }
-                dto.currentLevelId?.let { update[currentUnitId] = it }
-                dto.role?.let { update[role] = it }
-            }
-
-            getUserById(id)
-        }
-    } catch (e: Exception) {
-        throw BadRequestException("Error updating user: ${e.message}")
-    }
-
-    fun deleteUser(id: Int): Boolean = try {
-        transaction {
-            Users.deleteWhere { Users.id eq id } > 0
-        }
-    } catch (e: Exception) {
-        throw BadRequestException("Error deleting user: ${e.message}")
-    }
-
-
-
-    fun getUserStandbyPhrases(userId: Int): List<Any> = try {
-        transaction {
-            UserPhraseStandby.select(UserPhraseStandby.userId eq userId)
-                .map { row ->
-                    mapOf(
-                        "standbyId" to row[UserPhraseStandby.id].value,
-                        "phraseId" to row[UserPhraseStandby.phraseId],
-                        "incorrectAttempts" to row[UserPhraseStandby.incorrectAttempts],
-                        "addedAt" to row[UserPhraseStandby.addedAt].toString()
-                    )
-                }
-        }
-    } catch (e: Exception) {
-        throw BadRequestException("Error fetching standby phrases: ${e.message}")
-    }
-
-    fun getStandbyPhraseById(standbyId: Int): StandbyDto? = try {
-        transaction {
-            UserPhraseStandby.selectAll().where { UserPhraseStandby.id eq standbyId }.singleOrNull()
-                ?.let { row ->
-                    StandbyDto(
-                        id = row[UserPhraseStandby.id].value,
-                        userId = row[UserPhraseStandby.userId],
-                        phraseId = row[UserPhraseStandby.phraseId],
-                        incorrectAttempts = row[UserPhraseStandby.incorrectAttempts],
-                        addedAt = row[UserPhraseStandby.addedAt].toString()
-                    )
-                }
-        }
-    } catch (e: Exception) {
-        throw BadRequestException("Error fetching standby phrase by ID: ${e.message}")
-    }
-
-    fun addPhraseToStandby(userId: Int, phraseId: Int): Any = try {
-        transaction {
-            val standbyId = UserPhraseStandby.insert {
-                it[UserPhraseStandby.userId] = userId
-                it[UserPhraseStandby.phraseId] = phraseId
-                it[UserPhraseStandby.incorrectAttempts] = 0
-            }[UserPhraseStandby.id]
-            mapOf(
-                "standbyId" to standbyId.value,
-                "userId" to userId,
-                "phraseId" to phraseId,
-                "incorrectAttempts" to 0
-            )
-        }
-    } catch (e: Exception) {
-        throw BadRequestException("Error adding phrase to standby: ${e.message}")
-    }
-
-    fun updateStandbyPhrase(standbyId: Int, updateDto: StandbyUpdateDto) = try {
-        transaction {
-            UserPhraseStandby.update({ UserPhraseStandby.id eq standbyId }) { update ->
-                updateDto.incorrectAttempts?.let { update[incorrectAttempts] = it }
-                updateDto.addedAt?.let { update[addedAt] = LocalDateTime.parse(it) }
+                dto.name?.let { u[name] = it }
+                dto.preferences?.let { u[preferences] = it }
+                dto.provider?.let { u[provider] = it }
+                dto.currentUnitId?.let { u[currentUnitId] = it }
+                dto.role?.let { u[role] = it}
 
             }
         }
-
-    } catch (e: Exception) {
-        throw BadRequestException("Error updating standby phrase: ${e.message}")
     }
 
+    fun deleteUser(id: Int): Boolean = transaction {
+        getById(id) ?: throw BadRequestException("Usuario con ID $id no existe.")
+        Users.deleteWhere { Users.id eq id } > 0
+    }
 
-    fun deleteStandbyPhrase(standbyId: Int): Boolean = try {
-        transaction {
-            UserPhraseStandby.deleteWhere { UserPhraseStandby.id eq standbyId } > 0
+    fun login(email: String, password: String): UserDto = transaction {
+        val row = Users.select ( Users.email eq email ).singleOrNull()
+            ?: throw BadRequestException("Email o contraseña inválidos.")
+
+        val hashed = row[Users.password]
+        if (!BCrypt.checkpw(password, hashed)) {
+            throw BadRequestException("Email o contraseña inválidos.")
         }
-    } catch (e: Exception) {
-        throw BadRequestException("Error deleting standby phrase: ${e.message}")
+
+        // Devolver usuario sin contraseña
+        resultRowToUser(row)
     }
 }
