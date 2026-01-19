@@ -1,8 +1,10 @@
 package com.example.services
 
+import com.example.dtos.CreateUnitCompletedDto
 import com.example.dtos.CreateUnitDto
 import com.example.dtos.UnitCompletedDto
 import com.example.dtos.UnitDto
+import com.example.dtos.UpdateUnitCompletedDto
 import com.example.dtos.UpdateUnitDto
 import models.DifficultyLevel
 import repositories.UnitRepository
@@ -34,5 +36,23 @@ class UnitService(private val unitRepository: UnitRepository) {
     fun getUnitsCompletedByUser(userId: Int): List<UnitCompletedDto> {
         return unitRepository.getUnitsCompletedByUser(userId)
     }
+
+
+    fun createUnitCompleted(dto: CreateUnitCompletedDto) =
+        unitRepository.createUnitsCompleted(dto)
+
+    fun editUnitsCompleted (completedId: Int, dto: UpdateUnitCompletedDto) =
+        unitRepository.editUnitsCompleted(completedId, dto)
+
+    fun getAllUnitsCompletedByUser(userId: Int): List<UnitCompletedDto> =
+        unitRepository.getUnitsCompletedByUser(userId)
+    fun getUnitCompletedById(completedId: Int): UnitCompletedDto? =
+        unitRepository.getUnitsCompletedById(completedId)
+
+    fun getAllUnitsCompleted(): List<UnitCompletedDto> =
+        unitRepository.getAllUnitsCompleted()
+
+    fun deleteUnitsCompleted(completedId: Int) =
+        unitRepository.deleteUnitsCompleted(completedId)
 
 }

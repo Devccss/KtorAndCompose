@@ -1,14 +1,27 @@
 package com.example.services
 
+import com.example.dtos.CreateQuestionCompletedDto
 import com.example.dtos.CreateQuestionDto
+import com.example.dtos.QuestionCompletedDto
 import com.example.dtos.QuestionDto
+import com.example.dtos.UpdateQuestionCompletedDto
 import com.example.dtos.UpdateQuestionDto
 import repositories.QuestionRepository
 
 class QuestionService(private val repo: QuestionRepository) {
-    fun getAll(): List<QuestionDto> = repo.getAll()
-    fun getById(id: Int): QuestionDto? = repo.getById(id)
-    fun create(dto: CreateQuestionDto): QuestionDto = repo.create(dto)
-    fun update(id: Int, dto: UpdateQuestionDto) = repo.update(id, dto)
-    fun delete(id: Int): Boolean = repo.delete(id)
+
+    // Question CRUD
+    fun getAllQuestions(): List<QuestionDto> = repo.getAllQuestions()
+    fun getQuestionById(id: Int): QuestionDto? = repo.getQuestionById(id)
+    fun createQuestion(dto: CreateQuestionDto): QuestionDto = repo.createQuestion(dto)
+    fun updateQuestion(id: Int, dto: UpdateQuestionDto) = repo.updateQuestion(id, dto)
+    fun deleteQuestion(id: Int): Boolean = repo.deleteQuestion(id)
+
+    // QuestionCompleted CRUD
+    fun createQuestionCompleted(dto: CreateQuestionCompletedDto): QuestionCompletedDto = repo.createQuestionsCompleted(dto)
+    fun getAllQuestionsCompleted(): List<QuestionCompletedDto> = repo.getAllQuestionsCompleted()
+    fun getQuestionsCompletedByUser(userId: Int): List<QuestionCompletedDto> = repo.getQuestionsCompletedByUser(userId)
+    fun getQuestionCompletedById(id: Int): QuestionCompletedDto? = repo.getQuestionsCompletedById(id)
+    fun updateQuestionsCompleted(id: Int, dto: UpdateQuestionCompletedDto) = repo.updateQuestionsCompleted(id, dto)
+    fun deleteQuestionsCompleted(id: Int): Boolean = repo.deleteQuestionsCompleted(id)
 }

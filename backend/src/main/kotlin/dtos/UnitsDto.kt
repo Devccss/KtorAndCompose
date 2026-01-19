@@ -49,5 +49,7 @@ data class UnitCompletedDto(
 
 @Serializable
 data class UpdateUnitCompletedDto(
+    val userId: Int? = null,
+    val unitId: Int? = null,
     val completedAt: String? = null
 )

@@ -1,30 +1,55 @@
 package com.example.dtos
-
 import kotlinx.serialization.Serializable
 import models.TypeQuestion
+import models.TypeTextExercise
+
 
 @Serializable
 data class QuestionDto(
     val id: Int,
+    val textContent: String,
+    val typeText: TypeTextExercise,
+    val grammarExplanation: String,
+    val audioUrl: String?,
+    val isActive: Boolean? = false,
+    val exerciseId: Int,
     val questionText: String,
     val typeQuestion: TypeQuestion,
-    val contentId: Int? = null,
+    val orderQuestion: Float,
     val createdAt: String
 )
 
 @Serializable
 data class CreateQuestionDto(
+    val textContent: String,
+    val typeText: TypeTextExercise,
+    val grammarExplanation: String,
+    val audioUrl: String?,
+    val isActive: Boolean? = false,
+    val exerciseId: Int,
     val questionText: String,
-    val typeQuestion: TypeQuestion? = TypeQuestion.OPEN,
-    val contentId: Int? = null,
-    val createdAt: String
+    val typeQuestion: TypeQuestion,
+    val orderQuestion: Float? = 0f,
 )
 
 @Serializable
 data class UpdateQuestionDto(
+    val textContent: String? = null,
+    val typeText: TypeTextExercise? = null,
+    val grammarExplanation: String? = null,
+    val audioUrl: String? = null,
+    val isActive: Boolean? = false,
+    val exerciseId: Int? = null,
     val questionText: String? = null,
     val typeQuestion: TypeQuestion? = null,
-    val contentId: Int? = null
+    val orderQuestion: Float? = 0f,
+)
+
+@Serializable
+data class CreateQuestionCompletedDto(
+    val userId: Int,
+    val questionId: Int,
+    val completedAt: String
 )
 
 @Serializable
@@ -32,17 +57,12 @@ data class QuestionCompletedDto(
     val id: Int,
     val userId: Int,
     val questionId: Int,
-    val answeredAt: String
+    val completedAt: String
 )
-@Serializable
-data class CreateQuestionCompletedDto(
-    val userId: Int,
-    val questionId: Int,
-    val answeredAt: String
-)
+
 @Serializable
 data class UpdateQuestionCompletedDto(
     val userId: Int? = null,
     val questionId: Int? = null,
-    val answeredAt: String? = null
+    val completedAt: String? = null
 )

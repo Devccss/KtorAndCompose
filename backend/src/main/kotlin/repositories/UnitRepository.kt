@@ -1,8 +1,10 @@
 package repositories
 
+import com.example.dtos.CreateUnitCompletedDto
 import com.example.dtos.CreateUnitDto
 import com.example.dtos.UnitCompletedDto
 import com.example.dtos.UnitDto
+import com.example.dtos.UpdateUnitCompletedDto
 import com.example.dtos.UpdateUnitDto
 import io.ktor.server.plugins.BadRequestException
 import models.Units
@@ -97,7 +99,47 @@ class UnitRepository {
         Units.deleteWhere { Units.id eq id } > 0
     }
 
+    fun createUnitsCompleted(dto: CreateUnitCompletedDto): UnitCompletedDto = try {
+        transaction {
+            val newId = UnitsCompleted.insert {
+                it[userId] = dto.userId
+                it[unitId] = dto.unitId
+                it[completionDate] = LocalDateTime.now()
+            }[UnitsCompleted.id]
+
+            UnitCompletedDto(
+                id = newId.value,
+                userId = dto.userId,
+                unitId = dto.unitId,
+                completedAt = LocalDateTime.now().toString()
+            )
+        }
+    } catch (e: Exception) {
+        throw BadRequestException("Error al crear la unidad completada: ${e.message}")
+    }
+    fun editUnitsCompleted(id: Int, dto: UpdateUnitCompletedDto) {
+        transaction {
+            getUnitsCompletedByUser(id)
+
+            UnitsCompleted.update({ UnitsCompleted.id eq id }) { update ->
+                dto.userId?.let { update[userId] = it }
+                dto.unitId?.let { update[unitId] = it }
+                update[completionDate] = LocalDateTime.now()
+            }
+        }
+    }
     fun getUnitsCompletedByUser(userId: Int): List<UnitCompletedDto> = transaction {
         UnitsCompleted.selectAll().map (::resultRowToUnitCompleted)
     }
+    fun getUnitsCompletedById(id: Int): UnitCompletedDto? = transaction {
+        UnitsCompleted.selectAll().where { UnitsCompleted.id eq id }.singleOrNull()?.let(::resultRowToUnitCompleted)
+    }
+    fun getAllUnitsCompleted(): List<UnitCompletedDto> = transaction {
+        UnitsCompleted.selectAll().map(::resultRowToUnitCompleted)
+    }
+    fun deleteUnitsCompleted(id: Int): Boolean = transaction {
+        getUnitsCompletedById(id) ?: throw BadRequestException("La unidad completada con ID $id no existe.")
+        UnitsCompleted.deleteWhere { UnitsCompleted.id eq id } > 0
+    }
+
 }

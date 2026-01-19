@@ -50,10 +50,6 @@ fun Application.configureRouting() {
     val testService = get<TestService>()
     val testExerciseService = get<TestExerciseService>()
     val exerciseOnHoldService = get<ExerciseOnHoldService>()
-    val unitCompletedService = get<UnitCompletedService>()
-    val exerciseCompletedService = get<ExerciseCompletedService>()
-    val testCompletedService = get<TestCompletedService>()
-    val questionCompletedService = get<QuestionCompletedService>()
     val notificationsService = get<NotificationsService>()
 
     routing {
@@ -273,26 +269,26 @@ fun Application.configureRouting() {
 
             // Questions
             route("/questions") {
-                get { call.respond(questionService.getAll()) }
+                get { call.respond(questionService.getAllQuestions()) }
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = questionService.getById(id) ?: throw NotFoundException("Question not found")
+                    val item = questionService.getQuestionById(id) ?: throw NotFoundException("Question not found")
                     call.respond(item)
                 }
                 post {
                     val dto = call.receive<CreateQuestionDto>()
-                    val created = questionService.create(dto)
+                    val created = questionService.createQuestion(dto)
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateQuestionDto>()
-                    questionService.update(id, dto)
+                    questionService.updateQuestion(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    call.respond(questionService.delete(id))
+                    call.respond(questionService.deleteQuestion(id))
                 }
             }
 
@@ -373,101 +369,101 @@ fun Application.configureRouting() {
 
             // UnitsCompleted
             route("/units-completed") {
-                get { call.respond(unitCompletedService.getAll()) }
+                get { call.respond(unitService.getAllUnitsCompleted()) }
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = unitCompletedService.getById(id) ?: throw NotFoundException("UnitCompleted not found")
+                    val item = unitService.getUnitCompletedById(id) ?: throw NotFoundException("UnitCompleted not found")
                     call.respond(item)
                 }
                 post {
                     val dto = call.receive<CreateUnitCompletedDto>()
-                    val created = unitCompletedService.create(dto)
+                    val created = unitService.createUnitCompleted(dto)
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateUnitCompletedDto>()
-                    unitCompletedService.update(id, dto)
+                    unitService.editUnitsCompleted(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    call.respond(unitCompletedService.delete(id))
+                    call.respond(unitService.deleteUnitsCompleted(id))
                 }
             }
 
             // ExercisesCompleted
             route("/exercises-completed") {
-                get { call.respond(exerciseCompletedService.getAll()) }
+                get { call.respond(exerciseService.getAllExerciseCompleted()) }
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = exerciseCompletedService.getById(id) ?: throw NotFoundException("ExerciseCompleted not found")
+                    val item = exerciseService.getExerciseCompletedById(id) ?: throw NotFoundException("ExerciseCompleted not found")
                     call.respond(item)
                 }
                 post {
                     val dto = call.receive<CreateExerciseCompletedDto>()
-                    val created = exerciseCompletedService.create(dto)
+                    val created = exerciseService.createExerciseCompleted(dto)
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateExerciseCompletedDto>()
-                    exerciseCompletedService.update(id, dto)
+                    exerciseService.updateExerciseCompleted(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    call.respond(exerciseCompletedService.delete(id))
+                    call.respond(exerciseService.deleteExerciseCompleted(id))
                 }
             }
 
             // TestsCompleted
             route("/tests-completed") {
-                get { call.respond(testCompletedService.getAll()) }
+                get { call.respond(testService.getAllTestCompleted()) }
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = testCompletedService.getById(id) ?: throw NotFoundException("TestCompleted not found")
+                    val item = testService.getTestCompletedById(id) ?: throw NotFoundException("TestCompleted not found")
                     call.respond(item)
                 }
                 post {
                     val dto = call.receive<CreateTestCompletedDto>()
-                    val created = testCompletedService.create(dto)
+                    val created = testService.createTestCompleted(dto)
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateTestCompletedDto>()
-                    testCompletedService.update(id, dto)
+                    testService.updateTestCompleted(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    call.respond(testCompletedService.delete(id))
+                    call.respond(testService.deleteTestCompleted(id))
                 }
             }
 
             // QuestionsCompleted
             route("/questions-completed") {
-                get { call.respond(questionCompletedService.getAll()) }
+                get { call.respond(questionService.getAllQuestionsCompleted()) }
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = questionCompletedService.getById(id) ?: throw NotFoundException("QuestionCompleted not found")
+                    val item = questionService.getQuestionCompletedById(id) ?: throw NotFoundException("QuestionCompleted not found")
                     call.respond(item)
                 }
                 post {
                     val dto = call.receive<CreateQuestionCompletedDto>()
-                    val created = questionCompletedService.create(dto)
+                    val created = questionService.createQuestionCompleted(dto)
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateQuestionCompletedDto>()
-                    questionCompletedService.update(id, dto)
+                    questionService.updateQuestionsCompleted(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    call.respond(questionCompletedService.delete(id))
+                    call.respond(questionService.deleteQuestionsCompleted(id))
                 }
             }
 

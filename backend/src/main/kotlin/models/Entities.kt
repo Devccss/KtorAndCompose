@@ -1,5 +1,4 @@
 package models
-
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 import org.jetbrains.exposed.v1.javatime.datetime
 import java.time.LocalDateTime
@@ -55,18 +54,9 @@ object Exercises : IntIdTable() {
 
 enum class TypeTextExercise { normal, bold, italic, underline }
 
-object ContentExercises : IntIdTable() {
-    val nameExercise = varchar("name_exercise", 100)
-    val typeText = enumerationByName<TypeTextExercise>("type_text", 10)
-    val audioUrl = varchar("audio_url", 255).nullable()
-    val isActive = bool("is_active").default(false)
-    val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
-    val exerciseId = integer("exercise_id").references(Exercises.id)
 
-}
-
-object ContentWords : IntIdTable() {
-    val contentId = integer("content_id").references(ContentExercises.id)
+object QuestionWords : IntIdTable() {
+    val questionId = integer(" question_id ").references(Questions.id)
     val wordId = integer("word_id").references(Words.id)
 }
 
@@ -81,10 +71,16 @@ object Words : IntIdTable() {
 
 enum class TypeQuestion { ALTERNATIVE, OPEN }
 object Questions : IntIdTable() {
+    val textContent = text("text_content")
+    val typeText = enumerationByName<TypeTextExercise>("type_text", 10).default(TypeTextExercise.normal)
+    val grammarExplanation = text("grammar_explanation")
+    val audioUrl = varchar("audio_url", 255).nullable()
+    val isActive = bool("is_active").default(false)
+    val exerciseId = integer("exercise_id").references(Exercises.id)
     val questionText = text("question_text")
     val typeQuestion =
         enumerationByName<TypeQuestion>("type_question", 20).default(TypeQuestion.OPEN)
-    val contentId = integer("content_id").references(ContentExercises.id).nullable()
+    val orderQuestion = float("order_question")
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }
 
@@ -130,7 +126,7 @@ object TestCompleted : IntIdTable() {
     val completionDate = datetime("completion_date").clientDefault { LocalDateTime.now() }
 }
 
-object QuestionCompleted : IntIdTable() {
+object QuestionsCompleted : IntIdTable() {
     val questionId = integer("question_id").references(Questions.id)
     val userId = integer("user_id").references(Users.id)
     val openResponse = text("open_response").nullable()
