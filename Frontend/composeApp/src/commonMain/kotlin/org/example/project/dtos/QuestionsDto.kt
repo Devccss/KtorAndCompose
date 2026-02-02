@@ -1,9 +1,9 @@
-package com.example.dtos
+package org.example.project.dtos
+
 import kotlinx.serialization.Serializable
-import models.TypeQuestion
-import models.TypeTextExercise
 
-
+enum class TypeTextExercise { NORMAL, BOLD, ITALIC, UNDERLINE }
+enum class TypeQuestion { ALTERNATIVE, OPEN }
 @Serializable
 data class QuestionDto(
     val id: Int,

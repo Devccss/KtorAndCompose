@@ -1,7 +1,7 @@
-package com.example.dtos
+package org.example.project.dtos
 
 import kotlinx.serialization.Serializable
-import models.TestType
+enum class TestType { ALTERNATIVES, TRANSLATION, LISTENING, READING }
 
 @Serializable
 data class TestDto(

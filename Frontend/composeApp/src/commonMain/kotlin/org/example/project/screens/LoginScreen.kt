@@ -1,6 +1,5 @@
 package org.example.project.screens
 
-import RepositoryProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,10 +22,10 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import org.example.project.viewModel.UserViewModel
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import org.example.project.dtos.LoginDto
-import org.example.project.models.Role
+import org.example.project.dtos.Role
+import org.example.project.network.RepositoryProvider
 import org.example.project.screens.admindScreens.AdminDashboard
 import org.example.project.screens.admindScreens.RegisterScreen
-import org.example.project.screens.studentScreens.StudentDashboard
 
 class LoginScreen(private val logout: Boolean? = false) : Screen {
     @Composable
@@ -34,7 +33,7 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
         val navigator = LocalNavigator.currentOrThrow
 
         // Instancia del ViewModel
-        val userViewModel = rememberScreenModel {UserViewModel(RepositoryProvider.usersRepository, RepositoryProvider.levelRepository) }
+        val userViewModel = rememberScreenModel {UserViewModel(RepositoryProvider.userRepo, RepositoryProvider.unitRepo) }
         val uiState by userViewModel.state.collectAsState()
 
         var email by remember { mutableStateOf("") }
@@ -268,11 +267,6 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
                         LaunchedEffect(uiState.currentUser) {
                             if (uiState.currentUser?.role == Role.STUDENT && uiState.currentUser?.id != null) {
                                 uiState.currentUser?.let {
-                                    navigator.push(
-                                        StudentDashboard(
-                                            student = it,
-                                        )
-                                    )
                                 }
 
                             }

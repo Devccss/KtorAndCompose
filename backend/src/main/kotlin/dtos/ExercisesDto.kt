@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ExerciseDto(
     val id: Int,
-    val levelId: Int,
+    val unitId: Int,
     val name: String,
     val description: String? = null,
     val isActive: Boolean = false,
@@ -14,16 +14,15 @@ data class ExerciseDto(
 
 @Serializable
 data class CreateExerciseDto(
-    val levelId: Int,
+    val unitId: Int,
     val name: String,
     val description: String? = null,
     val isActive: Boolean? = false,
-    val createdAt: String
 )
 
 @Serializable
 data class UpdateExerciseDto(
-    val levelId: Int? = null,
+    val unitId: Int? = null,
     val name: String? = null,
     val description: String? = null,
     val isActive: Boolean? = null

@@ -1,6 +1,5 @@
 package com.example.plugins
-import com.example.services.ContentExerciseService
-import com.example.services.ContentWordService
+import com.example.services.QuestionWordService
 import com.example.services.ExerciseOnHoldService
 import com.example.services.ExerciseService
 import com.example.services.NotificationsService
@@ -15,8 +14,7 @@ import io.ktor.server.application.install
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
-import repositories.ContentExerciseRepository
-import repositories.ContentWordRepository
+import repositories.QuestionWordsRepository
 import repositories.ExerciseOnHoldRepository
 import repositories.ExerciseRepository
 import repositories.NotificationsRepository
@@ -39,8 +37,7 @@ val repositoryModule = module {
     single { NotificationsRepository() }
     single { ExerciseRepository() }
     single { ExerciseOnHoldRepository() }
-    single { ContentWordRepository()}
-    single { ContentExerciseRepository() }
+    single { QuestionWordsRepository()}
 
 }
 
@@ -55,8 +52,7 @@ val serviceModule = module {
     single { NotificationsService(get()) }
     single { ExerciseService(get()) }
     single { ExerciseOnHoldService(get()) }
-    single { ContentWordService(get()) }
-    single { ContentExerciseService(get()) }
+    single { QuestionWordService(get()) }
 }
 
 fun Application.configureKoin() {

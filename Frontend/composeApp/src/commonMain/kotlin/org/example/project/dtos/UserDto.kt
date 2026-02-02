@@ -1,10 +1,16 @@
-package com.example.dtos
-import models.Role
+package org.example.project.dtos
+
 import kotlinx.serialization.Serializable
+
+enum class Role {
+    ADMIN,
+    STUDENT,
+    CONTENT_EDITOR
+}
 
 @Serializable
 data class UserDto(
-    val id: Int,
+    val id: Int? = null,
     val email: String,
     val name: String,
     val password: String? = null,
@@ -13,7 +19,7 @@ data class UserDto(
     val activeNow: Boolean? = false,
     val currentUnitId: Int? = null,
     val createdAt: String,
-    val role: Role
+    val role: Role? = Role.STUDENT
 )
 @Serializable
 data class CreateUserDto(

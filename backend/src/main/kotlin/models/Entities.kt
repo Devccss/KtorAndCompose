@@ -15,7 +15,7 @@ object Users : IntIdTable() {
     val provider = varchar("provider", 100).nullable()
     val preferences = text("preferences").nullable()
     val activeNow = bool("active_now").default(false)
-    val currentUnitId = integer("current_level_id").references(Units.id)
+    val currentUnitId = integer("current_level_id").references(Units.id).nullable()
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
     val role = enumerationByName<Role>("role", 20).default(Role.STUDENT)
 }
@@ -38,21 +38,21 @@ object Units : IntIdTable() {
     val difficulty = enumerationByName<DifficultyLevel>("difficulty", 10)
     val name = varchar("name", 100)
     val description = text("description")
-    val orderUnit = float("orderLevel").uniqueIndex()
+    val orderUnit = integer("orderLevel").uniqueIndex()
     val isActive = bool("is_active").default(false)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }
 
 
 object Exercises : IntIdTable() {
-    val levelId = integer("level_id").references(Units.id)
+    val unitId = integer("unit_Id").references(Units.id)
     val name = varchar("name", 100)
     val description = text("description").nullable()
     val isActive = bool("is_active").default(false)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }
 
-enum class TypeTextExercise { normal, bold, italic, underline }
+enum class TypeTextExercise { NORMAL, BOLD, ITALIC, UNDERLINE }
 
 
 object QuestionWords : IntIdTable() {
@@ -72,15 +72,15 @@ object Words : IntIdTable() {
 enum class TypeQuestion { ALTERNATIVE, OPEN }
 object Questions : IntIdTable() {
     val textContent = text("text_content")
-    val typeText = enumerationByName<TypeTextExercise>("type_text", 10).default(TypeTextExercise.normal)
+    val typeText = enumerationByName<TypeTextExercise>("type_text", 10).default(TypeTextExercise.NORMAL)
     val grammarExplanation = text("grammar_explanation")
     val audioUrl = varchar("audio_url", 255).nullable()
     val isActive = bool("is_active").default(false)
     val exerciseId = integer("exercise_id").references(Exercises.id)
     val questionText = text("question_text")
     val typeQuestion =
-        enumerationByName<TypeQuestion>("type_question", 20).default(TypeQuestion.OPEN)
-    val orderQuestion = float("order_question")
+        enumerationByName<TypeQuestion>("type_question", 20).default(TypeQuestion.ALTERNATIVE)
+    val orderQuestion = integer("order_question")
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }
 
@@ -91,7 +91,7 @@ object Tests : IntIdTable() {
     val unitId = integer("unit_id").references(Units.id)
     val name = varchar("name", 100)
     val description = text("description").nullable()
-    val testType = enumerationByName<TestType>("test_type", 20)
+    val testType = enumerationByName<TestType>("test_type", 20).default(TestType.ALTERNATIVES)
     val isActive = bool("is_active").default(false)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }

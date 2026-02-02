@@ -1,7 +1,8 @@
-package com.example.dtos
+package org.example.project.dtos
 
 import kotlinx.serialization.Serializable
-import models.NotificationType
+
+enum class NotificationType { INFO, WARNING, ALERT }
 
 @Serializable
 data class NotificationDto(

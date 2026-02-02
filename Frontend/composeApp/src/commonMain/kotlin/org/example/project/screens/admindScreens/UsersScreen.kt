@@ -1,6 +1,4 @@
 package org.example.project.screens.admindScreens
-
-import RepositoryProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -62,11 +60,11 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlinx.coroutines.launch
 import org.example.project.dtos.CreateUserDto
-import org.example.project.models.Level
-import org.example.project.models.Role
-import org.example.project.models.Test
-import org.example.project.models.TestType
-import org.example.project.models.Users
+import org.example.project.dtos.Role
+import org.example.project.dtos.TestType
+import org.example.project.dtos.UnitDto
+import org.example.project.dtos.UserDto
+import org.example.project.network.RepositoryProvider
 import org.example.project.viewModel.UserViewModel
 
 class UsersScreen : Screen {
@@ -76,7 +74,7 @@ class UsersScreen : Screen {
     override fun Content() {
 
         val vm = rememberScreenModel {
-            UserViewModel(RepositoryProvider.usersRepository, RepositoryProvider.levelRepository)
+            UserViewModel(RepositoryProvider.userRepo, RepositoryProvider.unitRepo)
         }
 
         val ui by vm.state.collectAsState()
@@ -86,8 +84,8 @@ class UsersScreen : Screen {
         val scope = rememberCoroutineScope()
         val navigator = LocalNavigator.currentOrThrow
 
-        var editing by remember { mutableStateOf<Users?>(null) }
-        var confirmDelete by remember { mutableStateOf<Users?>(null) }
+        var editing by remember { mutableStateOf<UserDto?>(null) }
+        var confirmDelete by remember { mutableStateOf<UserDto?>(null) }
         var showAddUser by remember { mutableStateOf(false) }
 
         LaunchedEffect(ui.error) {
@@ -100,10 +98,7 @@ class UsersScreen : Screen {
         ModalNavigationDrawer(
             drawerState = drawerState,
             drawerContent = {
-                DrawerContent(onNavigate = { route ->
-                    scope.launch { drawerState.close() }
-                    navigator.push(route)
-                })
+
             }
         ) {
             Scaffold(
@@ -151,7 +146,7 @@ class UsersScreen : Screen {
 
                                     },
                                     onEdit = { editing = user },
-                                    levels = ui.levels,
+                                    levels = ui.unit,
                                     onDelete = { confirmDelete = user }
                                 )
                                 Spacer(Modifier.height(12.dp))
@@ -166,11 +161,15 @@ class UsersScreen : Screen {
                         initial = user,
                         onSave = { updated ->
                             updated.id?.let {
-                                user.id?.let { vm.updateUser(it, updated) }
+                                user.id.let {
+                                    if (it != null) {
+                                        vm.updateUser(it, updated)
+                                    }
+                                }
                             }
                             editing = null
                         },
-                        levels = ui.levels,
+                        levels = ui.unit,
                         onDismiss = { editing = null }
                     )
                 }
@@ -178,14 +177,19 @@ class UsersScreen : Screen {
 
                 if (showAddUser && !ui.isLoading ) {
                     EditUser(
-                        initial = Users(
+                        initial = UserDto(
+                            id = null,
                             name = "",
                             email = "",
                             password = "",
                             role = Role.STUDENT,
-                            currentLevelId = ui.levels.firstOrNull()?.id
+                            currentUnitId = ui.unit.firstOrNull()?.id,
+                            provider = "",
+                            preferences = "",
+                            activeNow = false,
+                            createdAt = ""
                         ),
-                        levels = ui.levels,
+                        levels = ui.unit,
                         onSave = { newUser ->
                             vm.registerUser(
                                 CreateUserDto(
@@ -193,7 +197,7 @@ class UsersScreen : Screen {
                                     email = newUser.email,
                                     password = newUser.password ?: "",
                                     role = newUser.role,
-                                    currentLevelId = newUser.currentLevelId
+                                    currentUnitId = newUser.currentUnitId
                                 )
                             )
                             showAddUser = false
@@ -228,13 +232,13 @@ class UsersScreen : Screen {
 
 @Composable
 fun UserCard(
-    user: Users,
-    levels: List<Level>,
+    user: UserDto,
+    levels: List<UnitDto>,
     onClick: () -> Unit = {},
-    onEdit: (Users) -> Unit,
-    onDelete: (Users) -> Unit
+    onEdit: (UserDto) -> Unit,
+    onDelete: (UserDto) -> Unit
 ) {
-    val levelName = levels.find { it.id == user.currentLevelId }?.name ?: "No asignado"
+    val levelName = levels.find { it.id == user.currentUnitId }?.name ?: "No asignado"
     Card(
         Modifier.fillMaxWidth().clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -292,9 +296,9 @@ fun UserCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditUser(
-    initial: Users,
-    levels: List<Level>,
-    onSave: (Users) -> Unit,
+    initial: UserDto,
+    levels: List<UnitDto>,
+    onSave: (UserDto) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(initial.name) }
@@ -306,7 +310,7 @@ fun EditUser(
     val roles by remember { mutableStateOf(Role.entries) }
     var role by remember { mutableStateOf(initial.role) }
     var roleExpanded by remember { mutableStateOf(false) }
-    var selectedLevel = levels.find { it.id == initial.currentLevelId }
+    var selectedUnit = levels.find { it.id == initial.currentUnitId }
 
     val testTypes = TestType.entries
 
@@ -325,10 +329,10 @@ fun EditUser(
                     onExpandedChange = { expanded = !expanded }
                 ) {
                     OutlinedTextField(
-                        value = selectedLevel?.name ?: "Selecciona un nivel",
+                        value = selectedUnit?.name ?: "Selecciona una unidad",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Nivel") },
+                        label = { Text("Unidad") },
                         modifier = Modifier.menuAnchor(
                             MenuAnchorType.PrimaryNotEditable,
                             enabled = true
@@ -343,7 +347,7 @@ fun EditUser(
                             DropdownMenuItem(
                                 text = { Text(level.name) },
                                 onClick = {
-                                    selectedLevel = level
+                                    selectedUnit = level
                                     expanded = false
                                 }
                             )
@@ -442,10 +446,9 @@ fun EditUser(
                             email = email,
                             password = newPassword,
                             provider = null,
-                            providerId = null,
                             preferences = null,
                             role = role,
-                            currentLevelId = selectedLevel?.id,
+                            currentUnitId = selectedUnit?.id,
 
 
                             )

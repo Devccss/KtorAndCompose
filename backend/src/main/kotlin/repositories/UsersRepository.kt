@@ -24,7 +24,7 @@ class UsersRepository {
             id = row[Users.id].value,
             email = row[Users.email],
             name = row[Users.name],
-            password = "" , // no devolver contraseña
+            password = "" ,
             activeNow = row[Users.activeNow],
             currentUnitId = row[Users.currentUnitId],
             preferences = row[Users.preferences] ,
@@ -43,7 +43,7 @@ class UsersRepository {
     }
 
     fun getByEmail(email: String): UserDto? = transaction {
-        Users.select ( Users.email eq email ).singleOrNull()?.let(::resultRowToUser)
+        Users.selectAll().where { Users.email eq email }.singleOrNull()?.let(::resultRowToUser)
     }
 
     fun createUser(dto: CreateUserDto): UserDto = try {
@@ -91,6 +91,7 @@ class UsersRepository {
                 dto.role?.let { u[role] = it}
 
             }
+            return@transaction true
         }
     }
 
@@ -100,7 +101,7 @@ class UsersRepository {
     }
 
     fun login(email: String, password: String): UserDto = transaction {
-        val row = Users.select ( Users.email eq email ).singleOrNull()
+        val row = Users.selectAll().where { Users.email eq email }.singleOrNull()
             ?: throw BadRequestException("Email o contraseña inválidos.")
 
         val hashed = row[Users.password]

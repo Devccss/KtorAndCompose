@@ -1,11 +1,12 @@
-package com.example.dtos
+package org.example.project.dtos
 
 import kotlinx.serialization.Serializable
-import models.DifficultyLevel
+
+enum class DifficultyLevel{ A1, A2, B1, B2, C1, C2 }
 
 @Serializable
 data class UnitDto(
-    val id: Int,
+    val id: Int? = null,
     val difficulty: DifficultyLevel,
     val name: String,
     val description: String,

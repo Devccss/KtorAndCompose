@@ -9,15 +9,16 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.example.project.dtos.CreateUnitDto
 import org.example.project.dtos.CreateUserDto
 import org.example.project.dtos.LoginDto
 import org.example.project.dtos.UnitDto
+import org.example.project.dtos.UpdateUnitDto
 import org.example.project.dtos.UserDto
 import org.example.project.repository.UnitRepo
-import org.example.project.repository.UserRepo
 
 
-data class UsersUiState(
+data class UnitUiState(
     val users: List<UserDto> = emptyList(),
     val unit: List<UnitDto> = emptyList(),
     val currentUser: UserDto? = null,
@@ -27,7 +28,7 @@ data class UsersUiState(
 
     )
 
-class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) : ViewModel(), ScreenModel {
+class UnitViewModel(private val unitRepo: UnitRepo) : ViewModel(), ScreenModel {
     private val _state = MutableStateFlow(
         UsersUiState(
             isLoading = true,
@@ -83,10 +84,10 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
 
      private fun loadUsers() {
         launchCatching(
-            block = { repo.getAllUsers() },
-            onSuccess = { users ->
+            block = { unitRepo.getAllUnits() },
+            onSuccess = { unit ->
                 _state.value = _state.value.copy(
-                    users = users,
+                    unit = unit,
                 )
             },
             onError = { error ->
@@ -98,20 +99,21 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
         )
     }
 
-    private fun getUserByEmail(email: String) {
+    private fun getUnitById(id: Int) {
         launchCatching(
-            block = { repo.getUserByEmail(email) },
-            onSuccess = { user ->
-                if (user != null) {
+            block = { unitRepo.getUnitById(id) },
+            onSuccess = { unit ->
+                if (unit != null) {
                     _state.value = _state.value.copy(
-                        users = _state.value.users.map {
-                            if (it.id == user.id) UserDto(
-                                id = user.id,
-                                name = user.name,
-                                email = user.email,
-                                password = user.password,
-                                currentUnitId = user.currentUnitId,
-                                createdAt = user.createdAt
+                        unit = _state.value.unit.map {
+                            if (it.id == unit.id) UnitDto(
+                                id = unit.id,
+                                name = unit.name,
+                                difficulty = unit.difficulty,
+                                description = unit.description,
+                                orderUnit = unit.orderUnit,
+                                isActive = unit.isActive,
+                                createdAt = unit.createdAt
                             ) else it
                         },
                     )
@@ -131,24 +133,24 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
         )
     }
 
-    fun registerUser(newUser: CreateUserDto) {
+    fun createUnit(newUnit: CreateUnitDto) {
         launchCatching(
             block = {
-                if (newUser.name.isEmpty()) {
+                if (newUnit.name.isEmpty()) {
                     throw IllegalArgumentException("El nombre no puede estar vacío")
                 }
-                if (newUser.email.isEmpty() || !newUser.email.contains("@")) {
-                    throw IllegalArgumentException("El email es invalido")
+                if (newUnit.description.isEmpty()) {
+                    throw IllegalArgumentException("La descripción no puede estar vacía")
                 }
-                if (newUser.password.isEmpty()) {
-                    throw IllegalArgumentException("La contraseña no puede estar vacía")
+                if (newUnit.orderUnit == null || newUnit.orderUnit <= 0) {
+                    throw IllegalArgumentException("El orden de la unidad debe ser un número positivo")
                 }
-                repo.createUser(newUser)
+
+                unitRepo.createUnit(newUnit)
             },
             onSuccess = { added ->
                 _state.value = _state.value.copy(
-                    users = _state.value.users.plus(added),
-                    registerUser = newUser,
+                    unit = _state.value.unit.plus(added),
 
                 )
             },
@@ -161,33 +163,11 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
         )
     }
 
-    fun login(loginDto: LoginDto) {
+    fun updateUnit(id: Int, updatedUnit: UpdateUnitDto) {
         launchCatching(
-            block = {
-                repo.loginUser(loginDto)
-            },
-            onSuccess = { user ->
-                println("------Z USER: $user")
-                user.let {
-
-                    _state.value = _state.value.copy(
-                        currentUser = user,
-                    )
-                }
-            },
-            onError = { error ->
-                _state.value = _state.value.copy(
-                    error = error.message,
-                )
-            }
-        )
-    }
-
-    fun updateUser(id: Int, updatedUser: UserDto) {
-        launchCatching(
-            block = { repo.updateUser(id, updatedUser) },
-            onSuccess = { updated ->
-                getUserByEmail(updated.email)
+            block = { unitRepo.updateUnit(id, updatedUnit) },
+            onSuccess = {
+                getUnitById(id)
             },
             onError = { error ->
                 _state.value = _state.value.copy(error = error.message)
@@ -195,17 +175,16 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
         )
     }
 
-    fun deleteUser(id: Int) {
+    fun deleteUnit(id: Int) {
         launchCatching(
-            block = { repo.deleteUser(id) },
+            block = { unitRepo.deleteUnit(id) },
             onSuccess = { success ->
                 if (success) {
                     _state.value = _state.value.copy(
-                        users = _state.value.users.filterNot { it.id == id },
-                        currentUser = if (_state.value.currentUser?.id == id) null else _state.value.currentUser
+                        unit = _state.value.unit.filterNot { it.id == id }
                     )
                 } else {
-                    _state.value = _state.value.copy(error = "Error al eliminar el usuario")
+                    _state.value = _state.value.copy(error = "Error al eliminar la unididad")
                 }
             },
             onError = { error ->

@@ -9,6 +9,7 @@ import com.example.dtos.UpdateQuestionDto
 import io.ktor.server.plugins.BadRequestException
 import models.Questions
 import models.QuestionsCompleted
+import models.Units
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
@@ -55,6 +56,11 @@ class QuestionRepository {
 
     fun createQuestion(dto: CreateQuestionDto): QuestionDto = try {
         transaction {
+            var order= 0
+            if(dto.orderQuestion == null) {
+                val total = (Questions.selectAll().count() + 1)
+                order = total.toInt()
+            }
             val newId = Questions.insert {
                 it[textContent] = dto.textContent
                 it[typeText] = dto.typeText
@@ -64,7 +70,7 @@ class QuestionRepository {
                 it[exerciseId] = dto.exerciseId
                 it[questionText] = dto.questionText
                 it[typeQuestion] = dto.typeQuestion
-                it[orderQuestion] = dto.orderQuestion ?: 0f
+                it[orderQuestion] = dto.orderQuestion?: order
             }[Questions.id]
 
             QuestionDto(
@@ -77,7 +83,7 @@ class QuestionRepository {
                 exerciseId = dto.exerciseId,
                 questionText = dto.questionText,
                 typeQuestion = dto.typeQuestion,
-                orderQuestion = dto.orderQuestion ?: 0f,
+                orderQuestion = dto.orderQuestion ?: order,
                 createdAt = LocalDateTime.now().toString()
             )
         }

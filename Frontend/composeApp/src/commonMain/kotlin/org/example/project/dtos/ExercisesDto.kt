@@ -1,13 +1,11 @@
-package com.example.dtos
+package org.example.project.dtos
 
 import kotlinx.serialization.Serializable
-import models.TestType
 
 @Serializable
-data class TestDto(
+data class ExerciseDto(
     val id: Int,
     val unitId: Int,
-    val testType: TestType,
     val name: String,
     val description: String? = null,
     val isActive: Boolean = false,
@@ -15,40 +13,38 @@ data class TestDto(
 )
 
 @Serializable
-data class CreateTestDto(
+data class CreateExerciseDto(
     val unitId: Int,
-    val testType: TestType,
     val name: String,
     val description: String? = null,
     val isActive: Boolean? = false,
-    val createdAt: String
 )
 
 @Serializable
-data class UpdateTestDto(
+data class UpdateExerciseDto(
+    val unitId: Int? = null,
     val name: String? = null,
     val description: String? = null,
     val isActive: Boolean? = null
 )
 
 @Serializable
-data class TestCompletedDto(
+data class ExerciseCompletedDto(
     val id: Int,
     val userId: Int,
-    val testId: Int,
+    val exerciseId: Int,
     val completedAt: String
 )
-
 @Serializable
-data class CreateTestCompletedDto(
+data class CreateExerciseCompletedDto(
     val userId: Int,
-    val testId: Int,
+    val exerciseId: Int,
     val completedAt: String
 )
 
 @Serializable
-data class UpdateTestCompletedDto(
+data class UpdateExerciseCompletedDto(
     val userId: Int? = null,
-    val testId: Int? = null,
+    val exerciseId: Int? = null,
     val completedAt: String? = null
 )

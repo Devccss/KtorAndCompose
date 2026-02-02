@@ -43,8 +43,7 @@ fun Application.configureRouting() {
     // Obtener el resto de servicios via Koin
     val unitService = get<UnitService>()
     val exerciseService = get<ExerciseService>()
-    val contentExerciseService = get<ContentExerciseService>()
-    val contentWordService = get<ContentWordService>()
+    val questionWordService = get<QuestionWordService>()
     val wordService = get<WordService>()
     val questionService = get<QuestionService>()
     val testService = get<TestService>()
@@ -192,53 +191,70 @@ fun Application.configureRouting() {
                 }
             }
 
-            // ContentExercises
-            route("/content-exercises") {
-                get { call.respond(contentExerciseService.getAll()) }
+            // QuestionExercises
+            route("/question-exercises") {
+                get { call.respond(questionWordService.getAll()) }
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = contentExerciseService.getById(id) ?: throw NotFoundException("ContentExercise not found")
+                    val item = questionWordService.getById(id) ?: throw NotFoundException("ContentExercise not found")
                     call.respond(item)
                 }
                 post {
-                    val dto = call.receive<CreateContentExerciseDto>()
-                    val created = contentExerciseService.create(dto)
+                    val dto = call.receive<CreateQuestionWordDto>()
+                    val created = questionWordService.create(dto)
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val dto = call.receive<UpdateContentExerciseDto>()
-                    contentExerciseService.update(id, dto)
+                    val dto = call.receive<UpdateQuestionWordDto>()
+                    questionWordService.update(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    call.respond(contentExerciseService.delete(id))
+                    call.respond(questionWordService.delete(id))
                 }
             }
 
-            // ContentWords
-            route("/content-words") {
-                get { call.respond(contentWordService.getAll()) }
+            // QuestionWords
+            route("/question-words") {
+                get { call.respond(questionWordService.getAll()) }
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = contentWordService.getById(id) ?: throw NotFoundException("ContentWord not found")
+                    val item = questionWordService.getById(id) ?: throw NotFoundException("ContentWord not found")
                     call.respond(item)
                 }
                 post {
-                    val dto = call.receive<CreateContentWordDto>()
-                    val created = contentWordService.create(dto)
+
+                    val dto = call.receive<CreateQuestionWordDto>()
+                    val question = questionService.getQuestionById(dto.questionId)
+                    val word = wordService.getById(dto.wordId)
+                    if (question == null) {
+                        throw BadRequestException("Question with ID ${dto.questionId} does not exist.")
+                    }
+                    if (word == null) {
+                        throw BadRequestException("Word with ID ${dto.wordId} does not exist.")
+                    }
+                    val created = questionWordService.create(dto)
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val dto = call.receive<UpdateContentWordDto>()
-                    contentWordService.update(id, dto)
+                    val dto = call.receive<UpdateQuestionWordDto>()
+                    val question = dto.questionId?.let { questionService.getQuestionById(it) }
+                    val word = dto.wordId?.let { wordService.getById(it) }
+                    if (question == null) {
+                        throw BadRequestException("Question with ID ${dto.questionId} does not exist.")
+                    }
+                    if (word == null) {
+                        throw BadRequestException("Word with ID ${dto.wordId} does not exist.")
+                    }
+                    questionWordService.update(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    call.respond(contentWordService.delete(id))
+                    call.respond(questionWordService.delete(id))
                 }
             }
 

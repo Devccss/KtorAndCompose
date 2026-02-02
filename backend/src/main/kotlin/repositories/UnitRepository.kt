@@ -28,7 +28,7 @@ class UnitRepository {
             difficulty = row[Units.difficulty],
             name = row[Units.name],
             description = row[Units.description],
-            orderUnit = row[Units.orderUnit].toFloat(),
+            orderUnit = row[Units.orderUnit],
             isActive = row[Units.isActive],
             createdAt = row[Units.createdAt].toString()
         )
@@ -57,13 +57,17 @@ class UnitRepository {
 
     fun createUnit(dto: CreateUnitDto): UnitDto = try {
         transaction {
+            var order= 0
+            if(dto.orderUnit == null) {
+                val total = (Units.selectAll().count() + 1)
+                order = total.toInt()
+            }
             val newId = Units.insert {
                 it[difficulty] = dto.difficulty
                 it[name] = dto.name
                 it[description] = dto.description
-                it[orderUnit] = dto.orderUnit
+                it[orderUnit] = dto.orderUnit?: order
                 it[isActive] = dto.isActive ?: false
-                // createdAt typically set by DB default; omit if DB handles it
             }[Units.id]
 
             UnitDto(
@@ -71,7 +75,7 @@ class UnitRepository {
                 difficulty = dto.difficulty,
                 name = dto.name,
                 description = dto.description,
-                orderUnit = dto.orderUnit,
+                orderUnit = dto.orderUnit?: order,
                 isActive = dto.isActive ?: false,
                 createdAt = LocalDateTime.now().toString()
             )

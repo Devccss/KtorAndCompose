@@ -1,6 +1,5 @@
 package org.example.project.screens.admindScreens
 
-import RepositoryProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,11 +44,11 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import org.example.project.dtos.CreateUserDto
-import org.example.project.models.Role
+import org.example.project.dtos.Role
+import org.example.project.network.RepositoryProvider
 import org.example.project.screens.LoginScreen
-import org.example.project.screens.studentScreens.StudentDashboard
 import org.example.project.viewModel.UserViewModel
-import org.jetbrains.compose.ui.tooling.preview.Preview
+
 
 
 class RegisterScreen() : Screen {
@@ -58,7 +57,7 @@ class RegisterScreen() : Screen {
         val navigator = LocalNavigator.currentOrThrow
 
         val userViewModel =
-            rememberScreenModel { UserViewModel(RepositoryProvider.usersRepository, RepositoryProvider.levelRepository) }
+            rememberScreenModel { UserViewModel(RepositoryProvider.userRepo, RepositoryProvider.unitRepo) }
         val uiState by userViewModel.state.collectAsState()
 
         var name: String by remember { mutableStateOf("") }
@@ -68,7 +67,7 @@ class RegisterScreen() : Screen {
         val providerId: String? by remember { mutableStateOf(null) }
         var confirmPassword: String by remember { mutableStateOf("") }
         val preferences: String? by remember { mutableStateOf("") }
-        val currentLevelId: Int? by remember { mutableStateOf(null) }
+        val currentUnitId: Int? by remember { mutableStateOf(null) }
         val role: Role? by remember { mutableStateOf(Role.STUDENT) }
 
         var showError by remember { mutableStateOf(false) }
@@ -305,8 +304,8 @@ class RegisterScreen() : Screen {
                                     password = password,
                                     preferences = preferences,
                                     provider = provider,
-                                    providerId = providerId,
-                                    currentLevelId = currentLevelId,
+
+                                    currentUnitId = currentUnitId,
                                     role = role ?: Role.STUDENT
                                 )
 

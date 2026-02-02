@@ -25,7 +25,7 @@ class ExerciseRepository {
     private fun resultRowToExercise(row: ResultRow): ExerciseDto {
         return ExerciseDto(
             id = row[Exercises.id].value,
-            levelId = row[Exercises.levelId],
+            unitId = row[Exercises.unitId],
             name = row[Exercises.name],
             description = row[Exercises.description],
             isActive = row[Exercises.isActive],
@@ -44,7 +44,7 @@ class ExerciseRepository {
     fun create(dto: CreateExerciseDto): ExerciseDto = try {
         transaction {
             val newId = Exercises.insert {
-                it[levelId] = dto.levelId
+                it[unitId] = dto.unitId
                 it[name] = dto.name
                 it[description] = dto.description
                 it[isActive] = dto.isActive ?: false
@@ -52,7 +52,7 @@ class ExerciseRepository {
 
             ExerciseDto(
                 id = newId.value,
-                levelId = dto.levelId,
+                unitId = dto.unitId,
                 name = dto.name,
                 description = dto.description,
                 isActive = dto.isActive ?: false,
@@ -67,7 +67,7 @@ class ExerciseRepository {
         transaction {
             getById(id) ?: throw BadRequestException("Exercise con ID $id no existe.")
             Exercises.update({ Exercises.id eq id }) { u ->
-                dto.levelId?.let { u[Exercises.levelId] = it }
+                dto.unitId?.let { u[Exercises.unitId] = it }
                 dto.name?.let { u[Exercises.name] = it }
                 dto.description?.let { u[Exercises.description] = it }
                 dto.isActive?.let { u[Exercises.isActive] = it }
