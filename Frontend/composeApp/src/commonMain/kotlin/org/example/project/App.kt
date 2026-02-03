@@ -8,8 +8,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import cafe.adriel.voyager.navigator.Navigator
+import org.example.project.dtos.Role
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.createHttpClient
+import org.example.project.screens.LoginScreen
 import org.example.project.screens.admindScreens.AdminDashboard
 
 
@@ -26,7 +28,8 @@ fun App() {
 
     MaterialTheme {
         if (initialized) {
-            Navigator(screen = AdminDashboard(adminName = "Deivid"))
+            Navigator(screen = AdminDashboard("Deivid",Role.ADMIN))
+            //Navigator(screen = LoginScreen())
         } else {
             // Loader o pantalla de espera
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

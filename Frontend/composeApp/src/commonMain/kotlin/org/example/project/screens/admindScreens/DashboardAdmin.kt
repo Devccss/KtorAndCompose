@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
@@ -35,7 +36,11 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_bold
+import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
+import org.example.project.components.ReusableBottomBar
+import org.example.project.components.NavItem
+import org.example.project.dtos.Role
 import org.example.project.dtos.UserDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.viewModel.UnitViewModel
@@ -57,19 +62,7 @@ enum class UnitStatus {
     DRAFT, PUBLISHED
 }
 
-// Definiciones de fuentes (temporalmente se usan SansSerif/Monospace como fallback).
-// Para usar las fuentes locales:
-// 1) Agrega archivos TTF/OTF en androidApp/src/main/res/font: encode_sans_regular.ttf, encode_sans_bold.ttf, jetbrains_mono_regular.ttf
-// 2) Descomenta y ajusta las líneas Font(...) usando R.font.encode_sans_regular etc.
-// val EncodeSansFamily = FontFamily(
-//     Font(R.font.encode_sans_regular),
-//     Font(R.font.encode_sans_bold, weight = FontWeight.Bold)
-// )
-// commonMain
-// expect val EncodeSansFamily: FontFamily
-// expect val JetbrainsMonoFamily: FontFamily
-
-class AdminDashboard(private val adminName: String) : Screen {
+class AdminDashboard(private val adminName: String, private val rolAdmin:Role) : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -85,44 +78,31 @@ class AdminDashboard(private val adminName: String) : Screen {
         var selectedIndex by remember { mutableStateOf(0) } // 0: dashboard, 1: users, 2: levels
 
         Scaffold(
-            // barra inferior con iconos para navegar entre pantallas
+
+            // reemplazamos bottomBar inline por componente reutilizable
             bottomBar = {
-                NavigationBar {
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Home, contentDescription = "Dashboard") },
-                        selected = selectedIndex == 0,
-                        onClick = {
-                            selectedIndex = 0
-                        },
-                        label = { Text("Inicio") }
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Group, contentDescription = "Usuarios") },
-                        selected = selectedIndex == 1,
-                        onClick = {
-                            selectedIndex = 1
-                            navigator.push(UsersScreen())
-                        },
-                        label = { Text("Usuarios") }
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Unidades") },
-                        selected = selectedIndex == 2,
-                        onClick = {
-                            selectedIndex = 2
-                            navigator.push(UnitsScreen()) // navegar a la pantalla completa de Unidades
-                        },
-                        label = { Text("Unidades") }
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.ExitToApp, contentDescription = "Cerrar sesión") },
-                        selected = false,
-                        onClick = { navigator.push(LoginScreen(true)) },
-                        label = { Text("Salir") }
-                    )
-                }
+                val navItems = listOf(
+                    NavItem(0, Icons.Default.Home, "Inicio"),
+                    NavItem(1, Icons.Default.Group, "Usuarios"),
+                    NavItem(2, Icons.AutoMirrored.Filled.List, "Unidades"),
+                    NavItem(3, Icons.AutoMirrored.Filled.ExitToApp, "Salir")
+                )
+                ReusableBottomBar(
+                    items = navItems,
+                    selectedIndex = selectedIndex,
+                    onSelect = { idx -> selectedIndex = idx },
+                    initialUserName = adminName,
+                    role = rolAdmin
+                )
             }
         ) { paddingValues ->
+            if (rolAdmin != Role.ADMIN){
+                return@Scaffold Column {
+                    Card {
+                        Text("No tienes permisos para ver este contenido.")
+                    }
+                }
+            }
             // Mapear UnitDto -> LessonUnit para reutilizar UI
             val lessonUnits = unitUi.unit.map { u ->
                 LessonUnit(
@@ -202,7 +182,7 @@ fun AdminDashboardContent(
                         text = "¡Bienvenido $adminName!",
                         style = MaterialTheme.typography.titleLarge,
                         color = Color(0xFF2D2D2D),
-                        fontFamily = FontFamily(Font(Res.font.encode_sans_bold, weight = FontWeight.Bold))
+                        fontFamily = FontFamily(Font(Res.font.encode_sans_variable, weight = FontWeight.SemiBold))
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -274,7 +254,7 @@ fun AdminDashboardContent(
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                // Tabs superiores
+
                 var selectedSectionTabs by remember { mutableStateOf(0) } // 0: Análisis, 1: Unidades, 2: Usuarios
                 Row(
                     modifier = Modifier.fillMaxWidth(),

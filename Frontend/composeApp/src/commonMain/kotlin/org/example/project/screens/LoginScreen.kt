@@ -266,19 +266,17 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
 
                         LaunchedEffect(uiState.currentUser) {
                             if (uiState.currentUser?.role == Role.STUDENT && uiState.currentUser?.id != null) {
-                                uiState.currentUser?.let {
-                                }
+                                //Estudiante
 
                             }
                             else if (uiState.currentUser?.role == Role.ADMIN && uiState.currentUser?.id != null) {
                                 navigator.push(AdminDashboard(
-                                    adminName = uiState.currentUser?.name ?: "Administrador"
+                                    adminName = uiState.currentUser?.name ?: "Administrador",
+                                    rolAdmin = uiState.currentUser?.role?: Role.STUDENT
                                 ))
                             }
                             else if (uiState.currentUser?.role == Role.CONTENT_EDITOR && uiState.currentUser?.id != null) {
-                                navigator.push(AdminDashboard(
-                                    adminName = uiState.currentUser?.name ?: "Editor de Contenido"
-                                ))
+                                //Editor de contenido
                             }
                         }
                         LaunchedEffect(logout){
