@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -23,12 +25,16 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
@@ -50,7 +56,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.model.rememberScreenModel
@@ -58,6 +67,10 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.core.screen.uniqueScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import frontend.composeapp.generated.resources.Res
+import frontend.composeapp.generated.resources.encode_sans_variable
+import frontend.composeapp.generated.resources.jetbrains_mono_regular
+import org.example.project.components.AppLayout
 import org.example.project.dtos.CreateUserDto
 import org.example.project.dtos.Role
 import org.example.project.dtos.UnitDto
@@ -66,11 +79,15 @@ import org.example.project.network.RepositoryProvider
 import org.example.project.viewModel.UserViewModel
 import org.example.project.components.NavItem
 import org.example.project.components.ReusableBottomBar
+import org.example.project.dtos.FilterUserDto
 import org.example.project.dtos.TestType
+import org.example.project.network.UserSession
+import org.jetbrains.compose.resources.Font
 
 class UsersScreen : Screen {
     override val key = uniqueScreenKey
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
 
@@ -87,8 +104,25 @@ class UsersScreen : Screen {
         var confirmDelete by remember { mutableStateOf<UserDto?>(null) }
         var showAddUser by remember { mutableStateOf(false) }
 
+        var showFilterOpcions by remember { mutableStateOf(false) }
+        var filterUser by remember { mutableStateOf<FilterUserDto?>(null) }
+
         var searchQuery by remember { mutableStateOf("") }
         var selectedIndex by remember { mutableStateOf(1) } // index in bottom bar
+
+        // Estados para filtros y búsqueda aplicada
+        var selectedRole by remember { mutableStateOf<Role?>(null) }
+        var roleExpanded by remember { mutableStateOf(false) }
+
+        var selectedUnit by remember { mutableStateOf<UnitDto?>(null) }
+        var unitExpanded by remember { mutableStateOf(false) }
+
+        var appliedSearch by remember { mutableStateOf("") }
+        var appliedRole by remember { mutableStateOf<Role?>(null) }
+        var appliedUnitId by remember { mutableStateOf<Int?>(null) }
+
+        // usa la variable showFilterOpcions para abrir/cerrar el DropdownMenu
+        var filterMenuExpanded by remember { mutableStateOf(false) }
 
         LaunchedEffect(ui.error) {
             ui.error?.let {
@@ -96,36 +130,29 @@ class UsersScreen : Screen {
             }
         }
 
-        Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            bottomBar = {
-                val navItems = listOf(
-                    NavItem(0, Icons.Default.Home, "Inicio"),
-                    NavItem(1, Icons.Default.Group, "Usuarios"),
-                    NavItem(2, Icons.AutoMirrored.Filled.List, "Unidades"),
-                    NavItem(3, Icons.AutoMirrored.Filled.ExitToApp, "Salir")
-                )
-                ReusableBottomBar(
-                    items = navItems,
-                    selectedIndex = selectedIndex,
-                    onSelect = { idx -> selectedIndex = idx }
-                )
-            }
-        ) { padding ->
+        // Usamos AppLayout que provee card de inicio y bottom bar fijo
+        AppLayout(
+            actualScreen = "Administrar usuarios",
+            selectedIndex = selectedIndex,
+            onSelect = { idx -> selectedIndex = idx },
+            initialUserName = UserSession.name,
+            role = UserSession.role,
+            snackbarHostState = snackbarHostState
+        ) { _, _, _ ->
+
             Box(
                 Modifier
                     .fillMaxSize()
                     .background(Color(0xFFFFF8F0))
-                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState()),
+                        .fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Barra de búsqueda y filtros (estilo UnitsScreen)
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -137,20 +164,141 @@ class UsersScreen : Screen {
                             modifier = Modifier.weight(1f),
                             placeholder = { Text("Buscar usuarios...", fontSize = MaterialTheme.typography.bodyMedium.fontSize.value.sp) },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
-                            singleLine = true
+                            singleLine = true,
+                            trailingIcon = {
+                                IconButton(onClick = {
+                                    // Al presionar enviar aplicamos la búsqueda y filtros actuales
+                                    appliedSearch = searchQuery
+                                    appliedRole = selectedRole
+                                    appliedUnitId = selectedUnit?.id
+                                }) {
+                                    Icon(Icons.Default.Send, contentDescription = "Buscar enviar")
+                                }
+                            }
                         )
 
-                        IconButton(
-                            onClick = { /* Abrir filtros */ },
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(Color.White, shape = MaterialTheme.shapes.small)
-                        ) {
-                            Icon(
-                                Icons.Default.FilterList,
-                                contentDescription = "Filtros",
-                                tint = Color(0xFF4A4A4A)
-                            )
+                        // Icono de filtros con DropdownMenu anclado
+                        Box {
+                            IconButton(
+                                onClick = { filterMenuExpanded = !filterMenuExpanded },
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .background(Color.White, shape = MaterialTheme.shapes.small)
+                            ) {
+                                Icon(
+                                    Icons.Default.FilterList,
+                                    contentDescription = "Filtros",
+                                    tint = Color(0xFF4A4A4A)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = filterMenuExpanded,
+                                onDismissRequest = { filterMenuExpanded = false },
+                                modifier = Modifier
+                                    .width(320.dp)
+                                    .background(Color.White)
+                            ) {
+                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("Filtros", fontWeight = FontWeight.SemiBold)
+
+                                    // Rol
+                                    ExposedDropdownMenuBox(
+                                        expanded = roleExpanded,
+                                        onExpandedChange = { roleExpanded = !roleExpanded }
+                                    ) {
+                                        OutlinedTextField(
+                                            value = selectedRole?.name ?: "Todos los roles",
+                                            onValueChange = {},
+                                            readOnly = true,
+                                            label = { Text("Rol") },
+                                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = roleExpanded) },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                        ExposedDropdownMenu(expanded = roleExpanded, onDismissRequest = { roleExpanded = false }) {
+                                            Role.entries.forEach { rol ->
+                                                DropdownMenuItem(
+                                                    text = { Text(rol.name) },
+                                                    onClick = {
+                                                        selectedRole = rol
+                                                        roleExpanded = false
+                                                    }
+                                                )
+                                            }
+                                            // opción para limpiar rol
+                                            DropdownMenuItem(
+                                                text = { Text("Todos") },
+                                                onClick = {
+                                                    selectedRole = null
+                                                    roleExpanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+
+                                    // Unidad
+                                    ExposedDropdownMenuBox(
+                                        expanded = unitExpanded,
+                                        onExpandedChange = { unitExpanded = !unitExpanded }
+                                    ) {
+                                        OutlinedTextField(
+                                            value = selectedUnit?.name ?: "Todas las unidades",
+                                            onValueChange = {},
+                                            readOnly = true,
+                                            label = { Text("Unidad actual") },
+                                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = unitExpanded) },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                        ExposedDropdownMenu(expanded = unitExpanded, onDismissRequest = { unitExpanded = false }) {
+                                            ui.unit.forEach { level ->
+                                                DropdownMenuItem(
+                                                    text = { Text(level.name) },
+                                                    onClick = {
+                                                        selectedUnit = level
+                                                        unitExpanded = false
+                                                    }
+                                                )
+                                            }
+                                            DropdownMenuItem(
+                                                text = { Text("Todas") },
+                                                onClick = {
+                                                    selectedUnit = null
+                                                    unitExpanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+
+                                    // Acciones: Aplicar / Limpiar
+                                    Row(
+                                        Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.End
+                                    ) {
+                                        TextButton(onClick = {
+                                            // Limpiar selecciones y aplicados
+                                            selectedRole = null
+                                            selectedUnit = null
+                                            appliedRole = null
+                                            appliedUnitId = null
+                                            appliedSearch = ""
+                                            searchQuery = ""
+                                            filterMenuExpanded = false
+                                        }) {
+                                            Text("Limpiar")
+                                        }
+                                        Spacer(Modifier.width(8.dp))
+                                        TextButton(onClick = {
+                                            // Aplicar filtros actuales
+                                            appliedRole = selectedRole
+                                            appliedUnitId = selectedUnit?.id
+                                            appliedSearch = searchQuery
+                                            filterMenuExpanded = false
+                                        }) {
+                                            Text("Aplicar")
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -182,10 +330,14 @@ class UsersScreen : Screen {
                         }
                     }
 
-                    // Lista de usuarios filtrada por searchQuery
-                    val filtered = if (searchQuery.isBlank()) ui.users else ui.users.filter {
-                        it.name.contains(searchQuery, ignoreCase = true) ||
-                                it.email.contains(searchQuery, ignoreCase = true)
+                    // Lista de usuarios filtrada por searchQuery y filtros aplicados
+                    val filtered = ui.users.filter { user ->
+                        val matchesSearch = appliedSearch.isBlank() ||
+                                user.name.contains(appliedSearch, ignoreCase = true) ||
+                                user.email.contains(appliedSearch, ignoreCase = true)
+                        val matchesRole = appliedRole == null || user.role == appliedRole
+                        val matchesUnit = appliedUnitId == null || user.currentUnitId == appliedUnitId
+                        matchesSearch && matchesRole && matchesUnit
                     }
 
                     if (ui.isLoading) {
@@ -215,20 +367,6 @@ class UsersScreen : Screen {
                 }
             }
 
-            // Edit dialog (nuevo/editar)
-            editing?.let { user ->
-                EditUser(
-                    initial = user,
-                    onSave = { updated ->
-                        updated.id?.let { id ->
-                            vm.updateUser(id, updated)
-                        }
-                        editing = null
-                    },
-                    levels = ui.unit,
-                    onDismiss = { editing = null }
-                )
-            }
 
             // Add user dialog
             if (showAddUser && !ui.isLoading) {
@@ -262,23 +400,6 @@ class UsersScreen : Screen {
                 )
             }
 
-            // Confirm delete dialog
-            confirmDelete?.let { user ->
-                AlertDialog(
-                    onDismissRequest = { confirmDelete = null },
-                    title = { Text("Eliminar Usuario") },
-                    text = { Text("¿Seguro de eliminar este usuario: ${user.name}?") },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            user.id?.let { vm.deleteUser(it) }
-                            confirmDelete = null
-                        }) { Text("Eliminar") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { confirmDelete = null }) { Text("Cancelar") }
-                    }
-                )
-            }
         }
     }
 }
@@ -292,6 +413,7 @@ fun UserCard(
     onDelete: (UserDto) -> Unit
 ) {
     val levelName = levels.find { it.id == user.currentUnitId }?.name ?: "No asignado"
+
     Card(
         Modifier.fillMaxWidth().clickable { onClick() },
         colors = CardDefaults.cardColors(
@@ -325,19 +447,7 @@ fun UserCard(
                     }
 
                 }
-                IconButton(
-                    onClick = { onEdit(user) },
-                    modifier = Modifier.size(18.dp)
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = "Editar")
-                }
-                Spacer(Modifier.width(8.dp))
-                IconButton(
-                    onClick = { onDelete(user) },
-                    modifier = Modifier.size(18.dp)
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = "Eliminar")
-                }
+
             }
 
             Spacer(Modifier.height(8.dp))

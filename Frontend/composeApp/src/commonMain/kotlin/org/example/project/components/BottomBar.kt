@@ -39,6 +39,10 @@ import org.example.project.screens.admindScreens.UsersScreen
 import org.example.project.screens.admindScreens.UnitsScreen
 import org.example.project.screens.LoginScreen
 import org.example.project.network.UserSession
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.ExitToApp
 
 data class NavItem(val id: Int, val icon: ImageVector, val label: String)
 
@@ -46,23 +50,27 @@ data class NavItem(val id: Int, val icon: ImageVector, val label: String)
 @Composable
 fun ReusableBottomBar(
     modifier: Modifier = Modifier.fillMaxWidth(),
-    items: List<NavItem>,
     selectedIndex: Int,
     onSelect: ((Int) -> Unit)? = null,
     initialUserName: String? = null,
     role: Role? = null,
 ) {
+    // Lista fija de items para toda la app
+    val fixedItems = listOf(
+        NavItem(0, Icons.Default.Home, "Inicio"),
+        NavItem(1, Icons.Default.Group, "Usuarios"),
+        NavItem(2, Icons.Default.List, "Unidades"),
+        NavItem(3, Icons.Default.ExitToApp, "Salir")
+    )
+
     // Inicializar valores desde initial params o desde UserSession si no se pasan.
-    // Usamos rememberSaveable para mantener entre recomposiciones; UserSession mantiene entre pantallas.
     val sessionName = UserSession.name
     val sessionRole = UserSession.role
 
     var rememberedUserName by rememberSaveable { mutableStateOf(initialUserName ?: sessionName ?: "") }
     var rememberedRoleName by rememberSaveable { mutableStateOf(role?.name ?: sessionRole?.name ?: Role.STUDENT.name) }
 
-    // Si se recibe explicitamente initialUserName/role, sincronizamos UserSession
     if (!initialUserName.isNullOrBlank() || role != null) {
-        // usamos remember{} para evitar ejecutar set muchas veces en recomposiciones
         remember(initialUserName, role) {
             UserSession.set(initialUserName ?: sessionName, role ?: sessionRole)
         }
@@ -70,7 +78,6 @@ fun ReusableBottomBar(
 
     val navigator = LocalNavigator.currentOrThrow
 
-    // Convertir nombre del rol a enum con fallback
     val rememberUserRole: Role = try {
         Role.valueOf(rememberedRoleName)
     } catch (e: Exception) {
@@ -79,7 +86,6 @@ fun ReusableBottomBar(
 
     Surface(
         modifier = modifier
-            // asegurarse de respetar la barra de navegación del sistema
             .navigationBarsPadding(),
         tonalElevation = 4.dp,
         color = Color.White
@@ -88,14 +94,12 @@ fun ReusableBottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp)
-                // también aplicamos navigationBarsPadding al NavigationBar por seguridad
                 .navigationBarsPadding(),
             containerColor = Color.White,
             tonalElevation = 4.dp
         ) {
-            items.forEachIndexed { index, item ->
+            fixedItems.forEachIndexed { index, item ->
                 val selected = index == selectedIndex
-                // animación simple: escala del icono
                 val scale by animateFloatAsState(if (selected) 1.15f else 1f)
 
                 NavigationBarItem(
@@ -117,7 +121,6 @@ fun ReusableBottomBar(
                                         .background(Color(0xFF003AB6), shape = CircleShape)
                                 )
                             }
-                            // Label pequeño
                             Text(
                                 text = item.label,
                                 fontSize = 11.sp,
@@ -129,33 +132,25 @@ fun ReusableBottomBar(
                     },
                     selected = selected,
                     onClick = {
-                        // Actualizar estado visual si se proporciona callback
                         onSelect?.invoke(index)
 
-                        // Si se pasó initialUserName/role actualizamos UserSession (ya hecho arriba),
-                        // sino usamos lo que hay en rememberedUserName/rememberUserRole (llenados desde session si existía).
                         val nameToUse = if (rememberedUserName.isNotBlank()) rememberedUserName else (UserSession.name ?: "")
                         val roleToUse = rememberUserRole
 
-                        // Manejo centralizado de navegación según índice usando los datos persistentes
                         when (index) {
-                            0 -> { // Inicio
-                                if (navigator != null) {
-                                    navigator.push(AdminDashboard(nameToUse.ifBlank { "Usuario" }, roleToUse))
-                                }
+                            0 -> {
+                                navigator.push(AdminDashboard(nameToUse.ifBlank { "Usuario" }, roleToUse))
                             }
-                            1 -> { // Usuarios
-                                navigator?.push(UsersScreen())
+                            1 -> {
+                                navigator.push(UsersScreen())
                             }
-                            2 -> { // Unidades
-                                navigator?.push(UnitsScreen())
+                            2 -> {
+                                navigator.push(UnitsScreen())
                             }
-                            3 -> { // Logout / Salir
-                                // limpiar sesión al hacer logout
+                            3 -> {
                                 UserSession.clear()
-                                navigator?.push(LoginScreen(true))
+                                navigator.push(LoginScreen(true))
                             }
-                            else -> { /* otros índices si los hay */ }
                         }
                     },
                     alwaysShowLabel = false,

@@ -3,6 +3,7 @@ package org.example.project.screens.admindScreens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -11,11 +12,13 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -29,9 +32,11 @@ import cafe.adriel.voyager.core.model.rememberScreenModel
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
+import org.example.project.components.AppLayout
 import org.example.project.components.NavItem
 import org.example.project.components.ReusableBottomBar
 import org.example.project.network.RepositoryProvider
+import org.example.project.network.UserSession
 import org.example.project.viewModel.UnitViewModel
 import org.jetbrains.compose.resources.Font
 
@@ -45,6 +50,7 @@ class UnitsScreen : Screen {
         val unitVm = rememberScreenModel { UnitViewModel(RepositoryProvider.unitRepo) }
         val unitUi by unitVm.state.collectAsState()
         var selectedIndex by remember { mutableStateOf(2) }
+        val snackbarHostState = remember { SnackbarHostState() }
 
         val lessonUnits = unitUi.unit.map { u ->
             LessonUnit(
@@ -57,34 +63,29 @@ class UnitsScreen : Screen {
         }
 
         var searchQuery by remember { mutableStateOf("") }
-
-        Scaffold(
-
-            //BottomBar
-            bottomBar = {
-                val navItems = listOf(
-                    NavItem(0, Icons.Default.Home, "Inicio"),
-                    NavItem(1, Icons.Default.Group, "Usuarios"),
-                    NavItem(2, Icons.AutoMirrored.Filled.List, "Unidades"),
-                    NavItem(3, Icons.AutoMirrored.Filled.ExitToApp, "Salir")
-                )
-                ReusableBottomBar(
-                    items = navItems,
-                    selectedIndex = selectedIndex,
-                    onSelect = { idx -> selectedIndex = idx }
-                )
+        LaunchedEffect(unitUi.error) {
+            unitUi.error?.let {
+                snackbarHostState.showSnackbar(it)
             }
+        }
 
 
-        ) { padding ->
+        AppLayout(
+            actualScreen = "Administrar Unidades",
+            selectedIndex = selectedIndex,
+            onSelect = { idx -> selectedIndex = idx },
+            initialUserName = UserSession.name,
+            role = UserSession.role,
+            snackbarHostState = snackbarHostState
+        ) { _, _, _ ->
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color(0xFFFFF8F0))
-                    // aplicar primero padding del Scaffold (inner) y luego padding interno de 16dp
-                    .padding(padding)
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Usamos la UnitsSection tal como la pediste
@@ -100,7 +101,12 @@ class UnitsScreen : Screen {
 
 // Implementación de UnitsSection (según tu especificación)
 @Composable
-fun UnitsSection(lessonUnits: List<LessonUnit>, searchQuery: String, onSearchQueryChange: (String) -> Unit) {
+fun UnitsSection(
+    lessonUnits: List<LessonUnit>,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit
+) {
+
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -116,7 +122,11 @@ fun UnitsSection(lessonUnits: List<LessonUnit>, searchQuery: String, onSearchQue
                 modifier = Modifier.weight(1f),
                 placeholder = { Text("Buscar unidades...", fontSize = 14.sp) },
                 leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = "Buscar", modifier = Modifier.size(20.dp))
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = "Buscar",
+                        modifier = Modifier.size(20.dp)
+                    )
                 },
                 singleLine = true,
                 shape = MaterialTheme.shapes.small,

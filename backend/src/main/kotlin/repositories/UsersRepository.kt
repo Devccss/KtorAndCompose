@@ -92,7 +92,7 @@ class UsersRepository {
 
             }
             return@transaction true
-        }
+        } 
     }
 
     fun deleteUser(id: Int): Boolean = transaction {

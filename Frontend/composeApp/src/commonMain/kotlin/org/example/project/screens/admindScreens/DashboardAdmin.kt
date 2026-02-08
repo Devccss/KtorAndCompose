@@ -38,6 +38,7 @@ import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_bold
 import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
+import org.example.project.components.AppLayout
 import org.example.project.components.ReusableBottomBar
 import org.example.project.components.NavItem
 import org.example.project.dtos.Role
@@ -77,33 +78,26 @@ class AdminDashboard(private val adminName: String, private val rolAdmin:Role) :
         // estado para navegación inferior
         var selectedIndex by remember { mutableStateOf(0) } // 0: dashboard, 1: users, 2: levels
 
-        Scaffold(
+        // Usar AppLayout que provee la card principal (bienvenida) y la bottom bar fija
+        AppLayout(
+            actualScreen = null,
+            selectedIndex = selectedIndex,
+            onSelect = { idx -> selectedIndex = idx },
+            initialUserName = adminName,
+            role = rolAdmin
+        ) { paddingValues,_,_ ->
 
-            // reemplazamos bottomBar inline por componente reutilizable
-            bottomBar = {
-                val navItems = listOf(
-                    NavItem(0, Icons.Default.Home, "Inicio"),
-                    NavItem(1, Icons.Default.Group, "Usuarios"),
-                    NavItem(2, Icons.AutoMirrored.Filled.List, "Unidades"),
-                    NavItem(3, Icons.AutoMirrored.Filled.ExitToApp, "Salir")
-                )
-                ReusableBottomBar(
-                    items = navItems,
-                    selectedIndex = selectedIndex,
-                    onSelect = { idx -> selectedIndex = idx },
-                    initialUserName = adminName,
-                    role = rolAdmin
-                )
-            }
-        ) { paddingValues ->
-            if (rolAdmin != Role.ADMIN){
-                return@Scaffold Column {
+            if (rolAdmin != Role.ADMIN) {
+                Column(modifier = Modifier
+                    .fillMaxSize()
+                ) {
                     Card {
                         Text("No tienes permisos para ver este contenido.")
                     }
                 }
+                return@AppLayout
             }
-            // Mapear UnitDto -> LessonUnit para reutilizar UI
+
             val lessonUnits = unitUi.unit.map { u ->
                 LessonUnit(
                     id = u.id ?: 0,
@@ -114,9 +108,10 @@ class AdminDashboard(private val adminName: String, private val rolAdmin:Role) :
                 )
             }
 
-            // ahora usamos onViewUnit para abrir detalle de unidad
+            // Llamamos al contenido del dashboard, pasando padding desde el layout
             AdminDashboardContent(
-                modifier = Modifier.padding(paddingValues),
+                modifier = Modifier
+                    .padding(16.dp),
                 adminName = adminName,
                 lessonUnits = lessonUnits,
                 onViewUnit = { id -> navigator.push(UnitDetailsPlaceholder(id)) },
@@ -157,59 +152,11 @@ fun AdminDashboardContent(
             .fillMaxSize()
             .background(Color(0xFFFFF8F0))
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            // .padding(16.dp) // padding ya aplicado por quien llama
+        ,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header con nombre y avatar
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    // Use CompositionLocals provided from MainActivity
 
-
-                    Text(
-                        text = "¡Bienvenido $adminName!",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color(0xFF2D2D2D),
-                        fontFamily = FontFamily(Font(Res.font.encode_sans_variable, weight = FontWeight.SemiBold))
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Unidades: $totalUnits  •  Usuarios: $totalUsers",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray,
-                        fontFamily = FontFamily(Font(Res.font.jetbrains_mono_regular))
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF4A4A4A)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Person,
-                        contentDescription = "Avatar",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-        }
-
-        // Gráfico de frecuencia (se mantiene pero puede usar datos reales si se integra)
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),

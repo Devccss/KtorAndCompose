@@ -51,3 +51,10 @@ data class UpdateUserDto(
     val currentUnitId: Int? = null,
     val role: Role? = Role.STUDENT
 )
+
+@Serializable
+data class FilterUserDto(
+    val name: String? = null,
+    val email: String? = null,
+    val role: Role? = null
+)
