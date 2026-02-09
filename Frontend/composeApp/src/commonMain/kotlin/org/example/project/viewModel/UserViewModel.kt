@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.example.project.dtos.CreateUserDto
+import org.example.project.dtos.FilterUsersDto
 import org.example.project.dtos.LoginDto
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UserDto
@@ -88,6 +89,33 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
                 _state.value = _state.value.copy(
                     users = users,
                 )
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(
+                    error = error.message,
+
+                )
+            }
+        )
+    }
+
+    fun getFilterUsers(filters: FilterUsersDto) {
+        launchCatching(
+            block = { repo.getFilterUsers(filters) },
+            onSuccess = { users ->
+                if (users != null) {
+                    if(users.isNotEmpty()){
+                        _state.value = _state.value.copy(
+                            users = users,
+                        )
+                    }else{
+
+                        _state.value = _state.value.copy(
+                            error = "No se encontraron usuarios con esos filtros",
+                            users = emptyList()
+                        )
+                    }
+                }
             },
             onError = { error ->
                 _state.value = _state.value.copy(

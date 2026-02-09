@@ -93,6 +93,7 @@ fun Application.configureRouting() {
                     val users = userService.getAllUsers()
                     call.respond(users)
                 }
+
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
@@ -112,6 +113,17 @@ fun Application.configureRouting() {
                     } else {
                         throw NotFoundException("User not found")
                     }
+                }
+                get("name/{name}") {
+                    val name = call.parameters["name"]
+                        ?: throw BadRequestException("Name parameter is required")
+                    val users = userService.getUsersByName(name)
+                    call.respond(users)
+                }
+                post("filter") {
+                    val filters = call.receive<FilterUsersDto>()
+                    val users = userService.getFilterUsers(filters)
+                    call.respond(users)
                 }
                 post("login") {
                     val dto = call.receive<LoginDto>()

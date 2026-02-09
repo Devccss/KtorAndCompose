@@ -9,6 +9,7 @@ import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.contentType
 import org.example.project.dtos.CreateUserDto
+import org.example.project.dtos.FilterUsersDto
 import org.example.project.dtos.LoginDto
 import org.example.project.dtos.UserDto
 
@@ -23,6 +24,14 @@ class UserRepo(private val httpClient: HttpClient, private val baseUrl: String) 
     suspend fun getUserByEmail(email: String): UserDto? =
         httpClient.get("$baseUrl/api/v1/users/email/$email").body()
 
+    suspend fun getFilterUsers(filters:FilterUsersDto): List<UserDto>? =
+        httpClient.post("$baseUrl/api/v1/users/filter") {
+            contentType(io.ktor.http.ContentType.Application.Json)
+            setBody(filters)
+        }.body()
+
+    suspend fun getUsersByName(name: String): List<UserDto> =
+        httpClient.get("$baseUrl/api/v1/users/name/$name").body()
 
     suspend fun loginUser(dto: LoginDto): UserDto =
         httpClient.post("$baseUrl/api/v1/users/login") {

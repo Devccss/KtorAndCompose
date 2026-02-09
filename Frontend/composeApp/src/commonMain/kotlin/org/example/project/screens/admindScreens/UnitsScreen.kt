@@ -1,6 +1,7 @@
 package org.example.project.screens.admindScreens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -29,6 +30,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.core.model.rememberScreenModel
+import cafe.adriel.voyager.navigator.Navigator
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
@@ -90,6 +92,7 @@ class UnitsScreen : Screen {
             ) {
                 // Usamos la UnitsSection tal como la pediste
                 UnitsSection(
+                    navigator = navigator,
                     lessonUnits = lessonUnits,
                     searchQuery = searchQuery,
                     onSearchQueryChange = { searchQuery = it }
@@ -102,6 +105,7 @@ class UnitsScreen : Screen {
 // Implementación de UnitsSection (según tu especificación)
 @Composable
 fun UnitsSection(
+    navigator: Navigator,
     lessonUnits: List<LessonUnit>,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit
@@ -184,17 +188,17 @@ fun UnitsSection(
 
         // Lista de unidades
         lessonUnits.forEach { unit ->
-            UnitCard(lessonUnit = unit)
+            UnitCard(lessonUnit = unit, onClick = {navigator.push(UnitsDetailsScreen(unit.id)) })
         }
     }
 }
 
 @Composable
-fun UnitCard(lessonUnit: LessonUnit) {
+fun UnitCard(lessonUnit: LessonUnit, onClick: () -> Unit = {}) {
     val encodeSansFamily = FontFamily(Font(Res.font.encode_sans_variable))
     val jetbrainsMonoFamily = FontFamily(Font(Res.font.jetbrains_mono_regular))
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFF5F5F5)

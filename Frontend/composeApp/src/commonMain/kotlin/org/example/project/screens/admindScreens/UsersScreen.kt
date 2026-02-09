@@ -2,6 +2,7 @@ package org.example.project.screens.admindScreens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,20 +16,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgeDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,9 +36,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,7 +52,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -67,22 +62,15 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.core.screen.uniqueScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import frontend.composeapp.generated.resources.Res
-import frontend.composeapp.generated.resources.encode_sans_variable
-import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import org.example.project.components.AppLayout
 import org.example.project.dtos.CreateUserDto
+import org.example.project.dtos.FilterUsersDto
 import org.example.project.dtos.Role
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UserDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.viewModel.UserViewModel
-import org.example.project.components.NavItem
-import org.example.project.components.ReusableBottomBar
-import org.example.project.dtos.FilterUserDto
-import org.example.project.dtos.TestType
 import org.example.project.network.UserSession
-import org.jetbrains.compose.resources.Font
 
 class UsersScreen : Screen {
     override val key = uniqueScreenKey
@@ -99,13 +87,14 @@ class UsersScreen : Screen {
 
         val snackbarHostState = remember { SnackbarHostState() }
         val navigator = LocalNavigator.currentOrThrow
+        val focusManager = LocalFocusManager.current
 
         var editing by remember { mutableStateOf<UserDto?>(null) }
         var confirmDelete by remember { mutableStateOf<UserDto?>(null) }
         var showAddUser by remember { mutableStateOf(false) }
 
         var showFilterOpcions by remember { mutableStateOf(false) }
-        var filterUser by remember { mutableStateOf<FilterUserDto?>(null) }
+        var filterUser by remember { mutableStateOf<FilterUsersDto?>(null) }
 
         var searchQuery by remember { mutableStateOf("") }
         var selectedIndex by remember { mutableStateOf(1) } // index in bottom bar
@@ -117,9 +106,10 @@ class UsersScreen : Screen {
         var selectedUnit by remember { mutableStateOf<UnitDto?>(null) }
         var unitExpanded by remember { mutableStateOf(false) }
 
-        var appliedSearch by remember { mutableStateOf("") }
-        var appliedRole by remember { mutableStateOf<Role?>(null) }
-        var appliedUnitId by remember { mutableStateOf<Int?>(null) }
+        var textSearch by remember { mutableStateOf("") }
+        var searchUsers by remember { mutableStateOf(false) }
+        var filtered by remember { mutableStateOf<List<UserDto>>(emptyList()) }
+
 
         // usa la variable showFilterOpcions para abrir/cerrar el DropdownMenu
         var filterMenuExpanded by remember { mutableStateOf(false) }
@@ -127,6 +117,7 @@ class UsersScreen : Screen {
         LaunchedEffect(ui.error) {
             ui.error?.let {
                 snackbarHostState.showSnackbar(it)
+                println(it)
             }
         }
 
@@ -144,8 +135,10 @@ class UsersScreen : Screen {
                 Modifier
                     .fillMaxSize()
                     .background(Color(0xFFFFF8F0))
-                    .verticalScroll(rememberScrollState())
                     .padding(16.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = { focusManager.clearFocus() })
+                    }
             ) {
                 Column(
                     modifier = Modifier
@@ -162,19 +155,37 @@ class UsersScreen : Screen {
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
                             modifier = Modifier.weight(1f),
-                            placeholder = { Text("Buscar usuarios...", fontSize = MaterialTheme.typography.bodyMedium.fontSize.value.sp) },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
+                            placeholder = {
+                                Text(
+                                    "Buscar usuarios...",
+                                    fontSize = MaterialTheme.typography.bodyMedium.fontSize.value.sp
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = "Buscar"
+                                )
+                            },
                             singleLine = true,
                             trailingIcon = {
                                 IconButton(onClick = {
-                                    // Al presionar enviar aplicamos la búsqueda y filtros actuales
-                                    appliedSearch = searchQuery
-                                    appliedRole = selectedRole
-                                    appliedUnitId = selectedUnit?.id
+                                    filterUser = FilterUsersDto(
+                                        name = searchQuery,
+                                        role = selectedRole,
+                                        unitId = selectedUnit?.id
+                                    )
+                                    filterUser?.let { vm.getFilterUsers(it) }
+
                                 }) {
-                                    Icon(Icons.Default.Send, contentDescription = "Buscar enviar")
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Send,
+                                        contentDescription = "Buscar enviar",
+                                        tint = Color(0xFF4A4A4A).copy(alpha = 0.5f)
+                                    )
                                 }
-                            }
+                            },
+
                         )
 
                         // Icono de filtros con DropdownMenu anclado
@@ -199,7 +210,10 @@ class UsersScreen : Screen {
                                     .width(320.dp)
                                     .background(Color.White)
                             ) {
-                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(
+                                    Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     Text("Filtros", fontWeight = FontWeight.SemiBold)
 
                                     // Rol
@@ -212,10 +226,19 @@ class UsersScreen : Screen {
                                             onValueChange = {},
                                             readOnly = true,
                                             label = { Text("Rol") },
-                                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = roleExpanded) },
-                                            modifier = Modifier.fillMaxWidth()
+                                            trailingIcon = {
+                                                ExposedDropdownMenuDefaults.TrailingIcon(
+                                                    expanded = roleExpanded
+                                                )
+                                            },
+                                            modifier = Modifier
+                                                .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+                                                .fillMaxWidth()
                                         )
-                                        ExposedDropdownMenu(expanded = roleExpanded, onDismissRequest = { roleExpanded = false }) {
+                                        ExposedDropdownMenu(
+                                            expanded = roleExpanded,
+                                            onDismissRequest = { roleExpanded = false }
+                                        ){
                                             Role.entries.forEach { rol ->
                                                 DropdownMenuItem(
                                                     text = { Text(rol.name) },
@@ -246,10 +269,18 @@ class UsersScreen : Screen {
                                             onValueChange = {},
                                             readOnly = true,
                                             label = { Text("Unidad actual") },
-                                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = unitExpanded) },
-                                            modifier = Modifier.fillMaxWidth()
+                                            trailingIcon = {
+                                                ExposedDropdownMenuDefaults.TrailingIcon(
+                                                    expanded = unitExpanded
+                                                )
+                                            },
+                                            modifier = Modifier
+                                                .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+                                                .fillMaxWidth()
                                         )
-                                        ExposedDropdownMenu(expanded = unitExpanded, onDismissRequest = { unitExpanded = false }) {
+                                        ExposedDropdownMenu(
+                                            expanded = unitExpanded,
+                                            onDismissRequest = { unitExpanded = false }) {
                                             ui.unit.forEach { level ->
                                                 DropdownMenuItem(
                                                     text = { Text(level.name) },
@@ -278,9 +309,6 @@ class UsersScreen : Screen {
                                             // Limpiar selecciones y aplicados
                                             selectedRole = null
                                             selectedUnit = null
-                                            appliedRole = null
-                                            appliedUnitId = null
-                                            appliedSearch = ""
                                             searchQuery = ""
                                             filterMenuExpanded = false
                                         }) {
@@ -289,9 +317,12 @@ class UsersScreen : Screen {
                                         Spacer(Modifier.width(8.dp))
                                         TextButton(onClick = {
                                             // Aplicar filtros actuales
-                                            appliedRole = selectedRole
-                                            appliedUnitId = selectedUnit?.id
-                                            appliedSearch = searchQuery
+                                            filterUser = FilterUsersDto(
+                                                name = searchQuery,
+                                                role = selectedRole,
+                                                unitId = selectedUnit?.id
+                                            )
+                                            vm.getFilterUsers(filterUser!!)
                                             filterMenuExpanded = false
                                         }) {
                                             Text("Aplicar")
@@ -321,34 +352,17 @@ class UsersScreen : Screen {
                                 color = Color(0xFF2D5E3D)
                             )
                         }
-
-                        androidx.compose.material3.OutlinedButton(
-                            onClick = { /* Ordenar */ },
-                            shape = MaterialTheme.shapes.small,
-                        ) {
-                            Text("Orden")
-                        }
-                    }
-
-                    // Lista de usuarios filtrada por searchQuery y filtros aplicados
-                    val filtered = ui.users.filter { user ->
-                        val matchesSearch = appliedSearch.isBlank() ||
-                                user.name.contains(appliedSearch, ignoreCase = true) ||
-                                user.email.contains(appliedSearch, ignoreCase = true)
-                        val matchesRole = appliedRole == null || user.role == appliedRole
-                        val matchesUnit = appliedUnitId == null || user.currentUnitId == appliedUnitId
-                        matchesSearch && matchesRole && matchesUnit
                     }
 
                     if (ui.isLoading) {
                         CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-                    } else if (filtered.isEmpty()) {
+                    } else if (ui.users.isEmpty()) {
                         Text(
                             "No hay usuarios disponibles.",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     } else {
-                        filtered.forEach { user ->
+                        ui.users.forEach { user ->
                             UserCard(
                                 user = user,
                                 onClick = {
@@ -423,9 +437,30 @@ fun UserCard(
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(user.name, style = MaterialTheme.typography.titleMedium)
+                        if (user.role == Role.ADMIN) {
+                            Badge(containerColor = BadgeDefaults.containerColor) {
+                                Text(user.role.name.lowercase(), fontSize = 12.sp)
+                            }
+                        }else{
+                            Badge(containerColor = Color(0xFFB8F4C4)) {
+                                user.role?.let { Text(it.name.lowercase(), fontSize = 12.sp) }
+                            }
+                        }
+                    }
+
+                    Text("Nivel: $levelName", style = MaterialTheme.typography.labelSmall)
+
+                }
+
                 Box(
                     Modifier
                         .size(40.dp)
+                        .clip(CircleShape)
                         .background(
                             androidx.compose.ui.graphics.Brush.linearGradient(
                                 listOf(Color(0xFF003AB6), Color(0xFF48145B))
@@ -436,24 +471,8 @@ fun UserCard(
                 ) {
                     Text(user.id?.toString() ?: "N", color = Color.White)
                 }
-                Spacer(Modifier.width(8.dp))
-                Column(Modifier.weight(1f)) {
-                    Row {
-                        Text(
-                            user.name,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-
-                }
 
             }
-
-            Spacer(Modifier.height(8.dp))
-            Text("Nivel: $levelName", style = MaterialTheme.typography.labelSmall)
-            Spacer(Modifier.height(4.dp))
-            Text("Rol: ${user.role}", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

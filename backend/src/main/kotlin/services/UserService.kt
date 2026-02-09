@@ -1,6 +1,7 @@
 package com.example.services
 
 import com.example.dtos.CreateUserDto
+import com.example.dtos.FilterUsersDto
 import com.example.dtos.LoginDto
 
 import com.example.dtos.UpdateUserDto
@@ -24,6 +25,12 @@ class UserService(private val userRepository: UsersRepository) {
     }
     fun getUserByEmail(email: String): UserDto? {
         return userRepository.getByEmail(email)
+    }
+    fun getUsersByName(name: String): List<UserDto> {
+        return userRepository.getUsersByName(name)
+    }
+    fun getFilterUsers(filters:FilterUsersDto): List<UserDto> {
+        return userRepository.getFilterUsers(filters)
     }
     fun updateUser(id: Int, dto: UpdateUserDto) {
         return userRepository.updateUser(id, dto)

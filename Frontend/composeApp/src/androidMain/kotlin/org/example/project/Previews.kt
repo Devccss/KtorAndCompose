@@ -32,7 +32,8 @@ fun UnitsSectionPreview() {
                 UnitsSection(
                     lessonUnits = sampleUnits,
                     searchQuery = "",
-                    onSearchQueryChange = {}
+                    onSearchQueryChange = {},
+                    navigator = TODO()
                 )
             }
         }
