@@ -2,6 +2,7 @@ package config
 
 import com.example.dtos.UserDto
 import io.github.cdimascio.dotenv.dotenv
+import models.Alternatives
 import models.ExerciseCompleted
 import models.Units
 import models.Users
@@ -40,7 +41,7 @@ fun configureDatabases() {
         SchemaUtils.create(
             Users, Units, Exercises, Notifications, Words, Questions,
             Tests, TestExercises, ExercisesOnHold, UnitsCompleted,
-            ExerciseCompleted, TestCompleted, QuestionWords
+            ExerciseCompleted, TestCompleted, QuestionWords,Alternatives
         )
         createAdminUserIfNotExists()
     }

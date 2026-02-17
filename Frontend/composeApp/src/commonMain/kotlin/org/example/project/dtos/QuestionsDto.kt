@@ -10,7 +10,7 @@ data class QuestionDto(
     val textContent: String,
     val typeText: TypeTextExercise,
     val grammarExplanation: String,
-    val audioUrl: String?,
+    val audioUrl: String? = null,
     val isActive: Boolean? = false,
     val exerciseId: Int,
     val questionText: String,

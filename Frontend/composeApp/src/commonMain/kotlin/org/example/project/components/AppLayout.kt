@@ -66,7 +66,7 @@ fun AppLayout(
             ReusableBottomBar(
                 selectedIndex = selectedIndex,
                 onSelect = { idx -> onSelect(idx) },
-                initialUserName = if (userName.isBlank()) null else userName,
+                initialUserName = userName.ifBlank { null },
                 role = userRole
             )
         }

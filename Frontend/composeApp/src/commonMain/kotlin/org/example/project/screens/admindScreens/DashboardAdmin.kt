@@ -4,24 +4,16 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -36,17 +28,12 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_bold
-import frontend.composeapp.generated.resources.encode_sans_variable
-import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import org.example.project.components.AppLayout
-import org.example.project.components.ReusableBottomBar
-import org.example.project.components.NavItem
 import org.example.project.dtos.Role
 import org.example.project.dtos.UserDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.viewModel.UnitViewModel
 import org.example.project.viewModel.UserViewModel
-import org.example.project.screens.LoginScreen
 import org.jetbrains.compose.resources.Font
 
 data class WeeklyStats(val day: String, val users: Int, val lessons: Int)
@@ -98,7 +85,7 @@ class AdminDashboard(private val adminName: String, private val rolAdmin:Role) :
                 return@AppLayout
             }
 
-            val lessonUnits = unitUi.unit.map { u ->
+            val lessonUnits = unitUi.units.map { u ->
                 LessonUnit(
                     id = u.id ?: 0,
                     title = u.name,
@@ -115,7 +102,7 @@ class AdminDashboard(private val adminName: String, private val rolAdmin:Role) :
                 adminName = adminName,
                 lessonUnits = lessonUnits,
                 onViewUnit = { id -> navigator.push(UnitDetailsPlaceholder(id)) },
-                totalUnits = unitUi.unit.size,
+                totalUnits = unitUi.units.size,
                 totalUsers = userUi.users.size,
                 recentUsers = userUi.users.take(5) // mostrar algunos usuarios recientes
             )

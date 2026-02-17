@@ -1,12 +1,16 @@
 package repositories
 
+import com.example.dtos.AlternativeDto
+import com.example.dtos.CreateAlternativeDto
 import com.example.dtos.CreateQuestionCompletedDto
 import com.example.dtos.CreateQuestionDto
 import com.example.dtos.QuestionCompletedDto
 import com.example.dtos.QuestionDto
+import com.example.dtos.UpdateAlternativeDto
 import com.example.dtos.UpdateQuestionCompletedDto
 import com.example.dtos.UpdateQuestionDto
 import io.ktor.server.plugins.BadRequestException
+import models.Alternatives
 import models.Questions
 import models.QuestionsCompleted
 import models.Units
@@ -36,6 +40,15 @@ class QuestionRepository {
             createdAt = row[Questions.createdAt].toString()
         )
     }
+    private fun resultRowToAlternative(row: ResultRow): AlternativeDto {
+        return AlternativeDto(
+            id = row[Alternatives.id].value,
+            questionId = row[Alternatives.questionId],
+            text = row[Alternatives.text],
+            isCorrect = row[Alternatives.isCorrect],
+            createdAt = row[Alternatives.createdAt].toString()
+        )
+    }
 
     private fun resultRowToQuestionCompleted(row: ResultRow): QuestionCompletedDto {
         return QuestionCompletedDto(
@@ -48,6 +61,9 @@ class QuestionRepository {
 
     fun getAllQuestions(): List<QuestionDto> = transaction {
         Questions.selectAll().orderBy(Questions.createdAt).map(::resultRowToQuestion)
+    }
+    fun getQuestionsByExerciseId(exerciseId: Int): List<QuestionDto> = transaction {
+        Questions.selectAll().where { Questions.exerciseId eq exerciseId }.orderBy(Questions.createdAt).map(::resultRowToQuestion)
     }
 
     fun getQuestionById(id: Int): QuestionDto? = transaction {
@@ -113,6 +129,53 @@ class QuestionRepository {
         getQuestionById(id) ?: throw BadRequestException("La pregunta con ID $id no existe.")
         Questions.deleteWhere { Questions.id eq id } > 0
     }
+
+
+    /* Alternatives */
+
+    fun getAlternativesByQuestionId(questionId: Int): List<AlternativeDto> = transaction {
+        Alternatives.selectAll().where { Alternatives.questionId eq questionId }.map(::resultRowToAlternative)
+    }
+    fun createAlternative(dto: CreateAlternativeDto): AlternativeDto = try {
+        transaction {
+            val newId = Alternatives.insert {
+                it[questionId] = dto.questionId
+                it[text] = dto.text
+                it[isCorrect] = dto.isCorrect?: false
+            }[Alternatives.id]
+
+            AlternativeDto(
+                id = newId.value,
+                questionId = dto.questionId,
+                text = dto.text,
+                isCorrect = dto.isCorrect?: false,
+                createdAt = LocalDateTime.now().toString()
+            )
+        }
+    } catch (e: Exception) {
+        throw BadRequestException("Error al crear la alternativa: ${e.message}")
+    }
+    fun updateAlternative(id: Int, dto: UpdateAlternativeDto) {
+        transaction {
+            val existing = Alternatives.selectAll().where { Alternatives.id eq id }.singleOrNull()
+                ?: throw BadRequestException("La alternativa con ID $id no existe.")
+
+            Alternatives.update({ Alternatives.id eq id }) { update ->
+                if(dto.text?.isNotBlank() == true){
+                    update[text] = dto.text
+                }
+                update[isCorrect] = dto.isCorrect?: existing[isCorrect]
+            }
+        }
+    }
+    fun deleteAlternative(id: Int): Boolean = transaction {
+        val existing = Alternatives.selectAll().where { Alternatives.id eq id }.singleOrNull()
+            ?: throw BadRequestException("La alternativa con ID $id no existe.")
+        Alternatives.deleteWhere { Alternatives.id eq id } > 0
+    }
+
+
+
 
     /* QuestionCompleted operations */
 

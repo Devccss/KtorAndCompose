@@ -41,6 +41,10 @@ class ExerciseRepository {
         Exercises.selectAll().where { Exercises.id eq id }.singleOrNull()?.let(::resultRowToExercise)
     }
 
+    fun getByUnitId(unitId: Int): List<ExerciseDto> = transaction {
+        Exercises.selectAll().where { Exercises.unitId eq unitId }.orderBy(Exercises.createdAt).map(::resultRowToExercise)
+    }
+
     fun create(dto: CreateExerciseDto): ExerciseDto = try {
         transaction {
             val newId = Exercises.insert {

@@ -4,22 +4,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -35,8 +29,6 @@ import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import org.example.project.components.AppLayout
-import org.example.project.components.NavItem
-import org.example.project.components.ReusableBottomBar
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
 import org.example.project.viewModel.UnitViewModel
@@ -54,7 +46,7 @@ class UnitsScreen : Screen {
         var selectedIndex by remember { mutableStateOf(2) }
         val snackbarHostState = remember { SnackbarHostState() }
 
-        val lessonUnits = unitUi.unit.map { u ->
+        val lessonUnits = unitUi.units.map { u ->
             LessonUnit(
                 id = u.id ?: 0,
                 title = u.name,
@@ -188,17 +180,20 @@ fun UnitsSection(
 
         // Lista de unidades
         lessonUnits.forEach { unit ->
-            UnitCard(lessonUnit = unit, onClick = {navigator.push(UnitsDetailsScreen(unit.id)) })
+            UnitCard(lessonUnit = unit, onClick = { navigator.push(ExercisesScreen(unit.id)) }, onExerciseClick = { navigator.push(ExercisesScreen(unit.id)) })
         }
     }
 }
 
 @Composable
-fun UnitCard(lessonUnit: LessonUnit, onClick: () -> Unit = {}) {
+fun UnitCard(lessonUnit: LessonUnit, onClick: () -> Unit = {}, onExerciseClick: () -> Unit = {}) {
     val encodeSansFamily = FontFamily(Font(Res.font.encode_sans_variable))
     val jetbrainsMonoFamily = FontFamily(Font(Res.font.jetbrains_mono_regular))
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .shadow( 1.dp, shape = RoundedCornerShape(12.dp)),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFF5F5F5)
@@ -208,108 +203,60 @@ fun UnitCard(lessonUnit: LessonUnit, onClick: () -> Unit = {}) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-
-            Column(
-                modifier = Modifier
-                    .weight(1f)
+            // Contenido principal: emoji a la izquierda, título + badge a la derecha del emoji, descripción debajo
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.Top
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                Text(
+                    text = lessonUnit.emoji,
+                    fontSize = 20.sp,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+
+                Column(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Emoji
-                    Text(
-                        text = lessonUnit.emoji,
-                        fontSize = 20.sp,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-
-                    // Título con peso para evitar que la badge lo comprima
-                    Text(
-                        text = lessonUnit.title,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF2D2D2D),
-                        fontSize = 16.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                        fontFamily = encodeSansFamily
-                    )
-
-                    Spacer(modifier = Modifier.width(4.dp))
-
-                    // Badge (anchura mínima para mantener espacio)
-                    val (badgeColor, badgeTextColor, badgeLabel) = if (lessonUnit.status == UnitStatus.PUBLISHED) {
-                        Triple(Color(0xFFB8F4C4), Color(0xFF2D5E3D), "Publicado")
-                    } else {
-                        Triple(Color(0xFFFFD4D4), Color(0xFF8B0000), "Borrador")
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = badgeColor,
-                        modifier = Modifier
-                            .defaultMinSize(minWidth = 42.dp)
-                            .defaultMinSize(minHeight = 10.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = badgeLabel,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            fontSize = 8.sp,
-                            color = badgeTextColor,
-                            fontWeight = FontWeight.Medium,
+                            text = lessonUnit.title,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF2D2D2D),
+                            fontSize = 16.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            fontFamily = encodeSansFamily
+                            fontFamily = encodeSansFamily,
                         )
+
+                        Spacer(modifier = Modifier.width(2.dp))
+
+                        val (badgeColor, badgeTextColor, badgeLabel) = if (lessonUnit.status == UnitStatus.PUBLISHED) {
+                            Triple(Color(0xFFB8F4C4), Color(0xFF2D5E3D), "Publicado")
+                        } else {
+                            Triple(Color(0xFFFFD4D4), Color(0xFF8B0000), "Borrador")
+                        }
+
+                        Badge(containerColor = badgeColor, contentColor = badgeTextColor) {
+                            Text(badgeLabel, fontSize = 12.sp)
+                        }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                // Descripción debajo, con límite de líneas para evitar desbordes
-                Text(
-                    text = lessonUnit.description,
-                    fontSize = 13.sp,
-                    color = Color.Gray,
-                    lineHeight = 16.sp,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                    fontFamily = jetbrainsMonoFamily // <-- descripción con JetBrains Mono
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Columna de acciones (botones) con ancho ajustado
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .wrapContentWidth()
-            ) {
-                // Usar defaultMinSize para forzar mismo tamaño mínimo en ambos botones
-                val actionButtonModifier = Modifier
-                    .defaultMinSize(minWidth = 92.dp, minHeight = 36.dp)
-
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedButton(
-                    onClick = { /* Eliminar */ },
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF4A4A4A)
-                    ),
-                    modifier = actionButtonModifier
-                ) {
                     Text(
-                        text = "Ver",
+                        text = lessonUnit.description,
                         fontSize = 13.sp,
+                        color = Color.Gray,
+                        lineHeight = 16.sp,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
                         fontFamily = jetbrainsMonoFamily
                     )
                 }

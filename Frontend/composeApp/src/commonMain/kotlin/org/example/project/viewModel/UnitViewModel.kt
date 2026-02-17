@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.example.project.dtos.CreateUnitDto
 import org.example.project.dtos.CreateUserDto
-import org.example.project.dtos.LoginDto
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UpdateUnitDto
 import org.example.project.dtos.UserDto
@@ -19,8 +18,8 @@ import org.example.project.repository.UnitRepo
 
 
 data class UnitUiState(
-    val users: List<UserDto> = emptyList(),
-    val unit: List<UnitDto> = emptyList(),
+    val units: List<UnitDto> = emptyList(),
+    val actualUnit : UnitDto? = null,
     val currentUser: UserDto? = null,
     val isLoading: Boolean = false,
     val registerUser: CreateUserDto? = null,
@@ -28,13 +27,13 @@ data class UnitUiState(
 
     )
 
-class UnitViewModel(private val unitRepo: UnitRepo) : ViewModel(), ScreenModel {
+class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : ViewModel(), ScreenModel {
     private val _state = MutableStateFlow(
-        UsersUiState(
+        UnitUiState(
             isLoading = true,
         )
     )
-    val state: StateFlow<UsersUiState> = _state
+    val state: StateFlow<UnitUiState> = _state
 
     var generalMessage by mutableStateOf<String?>(null)
 
@@ -42,62 +41,39 @@ class UnitViewModel(private val unitRepo: UnitRepo) : ViewModel(), ScreenModel {
         generalMessage = message
     }
 
-    init {
+    private fun getAllUnits() {
         launchCatching(
             block = { unitRepo.getAllUnits()},
             onSuccess = { unit ->
 
-                _state.value = _state.value.copy(unit = unit)
-                loadUsers()
+                _state.value = _state.value.copy(units = unit)
             },
             onError = { error ->
-                _state.value = _state.value.copy(error = error.message, unit = emptyList())
+                _state.value = _state.value.copy(error = error.message, units = emptyList())
             }
         )
     }
 
-
-     private fun getAllLevels() {
-        launchCatching(
-            block = { unitRepo.getAllUnits() },
-            onSuccess = { unit ->
-                if(unit.isNotEmpty()){
-                    _state.value = _state.value.copy(
-                        unit = unit,
-                    )
-                }else{
-
-                    _state.value = _state.value.copy(
-                        error = "No se encontraron unidades",
-                        unit = emptyList()
-                    )
-                }
-            },
-            onError = { error ->
-                _state.value = _state.value.copy(
-                    error = error.message,
-
-                )
-            }
-        )
+    init {
+        if(unitId != null){
+            getUnitById(unitId)
+            _state.value = _state.value.copy(units = emptyList())
+        }else{
+            getAllUnits()
+            _state.value = _state.value.copy(actualUnit = null)
+        }
     }
 
-     private fun loadUsers() {
-        launchCatching(
-            block = { unitRepo.getAllUnits() },
-            onSuccess = { unit ->
-                _state.value = _state.value.copy(
-                    unit = unit,
-                )
-            },
-            onError = { error ->
-                _state.value = _state.value.copy(
-                    error = error.message,
-
-                )
-            }
-        )
+    fun refreshUnits() {
+        if(unitId != null){
+            getUnitById(unitId)
+            _state.value = _state.value.copy(units = emptyList())
+        }else{
+            getAllUnits()
+            _state.value = _state.value.copy(actualUnit = null)
+        }
     }
+
 
     private fun getUnitById(id: Int) {
         launchCatching(
@@ -105,21 +81,11 @@ class UnitViewModel(private val unitRepo: UnitRepo) : ViewModel(), ScreenModel {
             onSuccess = { unit ->
                 if (unit != null) {
                     _state.value = _state.value.copy(
-                        unit = _state.value.unit.map {
-                            if (it.id == unit.id) UnitDto(
-                                id = unit.id,
-                                name = unit.name,
-                                difficulty = unit.difficulty,
-                                description = unit.description,
-                                orderUnit = unit.orderUnit,
-                                isActive = unit.isActive,
-                                createdAt = unit.createdAt
-                            ) else it
-                        },
+                        actualUnit = unit,
                     )
                 } else {
                     _state.value = _state.value.copy(
-                        error = "User not found",
+                        error = "Unit not found",
 
                     )
                 }
@@ -150,7 +116,7 @@ class UnitViewModel(private val unitRepo: UnitRepo) : ViewModel(), ScreenModel {
             },
             onSuccess = { added ->
                 _state.value = _state.value.copy(
-                    unit = _state.value.unit.plus(added),
+                    units = _state.value.units.plus(added),
 
                 )
             },
@@ -181,7 +147,7 @@ class UnitViewModel(private val unitRepo: UnitRepo) : ViewModel(), ScreenModel {
             onSuccess = { success ->
                 if (success) {
                     _state.value = _state.value.copy(
-                        unit = _state.value.unit.filterNot { it.id == id }
+                        units = _state.value.units.filterNot { it.id == id }
                     )
                 } else {
                     _state.value = _state.value.copy(error = "Error al eliminar la unididad")

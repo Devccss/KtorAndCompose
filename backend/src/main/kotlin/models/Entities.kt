@@ -83,7 +83,12 @@ object Questions : IntIdTable() {
     val orderQuestion = integer("order_question")
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }
-
+object Alternatives : IntIdTable() {
+    val questionId = integer("question_id").references(Questions.id)
+    val text = text("text")
+    val isCorrect = bool("is_correct").default(false)
+    val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
+}
 
 enum class TestType { ALTERNATIVES, TRANSLATION, LISTENING, READING }
 

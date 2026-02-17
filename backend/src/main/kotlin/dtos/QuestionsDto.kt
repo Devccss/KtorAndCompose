@@ -19,6 +19,8 @@ data class QuestionDto(
     val createdAt: String
 )
 
+
+
 @Serializable
 data class CreateQuestionDto(
     val textContent: String,

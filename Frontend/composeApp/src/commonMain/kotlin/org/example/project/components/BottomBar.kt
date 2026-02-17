@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.Surface
@@ -37,12 +38,11 @@ import org.example.project.dtos.Role
 import org.example.project.screens.admindScreens.AdminDashboard
 import org.example.project.screens.admindScreens.UsersScreen
 import org.example.project.screens.admindScreens.UnitsScreen
-import org.example.project.screens.LoginScreen
 import org.example.project.network.UserSession
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Check
+import org.example.project.screens.admindScreens.ExercisesScreen
 
 data class NavItem(val id: Int, val icon: ImageVector, val label: String)
 
@@ -59,8 +59,8 @@ fun ReusableBottomBar(
     val fixedItems = listOf(
         NavItem(0, Icons.Default.Home, "Inicio"),
         NavItem(1, Icons.Default.Group, "Usuarios"),
-        NavItem(2, Icons.Default.List, "Unidades"),
-        NavItem(3, Icons.Default.ExitToApp, "Salir")
+        NavItem(2, Icons.AutoMirrored.Filled.List, "Unidades"),
+        NavItem(3, Icons.Default.Check, "Ejercicios")
     )
 
     // Inicializar valores desde initial params o desde UserSession si no se pasan.
@@ -85,18 +85,19 @@ fun ReusableBottomBar(
     }
 
     Surface(
-        modifier = modifier
-            .navigationBarsPadding(),
+        modifier = modifier,
         tonalElevation = 4.dp,
         color = Color.White
     ) {
         NavigationBar(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)
-                .navigationBarsPadding(),
+                .navigationBarsPadding()
+                .height(64.dp),
+
             containerColor = Color.White,
-            tonalElevation = 4.dp
+            tonalElevation = 4.dp ,
+            windowInsets = WindowInsets(0.dp)
         ) {
             fixedItems.forEachIndexed { index, item ->
                 val selected = index == selectedIndex
@@ -134,12 +135,15 @@ fun ReusableBottomBar(
                     onClick = {
                         onSelect?.invoke(index)
 
-                        val nameToUse = if (rememberedUserName.isNotBlank()) rememberedUserName else (UserSession.name ?: "")
-                        val roleToUse = rememberUserRole
+                        val nameToUse = rememberedUserName.ifBlank { (UserSession.name ?: "") }
 
                         when (index) {
                             0 -> {
-                                navigator.push(AdminDashboard(nameToUse.ifBlank { "Usuario" }, roleToUse))
+                                navigator.push(
+                                    AdminDashboard(
+                                        nameToUse.ifBlank { "Usuario" },
+                                        rememberUserRole
+                                    ))
                             }
                             1 -> {
                                 navigator.push(UsersScreen())
@@ -148,8 +152,7 @@ fun ReusableBottomBar(
                                 navigator.push(UnitsScreen())
                             }
                             3 -> {
-                                UserSession.clear()
-                                navigator.push(LoginScreen(true))
+                                navigator.push(ExercisesScreen(null))
                             }
                         }
                     },

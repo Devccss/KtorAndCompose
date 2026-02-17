@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -51,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
@@ -374,7 +376,7 @@ class UsersScreen : Screen {
                                 levels = ui.unit,
                                 onDelete = { confirmDelete = user }
                             )
-                            Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.height(4.dp))
 
                         }
                     }
@@ -429,7 +431,7 @@ fun UserCard(
     val levelName = levels.find { it.id == user.currentUnitId }?.name ?: "No asignado"
 
     Card(
-        Modifier.fillMaxWidth().clickable { onClick() },
+        Modifier.fillMaxWidth().clickable { onClick() }.shadow( 1.dp, shape = RoundedCornerShape(12.dp)),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFF5F5F5)
         ),
@@ -437,7 +439,6 @@ fun UserCard(
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -452,11 +453,8 @@ fun UserCard(
                             }
                         }
                     }
-
                     Text("Nivel: $levelName", style = MaterialTheme.typography.labelSmall)
-
                 }
-
                 Box(
                     Modifier
                         .size(40.dp)

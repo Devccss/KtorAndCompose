@@ -1,6 +1,8 @@
 package org.example.project.network
 
 import io.ktor.client.HttpClient
+import org.example.project.repository.ExerciseRepo
+import org.example.project.repository.QuestionsRepo
 import org.example.project.repository.UnitRepo
 import org.example.project.repository.UserRepo
 
@@ -21,28 +23,38 @@ object RepositoryProvider {
             "RepositoryProvider.unitRepo not initialized. Call RepositoryProvider.init(httpClient, baseUrl) before using repositories."
         )
 
+    private var _exerciseRepo: ExerciseRepo? = null
+    val exerciseRepo: ExerciseRepo
+        get() = _exerciseRepo ?: throw IllegalStateException(
+            "RepositoryProvider.exerciseRepo not initialized. Call RepositoryProvider.init(httpClient, baseUrl) before using repositories."
+        )
 
-    /**
-     * Inicializa todos los repositorios con el HttpClient y baseUrl.
-     * Llamar una vez al arrancar la app (antes de resolver dependencias).
-     */
+    private var _questionRepo: QuestionsRepo? = null
+    val questionRepo: QuestionsRepo
+        get() = _questionRepo ?: throw IllegalStateException(
+            "RepositoryProvider.questionRepo not initialized. Call RepositoryProvider.init(httpClient, baseUrl) before using repositories."
+        )
+
+
+
     fun init(httpClient: HttpClient, baseUrl: String) {
         if (initialized) return
 
         _userRepo = UserRepo(httpClient, baseUrl)
         _unitRepo = UnitRepo(httpClient, baseUrl)
+        _exerciseRepo = ExerciseRepo(httpClient, baseUrl)
+        _questionRepo = QuestionsRepo(httpClient, baseUrl)
 
         initialized = true
     }
 
-    /**
-     * Limpia las referencias para permitir reinicialización (útil en tests).
-     */
     fun clear() {
-        // No se llaman destructores específicos; solo liberamos referencias
+
         initialized = false
         _userRepo = null
         _unitRepo = null
+        _exerciseRepo = null
+        _questionRepo = null
     }
 
     fun checkInitialized() {

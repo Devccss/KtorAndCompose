@@ -93,7 +93,7 @@ class UsersRepository {
         transaction {
             val userToEdit = getById(id) ?: throw BadRequestException("Usuario con ID $id no existe.")
             if (userToEdit.role == Role.ADMIN) throw BadRequestException("No se puede modificar un usuario con rol ADMIN.")
-            Users.update({ Users.id eq id }) { u ->
+             Users.update({ Users.id eq id }) { u ->
                 dto.email?.let { u[email] = it }
                 dto.password?.let { newPass ->
                     u[password] = BCrypt.hashpw(newPass, BCrypt.gensalt())
