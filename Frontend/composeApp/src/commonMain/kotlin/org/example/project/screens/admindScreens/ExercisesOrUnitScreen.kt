@@ -1,6 +1,7 @@
 package org.example.project.screens.admindScreens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,9 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgeDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -35,7 +34,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CardElevation
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,7 +44,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
@@ -70,7 +67,7 @@ import org.example.project.viewModel.ExercisesViewModel
 import org.example.project.viewModel.UnitViewModel
 import org.jetbrains.compose.resources.Font
 
-class ExercisesScreen(private val unitId: Int? = null) : Screen {
+class ExercisesOrUnitScreen(private val unitId: Int? = null) : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -117,9 +114,7 @@ class ExercisesScreen(private val unitId: Int? = null) : Screen {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFFFFF8F0))
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
+                    .verticalScroll(rememberScrollState()),
 
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -164,20 +159,25 @@ fun ExercisesSection(
 ) {
     val encodeSansFamily = FontFamily(Font(Res.font.encode_sans_variable))
     val jetbrainsMonoFamily = FontFamily(Font(Res.font.jetbrains_mono_regular))
-    Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+
+    Card(
+        // Agrego colores para mantener consistencia
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(1.dp, shape = RoundedCornerShape(12.dp)),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
     ) {
-        // Barra de búsqueda y filtro
-        // Verificamos ambas condiciones: que se deba mostrar Y que existan datos
-        if (showUnitHeader && actualUnit != null) {
-            Card(
-                // Agrego colores para mantener consistencia
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.Transparent
-                ),
-                shape = MaterialTheme.shapes.medium
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 20.dp)
             ) {
+            // Barra de búsqueda y filtro
+            // Verificamos ambas condiciones: que se deba mostrar Y que existan datos
+            if (showUnitHeader && actualUnit != null) {
+
                 Column {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -241,106 +241,107 @@ fun ExercisesSection(
 
                 }
 
-            }
-            Spacer(Modifier.height(8.dp))
 
-            Column {
-                Text("Ejercicios asociados")
-            }
+                Spacer(Modifier.height(8.dp))
 
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 8.dp),
-                color = Color.Gray.copy(alpha = 0.2f)
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = onSearchQueryChange,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Buscar ejercicios...", fontSize = 14.sp) },
-                leadingIcon = {
+                Column {
+                    Text("Ejercicios asociados")
+                }
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = Color.Gray.copy(alpha = 0.2f)
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = onSearchQueryChange,
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Buscar ejercicios...", fontSize = 14.sp) },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = "Buscar",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.small,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFFE0E0E0),
+                        unfocusedBorderColor = Color(0xFFE0E0E0)
+                    )
+                )
+
+                IconButton(
+                    onClick = { /* Abrir filtros */ },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(Color.White, shape = MaterialTheme.shapes.small)
+                ) {
                     Icon(
-                        Icons.Default.Search,
-                        contentDescription = "Buscar",
-                        modifier = Modifier.size(20.dp)
+                        Icons.Default.FilterList,
+                        contentDescription = "Filtros",
+                        tint = Color(0xFF4A4A4A)
                     )
-                },
-                singleLine = true,
-                shape = MaterialTheme.shapes.small,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFFE0E0E0),
-                    unfocusedBorderColor = Color(0xFFE0E0E0)
-                )
-            )
+                }
+            }
 
-            IconButton(
-                onClick = { /* Abrir filtros */ },
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(Color.White, shape = MaterialTheme.shapes.small)
+            // Botón de agregar nuevo ejercicio
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    Icons.Default.FilterList,
-                    contentDescription = "Filtros",
-                    tint = Color(0xFF4A4A4A)
-                )
-            }
-        }
-
-        // Botón de agregar nuevo ejercicio
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Button(
-                onClick = onAdd,
-                modifier = Modifier.weight(1f).padding(end = 8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFB8F4C4)
-                ),
-                shape = MaterialTheme.shapes.small
-            ) {
-                Text(
-                    "+ Agregar nuevo ejercicio",
-                    color = Color(0xFF2D5E3D),
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            OutlinedButton(
-                onClick = { /* Ordenar */ },
-                shape = MaterialTheme.shapes.small,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color(0xFF4A4A4A)
-                )
-            ) {
-                Text("Orden")
-            }
-        }
-
-        // Lista de ejercicios (aplicar búsqueda simple)
-        val filtered = if (searchQuery.isBlank()) exercises else {
-            exercises.filter {
-                it.name.contains(searchQuery, ignoreCase = true) ||
-                        it.description.contains(searchQuery, ignoreCase = true)
-            }
-        }
-
-        if (filtered.isEmpty()) {
-            Text("No hay ejercicios", color = Color.Gray)
-        } else {
-            filtered.forEach { ex ->
-                ExerciseCard(
-                    exercise = ex,
-                    onClick = { navigator.push(ExercisesDetailsScreen(ex.id, ex.unitId)) },
-
+                Button(
+                    onClick = onAdd,
+                    modifier = Modifier.weight(1f).padding(end = 8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFB8F4C4)
+                    ),
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Text(
+                        "+ Agregar nuevo ejercicio",
+                        color = Color(0xFF2D5E3D),
+                        fontWeight = FontWeight.Medium
                     )
+                }
+
+                OutlinedButton(
+                    onClick = { /* Ordenar */ },
+                    shape = MaterialTheme.shapes.small,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFF4A4A4A)
+                    )
+                ) {
+                    Text("Orden")
+                }
+            }
+
+            // Lista de ejercicios (aplicar búsqueda simple)
+            val filtered = if (searchQuery.isBlank()) exercises else {
+                exercises.filter {
+                    it.name.contains(searchQuery, ignoreCase = true) ||
+                            it.description.contains(searchQuery, ignoreCase = true)
+                }
+            }
+
+            if (filtered.isEmpty()) {
+                Text("No hay ejercicios", color = Color.Gray)
+            } else {
+                filtered.forEach { ex ->
+                    ExerciseCard(
+                        exercise = ex,
+                        onClick = { navigator.push(ExercisesDetailsScreen(ex.id, ex.unitId)) },
+
+                        )
+                }
             }
         }
     }
@@ -359,7 +360,7 @@ fun ExerciseCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .shadow(1.dp, shape = RoundedCornerShape(12.dp)),
+            .shadow(2.dp, shape = RoundedCornerShape(12.dp)),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFF5F5F5)

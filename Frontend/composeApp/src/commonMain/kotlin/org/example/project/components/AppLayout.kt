@@ -136,7 +136,7 @@ fun AppLayout(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-
+                    .padding(16.dp)
             ) {
                 content(paddingValues, userName, userRole)
             }

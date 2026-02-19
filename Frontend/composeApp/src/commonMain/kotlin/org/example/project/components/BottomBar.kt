@@ -42,7 +42,7 @@ import org.example.project.network.UserSession
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Check
-import org.example.project.screens.admindScreens.ExercisesScreen
+import org.example.project.screens.admindScreens.ExercisesOrUnitScreen
 
 data class NavItem(val id: Int, val icon: ImageVector, val label: String)
 
@@ -152,7 +152,7 @@ fun ReusableBottomBar(
                                 navigator.push(UnitsScreen())
                             }
                             3 -> {
-                                navigator.push(ExercisesScreen(null))
+                                navigator.push(ExercisesOrUnitScreen(null))
                             }
                         }
                     },

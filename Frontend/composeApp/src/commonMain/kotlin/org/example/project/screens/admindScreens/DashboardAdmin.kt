@@ -72,7 +72,7 @@ class AdminDashboard(private val adminName: String, private val rolAdmin:Role) :
             onSelect = { idx -> selectedIndex = idx },
             initialUserName = adminName,
             role = rolAdmin
-        ) { paddingValues,_,_ ->
+        ) { _,_,_ ->
 
             if (rolAdmin != Role.ADMIN) {
                 Column(modifier = Modifier
@@ -97,8 +97,6 @@ class AdminDashboard(private val adminName: String, private val rolAdmin:Role) :
 
             // Llamamos al contenido del dashboard, pasando padding desde el layout
             AdminDashboardContent(
-                modifier = Modifier
-                    .padding(16.dp),
                 adminName = adminName,
                 lessonUnits = lessonUnits,
                 onViewUnit = { id -> navigator.push(UnitDetailsPlaceholder(id)) },
@@ -153,7 +151,7 @@ fun AdminDashboardContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(horizontal = 12.dp, vertical = 20.dp)
             ) {
                 Text(
                     text = "Frecuencia de usuarios activos en la app",

@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ArrowBack
@@ -53,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
@@ -109,12 +111,14 @@ class UserDetailsScreen(private val userId: Int) : Screen {
             snackbarHostState = snackbarHostState
         ) { _,_,_ ->
 
-            Box(
+            Card(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFFFFF8F0))
-                    .padding(16.dp),
-
+                    .fillMaxWidth()
+                    .shadow(1.dp, shape = RoundedCornerShape(12.dp)),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                ),
             ) {
 
                 if (ui.isLoading && user == null) {
@@ -131,7 +135,8 @@ class UserDetailsScreen(private val userId: Int) : Screen {
                     // Usuario no encontrado
                     Column(
                         Modifier
-                            .fillMaxSize()
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 20.dp)
                             .wrapContentHeight()
                             .verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -140,7 +145,7 @@ class UserDetailsScreen(private val userId: Int) : Screen {
                         Text("Usuario no encontrado", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         Spacer(Modifier.height(12.dp))
                         androidx.compose.material3.Button(onClick = { navigator.pop() }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                             Spacer(Modifier.width(8.dp))
                             Text("Volver")
                         }
@@ -150,16 +155,16 @@ class UserDetailsScreen(private val userId: Int) : Screen {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .verticalScroll(rememberScrollState()),
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 12.dp, vertical = 20.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         // Header card: avatar, name, email, role, actions
                         Card(
                             Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = Color.White),
-                            elevation = CardDefaults.cardElevation(4.dp)
                         ) {
-                            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Row( verticalAlignment = Alignment.CenterVertically) {
                                 // Avatar box
                                 Box(
                                     modifier = Modifier

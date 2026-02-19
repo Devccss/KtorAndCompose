@@ -133,18 +133,19 @@ class UsersScreen : Screen {
             snackbarHostState = snackbarHostState
         ) { _, _, _ ->
 
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFFFFF8F0))
-                    .padding(16.dp)
-                    .pointerInput(Unit) {
-                        detectTapGestures(onTap = { focusManager.clearFocus() })
-                    }
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(1.dp, shape = RoundedCornerShape(12.dp)),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                ),
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
 

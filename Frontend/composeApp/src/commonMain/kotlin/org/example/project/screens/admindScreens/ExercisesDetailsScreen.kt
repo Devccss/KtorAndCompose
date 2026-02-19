@@ -51,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -103,7 +104,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
             }
             questionUi.error?.let {
                 snackbarHostState.showSnackbar(it)
-                println( "Error en QuestionViewModel: ${questionUi.error}")
+                println("Error en QuestionViewModel: ${questionUi.error}")
             }
         }
 
@@ -116,13 +117,14 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
             snackbarHostState = snackbarHostState
         ) { _, _, _ ->
 
-            Column(
+            Card(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFFFFF8F0))
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                    .fillMaxWidth()
+                    .shadow(1.dp, shape = RoundedCornerShape(12.dp)),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                ),
             ) {
                 if (exerciseUi.isLoading || questionUi.isLoading) {
                     Box(
@@ -134,7 +136,11 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                 } else {
                     // Header del Ejercicio (Titulo, Descripcion, Botones de acción)
                     exerciseUi.selectedExercise?.let { exercise ->
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 20.dp),
+                        ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -233,11 +239,6 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                             }
                         }
 
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 8.dp),
-                            color = Color.Gray.copy(alpha = 0.2f)
-                        )
-
                         // Lista de tarjetas de preguntas
                         val questions = questionUi.selectedQuestions
                         if (questions.isEmpty()) {
@@ -261,16 +262,17 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                     question = question,
                                     alternatives = specificAlternatives,
                                     onSave = { updatedQuestion, updatedAlternatives ->
-                                        questionVm.updateQuestion(question.id,updatedQuestion)
+                                        questionVm.updateQuestion(question.id, updatedQuestion)
                                         updatedAlternatives.forEach { alternative ->
-                                            questionVm.updateAlternativesForQuestion(alternative.id,
+                                            questionVm.updateAlternativesForQuestion(
+                                                alternative.id,
                                                 UpdateAlternativeDto(
                                                     text = alternative.text,
                                                     isCorrect = alternative.isCorrect
                                                 )
                                             )
                                         }
-                                        
+
 
                                         println("Pregunta actualizada: $updatedQuestion")
                                         println("Alternativas actualizadas: $updatedAlternatives")
@@ -402,21 +404,23 @@ fun QuestionDetailCard(
                                 )
 
                                 // Preparamos las alternativas actualizadas (marcando isCorrect según la selección)
-                                val updatedAlternatives = if (question.typeQuestion == TypeQuestion.ALTERNATIVE) {
-                                    alternatives.map { alt ->
-                                        alt.copy(isCorrect = (alt.id == selectedAlt))
+                                val updatedAlternatives =
+                                    if (question.typeQuestion == TypeQuestion.ALTERNATIVE) {
+                                        alternatives.map { alt ->
+                                            alt.copy(isCorrect = (alt.id == selectedAlt))
+                                        }
+                                    } else {
+                                        alternatives
                                     }
-                                } else {
-                                    alternatives
-                                }
 
                                 // Enviamos los datos al callback
                                 onSave(
                                     UpdateQuestionDto(
-                                    textContent = updatedQuestion.textContent,
-                                    grammarExplanation = updatedQuestion.grammarExplanation,
-                                    questionText = updatedQuestion.questionText,
-                                ), updatedAlternatives)
+                                        textContent = updatedQuestion.textContent,
+                                        grammarExplanation = updatedQuestion.grammarExplanation,
+                                        questionText = updatedQuestion.questionText,
+                                    ), updatedAlternatives
+                                )
                             },
                             modifier = Modifier
                                 .size(32.dp)

@@ -73,14 +73,12 @@ class UnitsScreen : Screen {
             snackbarHostState = snackbarHostState
         ) { _, _, _ ->
 
-            Column(
+            Card(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFFFFF8F0))
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .fillMaxWidth()
+                    .shadow(1.dp, shape = RoundedCornerShape(12.dp)),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
                 // Usamos la UnitsSection tal como la pediste
                 UnitsSection(
@@ -104,7 +102,9 @@ fun UnitsSection(
 ) {
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 20.dp)
     ) {
         // Barra de búsqueda y filtro
         Row(
@@ -180,7 +180,7 @@ fun UnitsSection(
 
         // Lista de unidades
         lessonUnits.forEach { unit ->
-            UnitCard(lessonUnit = unit, onClick = { navigator.push(ExercisesScreen(unit.id)) }, onExerciseClick = { navigator.push(ExercisesScreen(unit.id)) })
+            UnitCard(lessonUnit = unit, onClick = { navigator.push(ExercisesOrUnitScreen(unit.id)) }, onExerciseClick = { navigator.push(ExercisesOrUnitScreen(unit.id)) })
         }
     }
 }
