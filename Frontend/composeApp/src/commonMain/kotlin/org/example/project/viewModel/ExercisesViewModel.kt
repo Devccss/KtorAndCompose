@@ -9,6 +9,7 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.example.project.dtos.CreateExerciseDto
 import org.example.project.dtos.DifficultyLevel
 import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.UnitDto
@@ -39,39 +40,82 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
 
     init {
         if (unitId != null && exerciseId != null) {
-            launchCatching(
-                block = { repo.getExerciseById(exerciseId) },
-                onSuccess = { exercise ->
-                    _state.value = _state.value.copy(selectedExercise = exercise)
-                },
-                onError = { error ->
-                    _state.value = _state.value.copy(error = error.message, selectedExercise = null)
-                }
-            )
+            getExerciseById(exerciseId)
 
         }else if(unitId != null && exerciseId == null){
-            launchCatching(
-                block = { repo.getExercisesByUnitId(unitId)},
-                onSuccess = { exercise ->
-
-                    _state.value = _state.value.copy(exercise = exercise)
-                },
-                onError = { error ->
-                    _state.value = _state.value.copy(error = error.message, exercise = emptyList())
-                }
-            )
+            getExercisesByUnitId(unitId)
         }else{
-            launchCatching(
-                block = { repo.getAllExercises()},
-                onSuccess = { exercise ->
-
-                    _state.value = _state.value.copy(exercise = exercise)
-                },
-                onError = { error ->
-                    _state.value = _state.value.copy(error = error.message, exercise = emptyList())
-                }
-            )
+            getAllExercises()
         }
+    }
+
+    fun getAllExercises() {
+        launchCatching(
+            block = { repo.getAllExercises()},
+            onSuccess = { exercise ->
+
+                _state.value = _state.value.copy(exercise = exercise)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = error.message, exercise = emptyList())
+            }
+        )
+    }
+
+    fun getExerciseById(exerciseId: Int) {
+        launchCatching(
+            block = { repo.getExerciseById(exerciseId) },
+            onSuccess = { exercise ->
+                _state.value = _state.value.copy(selectedExercise = exercise)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = error.message, selectedExercise = null)
+            }
+        )
+    }
+
+    fun getExercisesByUnitId(unitId: Int) {
+        launchCatching(
+            block = { repo.getExercisesByUnitId(unitId)},
+            onSuccess = { exercise ->
+
+                _state.value = _state.value.copy(exercise = exercise)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = error.message, exercise = emptyList())
+            }
+        )
+    }
+
+    fun createExercise(dto: CreateExerciseDto) {
+        launchCatching(
+            block = { repo.createExercise(dto) },
+            onSuccess = { newExercise ->
+                // Actualizar lista local agregando el nuevo
+                val currentList = _state.value.exercise
+                _state.value = _state.value.copy(exercise = currentList + newExercise)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al crear ejercicio: ${error.message}")
+            }
+        )
+    }
+
+    fun reorderExercises(updates: List<Pair<Int, Int>>) {
+        launchCatching(
+            block = { repo.reorderExercises(updates) },
+            onSuccess = {
+
+                if (unitId != null) {
+                    getExercisesByUnitId(unitId)
+                } else {
+                    getAllExercises()
+                }
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al reordenar: ${error.message}")
+            }
+        )
     }
 
     private fun <T> launchCatching(

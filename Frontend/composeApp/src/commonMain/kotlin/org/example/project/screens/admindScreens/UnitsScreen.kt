@@ -1,13 +1,23 @@
 package org.example.project.screens.admindScreens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,6 +27,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,6 +40,10 @@ import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import org.example.project.components.AppLayout
+import org.example.project.dtos.CreateUnitDto
+import org.example.project.dtos.DifficultyLevel
+import org.example.project.dtos.Role
+import org.example.project.dtos.UnitDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
 import org.example.project.viewModel.UnitViewModel
@@ -46,7 +61,9 @@ class UnitsScreen : Screen {
         var selectedIndex by remember { mutableStateOf(2) }
         val snackbarHostState = remember { SnackbarHostState() }
 
-        val lessonUnits = unitUi.units.map { u ->
+        // Convertimos a mutable para manejo local del UI durante el reordenamiento
+        // Pero usamos los datos del viewmodel como fuente de verdad
+        val lessonUnits = unitUi.units.sortedBy { it.orderUnit }.map { u ->
             LessonUnit(
                 id = u.id ?: 0,
                 title = u.name,
@@ -84,8 +101,12 @@ class UnitsScreen : Screen {
                 UnitsSection(
                     navigator = navigator,
                     lessonUnits = lessonUnits,
+                    allUnitsDto = unitUi.units, // Pasamos la lista original DTO para poder actualizar
                     searchQuery = searchQuery,
-                    onSearchQueryChange = { searchQuery = it }
+                    onSearchQueryChange = { searchQuery = it },
+                    onCreateUnit = { dto -> unitVm.createUnit(dto) },
+                    onReorderUnits = { updatedList -> unitVm.updateUnitsOrder(updatedList) }, // Callback
+                    onError = { error -> unitVm.updateMessage(error.message) }
                 )
             }
         }
@@ -93,107 +114,422 @@ class UnitsScreen : Screen {
 }
 
 // Implementación de UnitsSection (según tu especificación)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UnitsSection(
     navigator: Navigator,
     lessonUnits: List<LessonUnit>,
+    allUnitsDto: List<UnitDto>, // Lista origen datos reales
     searchQuery: String,
-    onSearchQueryChange: (String) -> Unit
+    onSearchQueryChange: (String) -> Unit,
+    onCreateUnit: (CreateUnitDto) -> Unit,
+    onReorderUnits: (List<Pair<Int, Int>>) -> Unit,
+    onError: (Error) -> Unit
 ) {
+    // Estados existentes
+    var isAddingUnit by remember { mutableStateOf(false) }
+    var newUnitName by remember { mutableStateOf("") }
+    var newUnitDescription by remember { mutableStateOf("") }
+    var newUnitOrder by remember { mutableStateOf("") }
+    var newUnitDifficulty by remember { mutableStateOf<DifficultyLevel?>(null) }
+    var textAdd by remember { mutableStateOf("") }
+    var butonAddColor by remember { mutableStateOf(Color(0xFFB8F4C4)) }
+    var difficultyMenu by remember { mutableStateOf(false) }
+    var selectedDifficulty by remember { mutableStateOf(DifficultyLevel.A1) }
 
+    // Estado para modo ordenar
+    var isReordering by remember { mutableStateOf(false) }
+    // Copia local mutable para la UI de reordenamiento
+    var reorderableList by remember { mutableStateOf(allUnitsDto.sortedBy { it.orderUnit }) }
+
+    // Sincronizar lista local cuando cambian los datos del servidor (si no estamos reordenando)
+    LaunchedEffect(allUnitsDto) {
+        if (!isReordering) {
+            reorderableList = allUnitsDto.sortedBy { it.orderUnit }
+        }
+    }
+
+    if (isAddingUnit) {
+        textAdd = "Cancelar creación"
+        butonAddColor = Color(0xFFFFD4D4)
+    } else {
+        textAdd = "+ Agregar nueva unidad"
+        butonAddColor = Color(0xFFB8F4C4)
+    }
+
+    // Cambiamos Column por LazyColumn para mejor manejo de listas y reordenamiento visual
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 20.dp)
     ) {
-        // Barra de búsqueda y filtro
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = onSearchQueryChange,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Buscar unidades...", fontSize = 14.sp) },
-                leadingIcon = {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = "Buscar",
-                        modifier = Modifier.size(20.dp)
-                    )
-                },
-                singleLine = true,
-                shape = MaterialTheme.shapes.small,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFFE0E0E0),
-                    unfocusedBorderColor = Color(0xFFE0E0E0)
-                )
-            )
-
-            IconButton(
-                onClick = { /* Abrir filtros */ },
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(Color.White, shape = MaterialTheme.shapes.small)
+        // Barra de búsqueda y filtro (Solo visible si NO estamos reordenando para simplificar UI)
+        if (!isReordering) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    Icons.Default.FilterList,
-                    contentDescription = "Filtros",
-                    tint = Color(0xFF4A4A4A)
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = onSearchQueryChange,
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Buscar unidades...", fontSize = 14.sp) },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = "Buscar",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.small,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFFE0E0E0),
+                        unfocusedBorderColor = Color(0xFFE0E0E0)
+                    )
                 )
+
+                IconButton(
+                    onClick = { /* Abrir filtros */ },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(Color.White, shape = MaterialTheme.shapes.small)
+                ) {
+                    Icon(
+                        Icons.Default.FilterList,
+                        contentDescription = "Filtros",
+                        tint = Color(0xFF4A4A4A)
+                    )
+                }
             }
+        } else {
+            Text(
+                "Modo Ordenamiento: Usa las flechas para mover",
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF003AB6),
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
         }
 
-        // Botón de agregar nueva unidad
+        // Botón de agregar nueva unidad y Ordenar
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Button(
-                onClick = { /* Agregar nueva unidad */ },
-                modifier = Modifier.weight(1f).padding(end = 8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFB8F4C4)
-                ),
-                shape = MaterialTheme.shapes.small
-            ) {
-                Text(
-                    "+ Agregar nueva unidad",
-                    color = Color(0xFF2D5E3D),
-                    fontWeight = FontWeight.Medium
-                )
+            // Ocultar botón agregar si estamos ordenando
+            if (!isReordering) {
+                Button(
+                    onClick = { isAddingUnit = !isAddingUnit },
+                    modifier = Modifier.weight(1f).padding(end = 8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = butonAddColor
+                    ),
+                    shape = MaterialTheme.shapes.small
+                ) {
+
+                    Text(
+                        textAdd,
+                        color = Color(0xFF2D5E3D),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
             }
 
+            // Botón Ordenar
             OutlinedButton(
-                onClick = { /* Ordenar */ },
+                onClick = {
+                    if (isReordering) {
+
+                        val updates = reorderableList.mapIndexedNotNull { index, unitDto ->
+                            unitDto.id?.let { id ->
+                                Pair(id, index + 1)
+                            }
+                        }
+                        println("Reordenando unidades con el siguiente orden: $updates")
+                        
+                        // Enviamos la lista al backend
+                        onReorderUnits(updates)
+                        
+                        isReordering = false
+                    } else {
+                        // Activar modo
+                        isReordering = true
+                        // Aseguramos que empezamos con la lista ordenada actual
+                        reorderableList = allUnitsDto.sortedBy { it.orderUnit }
+                    }
+                },
                 shape = MaterialTheme.shapes.small,
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color(0xFF4A4A4A)
+                    containerColor = if (isReordering) Color(0xFF003AB6) else Color.Transparent,
+                    contentColor = if (isReordering) Color.White else Color(0xFF4A4A4A)
                 )
             ) {
-                Text("Orden")
+                if (isReordering) {
+                    Icon(
+                        Icons.Default.Save,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Guardar Orden")
+                } else {
+                    Text("Orden")
+                }
             }
         }
 
-        // Lista de unidades
-        lessonUnits.forEach { unit ->
-            UnitCard(lessonUnit = unit, onClick = { navigator.push(ExercisesOrUnitScreen(unit.id)) }, onExerciseClick = { navigator.push(ExercisesOrUnitScreen(unit.id)) })
+        // Formulario desplegable para agregar unidad
+        AnimatedVisibility(
+            visible = isAddingUnit,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text("Nueva Unidad", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+
+                    OutlinedTextField(
+                        value = newUnitName,
+                        onValueChange = { newUnitName = it },
+                        label = { Text("Nombre de la unidad*") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        isError = newUnitName.isBlank()
+                    )
+
+
+                    OutlinedTextField(
+                        value = newUnitDescription,
+                        onValueChange = { newUnitDescription = it },
+                        label = { Text("Descripción") },
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = newUnitDescription.isBlank()
+                    )
+
+                    ExposedDropdownMenuBox(
+                        expanded = difficultyMenu,
+                        onExpandedChange = { difficultyMenu = !difficultyMenu }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedDifficulty?.name ?: "Selecciona una dificultad",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Dificultad") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(
+                                    expanded = difficultyMenu
+                                )
+                            },
+                            modifier = Modifier
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = difficultyMenu,
+                            onDismissRequest = { difficultyMenu = false }
+                        ) {
+                            DifficultyLevel.entries.forEach { difficulty ->
+                                DropdownMenuItem(
+                                    text = { Text(difficulty.name) },
+                                    onClick = {
+                                        selectedDifficulty = difficulty
+                                        difficultyMenu = false
+                                    }
+                                )
+                            }
+                            // opción para limpiar rol
+                            DropdownMenuItem(
+                                text = { Text("Todos") },
+                                onClick = {
+                                    selectedDifficulty = DifficultyLevel.A1
+                                    difficultyMenu = false
+                                }
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            if (newUnitName.isBlank() || newUnitDescription.isBlank()) {
+                                onError(Error("El nombre y la descripción son obligatorios"))
+                                return@Button
+                            }
+
+                            if (selectedDifficulty == null) {
+                                onError(Error("Debes seleccionar una dificultad"))
+                                return@Button
+                            }
+
+                            // Ya se validó arriba que no sean nulos
+                            onCreateUnit(
+                                CreateUnitDto(
+                                    name = newUnitName,
+                                    description = newUnitDescription,
+                                    orderUnit = newUnitOrder.toIntOrNull(),
+                                    isActive = false,
+                                    difficulty = selectedDifficulty,
+                                    createdAt = null
+                                )
+                            )
+
+                            // Limpiar campos y cerrar formulario
+                            newUnitName = ""
+                            newUnitDescription = ""
+                            newUnitOrder = ""
+                            selectedDifficulty = DifficultyLevel.A1
+                            isAddingUnit = false
+                        },
+                        modifier = Modifier.align(Alignment.End),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFB8F4C4)
+                        )
+                    ) {
+                        Text("Guardar Unidad", color = Color(0xFF2D5E3D))
+                    }
+                }
+            }
+        }
+
+        // LISTA DE UNIDADES
+        // Usamos LazyColumn para permitir desplazamiento eficiente y lógica de swap
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.weight(1f) // Ocupa el espacio restante
+        ) {
+            if (isReordering) {
+                // MODO REORDENAR: Usamos la lista local mutable (reorderableList)
+                itemsIndexed(reorderableList) { index, unitDto ->
+                    val isFirst = index == 0
+                    val isLast = index == reorderableList.lastIndex
+
+                    ReorderableUnitCard(
+                        name = unitDto.name,
+                        index = index + 1, // Visual index (Order)
+                        isFirst = isFirst,
+                        isLast = isLast,
+                        onMoveUp = {
+                            if (!isFirst) {
+                                // Intercambio visual: Movemos el elemento actual hacia arriba
+                                val mutable = reorderableList.toMutableList()
+                                val current = mutable[index]
+                                val previous = mutable[index - 1]
+                                
+                                mutable[index] = previous
+                                mutable[index - 1] = current
+                                
+                                reorderableList = mutable
+                            }
+                        },
+                        onMoveDown = {
+                            if (!isLast) {
+                                // Intercambio visual: Movemos el elemento actual hacia abajo
+                                val mutable = reorderableList.toMutableList()
+                                val current = mutable[index]
+                                val next = mutable[index + 1]
+                                
+                                mutable[index] = next
+                                mutable[index + 1] = current
+                                
+                                reorderableList = mutable
+                            }
+                        }
+                    )
+                }
+            } else {
+                // MODO NORMAL: Usamos lessonUnits original filtrado por búsqueda
+                val filteredUnits =
+                    if (searchQuery.isBlank()) lessonUnits else lessonUnits.filter {
+                        it.title.contains(searchQuery, ignoreCase = true)
+                    }
+
+                itemsIndexed(filteredUnits) { _, unit ->
+                    UnitCard(
+                        lessonUnit = unit,
+                        onClick = { navigator.push(ExercisesOrUnitScreen(unit.id)) },
+                        onExerciseClick = { navigator.push(ExercisesOrUnitScreen(unit.id)) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Nueva Card simplificada para el modo reordenamiento
+@Composable
+fun ReorderableUnitCard(
+    name: String,
+    index: Int,
+    isFirst: Boolean,
+    isLast: Boolean,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F0FE)), // Azul claro para indicar modo edición
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.DragHandle, contentDescription = null, tint = Color.Gray)
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "#$index  $name",
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 16.sp
+                )
+            }
+
+            Row {
+                IconButton(onClick = onMoveUp, enabled = !isFirst) {
+                    Icon(
+                        Icons.Default.ArrowUpward,
+                        contentDescription = "Subir",
+                        tint = if (isFirst) Color.LightGray else Color(0xFF003AB6)
+                    )
+                }
+                IconButton(onClick = onMoveDown, enabled = !isLast) {
+                    Icon(
+                        Icons.Default.ArrowDownward,
+                        contentDescription = "Bajar",
+                        tint = if (isLast) Color.LightGray else Color(0xFF003AB6)
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-fun UnitCard(lessonUnit: LessonUnit, onClick: () -> Unit = {}, onExerciseClick: () -> Unit = {}) {
+fun UnitCard(
+    lessonUnit: LessonUnit,
+    onClick: () -> Unit = {},
+    onExerciseClick: () -> Unit = {}
+) {
     val encodeSansFamily = FontFamily(Font(Res.font.encode_sans_variable))
     val jetbrainsMonoFamily = FontFamily(Font(Res.font.jetbrains_mono_regular))
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .shadow( 1.dp, shape = RoundedCornerShape(12.dp)),
+            .shadow(1.dp, shape = RoundedCornerShape(12.dp)),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFF5F5F5)

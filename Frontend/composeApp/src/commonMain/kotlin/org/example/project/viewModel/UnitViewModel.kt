@@ -19,7 +19,7 @@ import org.example.project.repository.UnitRepo
 
 data class UnitUiState(
     val units: List<UnitDto> = emptyList(),
-    val actualUnit : UnitDto? = null,
+    val actualUnit: UnitDto? = null,
     val currentUser: UserDto? = null,
     val isLoading: Boolean = false,
     val registerUser: CreateUserDto? = null,
@@ -27,7 +27,8 @@ data class UnitUiState(
 
     )
 
-class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : ViewModel(), ScreenModel {
+class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : ViewModel(),
+    ScreenModel {
     private val _state = MutableStateFlow(
         UnitUiState(
             isLoading = true,
@@ -38,12 +39,12 @@ class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : V
     var generalMessage by mutableStateOf<String?>(null)
 
     fun updateMessage(message: String?) {
-        generalMessage = message
+        _state.value = _state.value.copy(error = message)
     }
 
     private fun getAllUnits() {
         launchCatching(
-            block = { unitRepo.getAllUnits()},
+            block = { unitRepo.getAllUnits() },
             onSuccess = { unit ->
 
                 _state.value = _state.value.copy(units = unit)
@@ -55,27 +56,27 @@ class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : V
     }
 
     init {
-        if(unitId != null){
+        if (unitId != null) {
             getUnitById(unitId)
             _state.value = _state.value.copy(units = emptyList())
-        }else{
+        } else {
             getAllUnits()
             _state.value = _state.value.copy(actualUnit = null)
         }
     }
 
     fun refreshUnits() {
-        if(unitId != null){
+        if (unitId != null) {
             getUnitById(unitId)
             _state.value = _state.value.copy(units = emptyList())
-        }else{
+        } else {
             getAllUnits()
             _state.value = _state.value.copy(actualUnit = null)
         }
     }
 
 
-    private fun getUnitById(id: Int) {
+    fun getUnitById(id: Int) {
         launchCatching(
             block = { unitRepo.getUnitById(id) },
             onSuccess = { unit ->
@@ -87,14 +88,14 @@ class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : V
                     _state.value = _state.value.copy(
                         error = "Unit not found",
 
-                    )
+                        )
                 }
             },
             onError = { error ->
                 _state.value = _state.value.copy(
                     error = error.message,
 
-                )
+                    )
             }
         )
     }
@@ -102,29 +103,47 @@ class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : V
     fun createUnit(newUnit: CreateUnitDto) {
         launchCatching(
             block = {
-                if (newUnit.name.isEmpty()) {
+                if (newUnit.name.isBlank()) {
+                    _state.value = _state.value.copy(
+                        error = "El nombre no puede estar vacío"
+                    )
                     throw IllegalArgumentException("El nombre no puede estar vacío")
                 }
-                if (newUnit.description.isEmpty()) {
+                if (newUnit.description.isBlank()) {
+                    _state.value = _state.value.copy(
+                        error = "La descripción no puede estar vacía"
+                    )
                     throw IllegalArgumentException("La descripción no puede estar vacía")
                 }
-                if (newUnit.orderUnit == null || newUnit.orderUnit <= 0) {
-                    throw IllegalArgumentException("El orden de la unidad debe ser un número positivo")
-                }
-
                 unitRepo.createUnit(newUnit)
             },
             onSuccess = { added ->
                 _state.value = _state.value.copy(
                     units = _state.value.units.plus(added),
 
-                )
+                    )
             },
             onError = { error ->
                 _state.value = _state.value.copy(
                     error = error.message,
 
-                )
+                    )
+            }
+        )
+    }
+
+    // Nueva función para reordenar múltiples unidades
+    fun updateUnitsOrder(orders: List<Pair<Int, Int>>) {
+        launchCatching(
+            block = {
+                unitRepo.reorderUnits(orders)
+            },
+            onSuccess = {
+                // Refrescar la lista para asegurar consistencia
+                getAllUnits()
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al reordenar: ${error.message}")
             }
         )
     }

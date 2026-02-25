@@ -39,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -125,7 +126,7 @@ class UsersScreen : Screen {
 
         // Usamos AppLayout que provee card de inicio y bottom bar fijo
         AppLayout(
-            actualScreen = "Administrar usuarios",
+            actualScreen = "Administrar Usuarios",
             selectedIndex = selectedIndex,
             onSelect = { idx -> selectedIndex = idx },
             initialUserName = UserSession.name,
@@ -158,6 +159,11 @@ class UsersScreen : Screen {
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
                             modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFFE0E0E0),
+                                unfocusedBorderColor = Color(0xFFE0E0E0)
+                            ),
+                            shape = MaterialTheme.shapes.small,
                             placeholder = {
                                 Text(
                                     "Buscar usuarios...",
@@ -167,6 +173,7 @@ class UsersScreen : Screen {
                             leadingIcon = {
                                 Icon(
                                     Icons.Default.Search,
+                                    modifier = Modifier.size(20.dp),
                                     contentDescription = "Buscar"
                                 )
                             },
@@ -183,6 +190,7 @@ class UsersScreen : Screen {
                                 }) {
                                     Icon(
                                         Icons.AutoMirrored.Filled.Send,
+                                        modifier = Modifier.size(20.dp),
                                         contentDescription = "Buscar enviar",
                                         tint = Color(0xFF4A4A4A).copy(alpha = 0.5f)
                                     )

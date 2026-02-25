@@ -20,24 +20,7 @@ import org.example.project.screens.admindScreens.UnitsSection
 @Preview(showBackground = true, backgroundColor = 0xFFFFF8F0)
 @Composable
 fun UnitsSectionPreview() {
-    val sampleUnits = listOf(
-        LessonUnit(1, "Introducción a Kotlin", "Descripción breve de la unidad que explica qué aprenderás.", UnitStatus.PUBLISHED, "📚"),
-        LessonUnit(2, "Sintaxis básica", "Contenido sobre variables, funciones y estructuras de control.", UnitStatus.DRAFT, "🧩"),
-        LessonUnit(3, "Coroutines", "Explicación sobre concurrencia con ejemplos sencillos.", UnitStatus.PUBLISHED, "⚙️")
-    )
 
-    MaterialTheme {
-        Surface {
-            Box(modifier = Modifier.padding(16.dp)) {
-                UnitsSection(
-                    lessonUnits = sampleUnits,
-                    searchQuery = "",
-                    onSearchQueryChange = {},
-                    navigator = TODO()
-                )
-            }
-        }
-    }
 }
 
 /**

@@ -172,6 +172,13 @@ fun Application.configureRouting() {
                     unitService.updateUnit(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
+                put("reorder") {
+                    val dto = call.receive<List<Pair<Int, Int>>>()
+                    print("Received reorder request: $dto")
+                    val success = unitService.reorderUnits(dto)
+                    call.respond(success)
+                }
+
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
                     call.respond(unitService.deleteUnit(id))
@@ -201,6 +208,12 @@ fun Application.configureRouting() {
                     val dto = call.receive<UpdateExerciseDto>()
                     exerciseService.update(id, dto)
                     call.respond(HttpStatusCode.OK)
+                }
+                put("reorder") {
+                    val dto = call.receive<List<Pair<Int, Int>>>()
+                    print("Received reorder request: $dto")
+                    val success = exerciseService.reorderExercises(dto)
+                    call.respond(success)
                 }
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")

@@ -28,6 +28,7 @@ class ExerciseRepository {
             unitId = row[Exercises.unitId],
             name = row[Exercises.name],
             description = row[Exercises.description],
+            orderExercise = row[Exercises.orderExercise],
             isActive = row[Exercises.isActive],
             createdAt = row[Exercises.createdAt].toString()
         )
@@ -38,15 +39,20 @@ class ExerciseRepository {
     }
 
     fun getById(id: Int): ExerciseDto? = transaction {
-        Exercises.selectAll().where { Exercises.id eq id }.singleOrNull()?.let(::resultRowToExercise)
+        Exercises.selectAll().where { Exercises.id eq id }.singleOrNull()
+            ?.let(::resultRowToExercise)
     }
 
     fun getByUnitId(unitId: Int): List<ExerciseDto> = transaction {
-        Exercises.selectAll().where { Exercises.unitId eq unitId }.orderBy(Exercises.createdAt).map(::resultRowToExercise)
+        Exercises.selectAll().where { Exercises.unitId eq unitId }.orderBy(Exercises.createdAt)
+            .map(::resultRowToExercise)
     }
 
     fun create(dto: CreateExerciseDto): ExerciseDto = try {
         transaction {
+
+            val total = Exercises.selectAll().where { Exercises.unitId eq dto.unitId }.count()
+
             val newId = Exercises.insert {
                 it[unitId] = dto.unitId
                 it[name] = dto.name
@@ -60,7 +66,8 @@ class ExerciseRepository {
                 name = dto.name,
                 description = dto.description,
                 isActive = dto.isActive ?: false,
-                createdAt = LocalDateTime.now().toString()
+                orderExercise = dto.orderExercise ?: (total.toInt() + 1),
+                createdAt = LocalDateTime.now().toString(),
             )
         }
     } catch (e: Exception) {
@@ -71,11 +78,27 @@ class ExerciseRepository {
         transaction {
             getById(id) ?: throw BadRequestException("Exercise con ID $id no existe.")
             Exercises.update({ Exercises.id eq id }) { u ->
-                dto.unitId?.let { u[Exercises.unitId] = it }
-                dto.name?.let { u[Exercises.name] = it }
-                dto.description?.let { u[Exercises.description] = it }
-                dto.isActive?.let { u[Exercises.isActive] = it }
+                dto.unitId?.let { u[unitId] = it }
+                dto.name?.let { u[name] = it }
+                dto.description?.let { u[description] = it }
+                dto.isActive?.let { u[isActive] = it }
             }
+        }
+    }
+
+    fun reorderExercises(exercises: List<Pair<Int, Int>>): Boolean {
+        return transaction {
+            exercises.forEach { (id, _) ->
+                Exercises.update({ Exercises.id eq id }) {
+                    it[orderExercise] = -id
+                }
+            }
+            exercises.forEach { (id, newOrder) ->
+                Exercises.update({ Exercises.id eq id }) {
+                    it[orderExercise] = newOrder
+                }
+            }
+            true
         }
     }
 
@@ -95,6 +118,7 @@ class ExerciseRepository {
                 )
             }
     }
+
     fun getAllExerciseCompleted(): List<ExerciseCompletedDto> = transaction {
         ExerciseCompleted.selectAll()
             .map { row ->
@@ -106,6 +130,7 @@ class ExerciseRepository {
                 )
             }
     }
+
     fun getExercisesCompletedByUser(userId: Int): List<ExerciseCompletedDto> = transaction {
         ExerciseCompleted.selectAll().where { ExerciseCompleted.userId eq userId }
             .map { row ->
@@ -136,9 +161,11 @@ class ExerciseRepository {
     } catch (e: Exception) {
         throw BadRequestException("Error al crear el registro de ejercicio completado: ${e.message}")
     }
+
     fun updateExerciseCompleted(id: Int, dto: UpdateExerciseCompletedDto) {
         transaction {
-            getExerciseCompletedById(id) ?: throw BadRequestException("El registro de ejercicio completado con ID $id no existe.")
+            getExerciseCompletedById(id)
+                ?: throw BadRequestException("El registro de ejercicio completado con ID $id no existe.")
 
             ExerciseCompleted.update({ ExerciseCompleted.id eq id }) { update ->
                 dto.userId?.let { update[userId] = it }
@@ -147,8 +174,10 @@ class ExerciseRepository {
             }
         }
     }
+
     fun deleteExerciseCompleted(id: Int): Boolean = transaction {
-        getExerciseCompletedById(id) ?: throw BadRequestException("El registro de ejercicio completado con ID $id no existe.")
+        getExerciseCompletedById(id)
+            ?: throw BadRequestException("El registro de ejercicio completado con ID $id no existe.")
         ExerciseCompleted.deleteWhere { ExerciseCompleted.id eq id } > 0
     }
 

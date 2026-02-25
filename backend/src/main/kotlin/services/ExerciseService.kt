@@ -24,6 +24,7 @@ class ExerciseService(private val repo: ExerciseRepository) {
     fun updateExerciseCompleted(id: Int, dto: UpdateExerciseCompletedDto) {
         repo.updateExerciseCompleted(id, dto)
     }
+    fun reorderExercises(orders: List<Pair<Int, Int>>) = repo.reorderExercises(orders)
     fun deleteExerciseCompleted(id: Int) {
         repo.deleteExerciseCompleted(id)
     }

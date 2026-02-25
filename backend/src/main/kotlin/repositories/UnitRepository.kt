@@ -57,8 +57,8 @@ class UnitRepository {
 
     fun createUnit(dto: CreateUnitDto): UnitDto = try {
         transaction {
-            var order= 0
-            if(dto.orderUnit == null) {
+            var order = 0
+            if (dto.orderUnit == null) {
                 val total = (Units.selectAll().count() + 1)
                 order = total.toInt()
             }
@@ -66,7 +66,7 @@ class UnitRepository {
                 it[difficulty] = dto.difficulty
                 it[name] = dto.name
                 it[description] = dto.description
-                it[orderUnit] = dto.orderUnit?: order
+                it[orderUnit] = dto.orderUnit ?: order
                 it[isActive] = dto.isActive ?: false
             }[Units.id]
 
@@ -75,7 +75,7 @@ class UnitRepository {
                 difficulty = dto.difficulty,
                 name = dto.name,
                 description = dto.description,
-                orderUnit = dto.orderUnit?: order,
+                orderUnit = dto.orderUnit ?: order,
                 isActive = dto.isActive ?: false,
                 createdAt = LocalDateTime.now().toString()
             )
@@ -97,6 +97,29 @@ class UnitRepository {
             }
         }
     }
+
+    fun reorderUnits(idOrder: List<Pair<Int, Int>>): Boolean = transaction {
+        try {
+            idOrder.forEach { (id, _) ->
+                Units.update({ Units.id eq id }) {
+                    it[orderUnit] = -id
+                }
+            }
+
+
+            idOrder.forEach { (id, order) ->
+                Units.update({ Units.id eq id }) {
+                    it[orderUnit] = order
+                }
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            rollback() // Revertir cambios si algo falla
+            throw BadRequestException("Error al reordenar las unidades: ${e.message}")
+        }
+    }
+
 
     fun deleteUnit(id: Int): Boolean = transaction {
         getUnitById(id) ?: throw BadRequestException("La unidad con ID $id no existe.")
@@ -121,6 +144,11 @@ class UnitRepository {
     } catch (e: Exception) {
         throw BadRequestException("Error al crear la unidad completada: ${e.message}")
     }
+
+    fun getUnitsCompletedByUser(userId: Int): List<UnitCompletedDto> = transaction {
+        UnitsCompleted.selectAll().map(::resultRowToUnitCompleted)
+    }
+
     fun editUnitsCompleted(id: Int, dto: UpdateUnitCompletedDto) {
         transaction {
             getUnitsCompletedByUser(id)
@@ -132,18 +160,20 @@ class UnitRepository {
             }
         }
     }
-    fun getUnitsCompletedByUser(userId: Int): List<UnitCompletedDto> = transaction {
-        UnitsCompleted.selectAll().map (::resultRowToUnitCompleted)
-    }
+
+
     fun getUnitsCompletedById(id: Int): UnitCompletedDto? = transaction {
-        UnitsCompleted.selectAll().where { UnitsCompleted.id eq id }.singleOrNull()?.let(::resultRowToUnitCompleted)
+        UnitsCompleted.selectAll().where { UnitsCompleted.id eq id }.singleOrNull()
+            ?.let(::resultRowToUnitCompleted)
     }
+
     fun getAllUnitsCompleted(): List<UnitCompletedDto> = transaction {
         UnitsCompleted.selectAll().map(::resultRowToUnitCompleted)
     }
+
     fun deleteUnitsCompleted(id: Int): Boolean = transaction {
-        getUnitsCompletedById(id) ?: throw BadRequestException("La unidad completada con ID $id no existe.")
+        getUnitsCompletedById(id)
+            ?: throw BadRequestException("La unidad completada con ID $id no existe.")
         UnitsCompleted.deleteWhere { UnitsCompleted.id eq id } > 0
     }
-
 }

@@ -94,7 +94,8 @@ fun AppLayout(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        (if (userName.isNotBlank()  ){ "¡Bienvenido $userName!" }else actualScreen)?.let {
+                        // Cambio de lógica: Si hay actualScreen úsalo, si no, usa el mensaje de bienvenida
+                        (actualScreen ?: if (userName.isNotBlank()) "¡Bienvenido $userName!" else null)?.let {
                             Text(
                                 text = it,
                                 style = MaterialTheme.typography.titleLarge,

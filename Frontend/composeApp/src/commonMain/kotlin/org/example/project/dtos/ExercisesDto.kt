@@ -8,6 +8,7 @@ data class ExerciseDto(
     val unitId: Int,
     val name: String,
     val description: String? = null,
+    val orderExercise: Int,
     val isActive: Boolean = false,
     val createdAt: String
 )
@@ -17,6 +18,7 @@ data class CreateExerciseDto(
     val unitId: Int,
     val name: String,
     val description: String? = null,
+    val orderExercise: Int? = null,
     val isActive: Boolean? = false,
 )
 
@@ -25,6 +27,7 @@ data class UpdateExerciseDto(
     val unitId: Int? = null,
     val name: String? = null,
     val description: String? = null,
+    val orderExercise: Int? = null,
     val isActive: Boolean? = null
 )
 

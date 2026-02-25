@@ -32,6 +32,12 @@ class UnitRepo(private val httpClient: HttpClient, private val baseUrl: String) 
             setBody(unit)
         }.body()
 
+    suspend fun reorderUnits(orders: List<Pair<Int, Int>>): Boolean =
+        httpClient.put("$baseUrl/api/v1/units/reorder") {
+            contentType(io.ktor.http.ContentType.Application.Json)
+            setBody(orders)
+        }.body()
+
     suspend fun deleteUnit(id: Int): Boolean =
         httpClient.delete("$baseUrl/api/v1/units/$id").body()
 }

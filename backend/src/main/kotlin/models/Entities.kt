@@ -1,4 +1,5 @@
 package models
+import models.Units.uniqueIndex
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 import org.jetbrains.exposed.v1.javatime.datetime
 import java.time.LocalDateTime
@@ -48,6 +49,7 @@ object Exercises : IntIdTable() {
     val unitId = integer("unit_Id").references(Units.id)
     val name = varchar("name", 100)
     val description = text("description").nullable()
+    val orderExercise = integer("orderExersice").uniqueIndex()
     val isActive = bool("is_active").default(false)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }

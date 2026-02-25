@@ -29,6 +29,10 @@ class UnitService(private val unitRepository: UnitRepository) {
     fun updateUnit(id: Int, dto: UpdateUnitDto) {
         return unitRepository.updateUnit(id, dto)
     }
+    fun reorderUnits(units: List<Pair<Int, Int>>): Boolean{
+        return unitRepository.reorderUnits(units)
+    }
+
     fun deleteUnit(id: Int): Boolean {
         return unitRepository.deleteUnit(id)
     }

@@ -35,6 +35,13 @@ class ExerciseRepo(private val httpClient: HttpClient, private val baseUrl: Stri
             setBody(exercise)
         }.body()
 
+    suspend fun reorderExercises(orders: List<Pair<Int, Int>>): Boolean =
+        httpClient.put("$baseUrl/api/v1/exercises/reorder") {
+            contentType(io.ktor.http.ContentType.Application.Json)
+            setBody(orders)
+        }.body()
+
+
     suspend fun deleteExercise(id: Int): Boolean =
         httpClient.delete("$baseUrl/api/v1/exercises/$id").body()
 }
