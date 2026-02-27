@@ -1,4 +1,5 @@
 package org.example.project.screens.admindScreens
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -65,6 +66,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.core.screen.ScreenKey
+import cafe.adriel.voyager.core.screen.uniqueScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.Navigator
@@ -82,6 +85,7 @@ import org.example.project.viewModel.UnitViewModel
 import org.jetbrains.compose.resources.Font
 
 class ExercisesOrUnitScreen(private val unitId: Int? = null) : Screen {
+    override val key: ScreenKey = uniqueScreenKey
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -104,6 +108,7 @@ class ExercisesOrUnitScreen(private val unitId: Int? = null) : Screen {
                 unitVm.getUnitById(unitId)
                 exerciseVm.getExercisesByUnitId(unitId)
             } else {
+                unitVm.actualNull()
                 unitVm.getAllUnits()
                 exerciseVm.getAllExercises()
             }
@@ -223,7 +228,7 @@ fun ExercisesSection(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
 
-                    ) {
+                        ) {
                         if (!isEditingExercise) {
                             Column {
                                 Row {
@@ -247,7 +252,10 @@ fun ExercisesSection(
                                             singleLine = true,
                                             modifier = Modifier
                                                 .wrapContentWidth()
-                                                .background(Color.Transparent, shape = RoundedCornerShape(4.dp))
+                                                .background(
+                                                    Color.Transparent,
+                                                    shape = RoundedCornerShape(4.dp)
+                                                )
                                         )
                                     }
                                     // Badge de estado
@@ -257,14 +265,24 @@ fun ExercisesSection(
                                         onExpandedChange = { editStatus = !editStatus }
                                     ) {
                                         // Definir colores basados en el estado actual
-                                        val badgeColor = if (actualUnit.isActive) Color(0xFFB8F4C4) else Color(0xFFFFD4D4)
-                                        val textColor = if (actualUnit.isActive) Color(0xFF2D5E3D) else Color(0xFF8B0000)
-                                        val textState = if (actualUnit.isActive) "Activo" else "Inactivo"
+                                        val badgeColor =
+                                            if (actualUnit.isActive) Color(0xFFB8F4C4) else Color(
+                                                0xFFFFD4D4
+                                            )
+                                        val textColor =
+                                            if (actualUnit.isActive) Color(0xFF2D5E3D) else Color(
+                                                0xFF8B0000
+                                            )
+                                        val textState =
+                                            if (actualUnit.isActive) "Activo" else "Inactivo"
 
                                         // Usamos Surface para darle forma de Chip/Badge
                                         Surface(
                                             modifier = Modifier
-                                                .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true) // Importante: Ancla el menú
+                                                .menuAnchor(
+                                                    MenuAnchorType.PrimaryNotEditable,
+                                                    enabled = true
+                                                ) // Importante: Ancla el menú
                                                 .height(28.dp), // Altura pequeña tipo badge
                                             shape = RoundedCornerShape(16.dp),
                                             color = badgeColor,
@@ -298,7 +316,12 @@ fun ExercisesSection(
                                             onDismissRequest = { editStatus = false }
                                         ) {
                                             DropdownMenuItem(
-                                                text = { Text("Activo", color = Color(0xFF2D5E3D)) },
+                                                text = {
+                                                    Text(
+                                                        "Activo",
+                                                        color = Color(0xFF2D5E3D)
+                                                    )
+                                                },
                                                 onClick = {
                                                     // Lógica para poner en activo
                                                     // onUpdateStatus(true)
@@ -306,7 +329,12 @@ fun ExercisesSection(
                                                 }
                                             )
                                             DropdownMenuItem(
-                                                text = { Text("Inactivo", color = Color(0xFF8B0000)) },
+                                                text = {
+                                                    Text(
+                                                        "Inactivo",
+                                                        color = Color(0xFF8B0000)
+                                                    )
+                                                },
                                                 onClick = {
                                                     // Lógica para poner en inactivo
                                                     // onUpdateStatus(false)
@@ -355,325 +383,325 @@ fun ExercisesSection(
                     }
 
                 }
-
-                // Barra de búsqueda y filtro (Visible si no reordenamos)
-                if (!isReordering) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = onSearchQueryChange,
-                            modifier = Modifier.weight(1f),
-                            placeholder = { Text("Buscar ejercicios...", fontSize = 14.sp) },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Search,
-                                    contentDescription = "Buscar",
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            },
-                            singleLine = true,
-                            shape = MaterialTheme.shapes.small,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFFE0E0E0),
-                                unfocusedBorderColor = Color(0xFFE0E0E0)
-                            )
-                        )
-
-                        IconButton(
-                            onClick = { /* Abrir filtros */ },
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(Color.White, shape = MaterialTheme.shapes.small)
-                        ) {
-                            Icon(
-                                Icons.Default.FilterList,
-                                contentDescription = "Filtros",
-                                tint = Color(0xFF4A4A4A)
-                            )
-                        }
-                    }
-                } else {
-                    Text(
-                        "Modo Ordenamiento: Usa las flechas para mover",
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF003AB6),
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                }
-
-                // Botón de agregar nuevo ejercicio y ordenar
+            }
+            // Barra de búsqueda y filtro (Visible si no reordenamos)
+            if (!isReordering) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (!isReordering) {
-                        Button(
-                            onClick = {
-                                if (unitsList.isEmpty()) {
-                                    onError(Error("Debe existir al menos una unidad para crear ejercicios"))
-                                } else {
-                                    isAddingExercise = !isAddingExercise
-                                }
-                            },
-                            modifier = Modifier.weight(1f).padding(end = 8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = butonAddColor
-                            ),
-                            shape = MaterialTheme.shapes.small
-                        ) {
-
-                            Text(
-                                textAdd,
-                                color = Color(0xFF2D5E3D),
-                                fontWeight = FontWeight.Medium
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = onSearchQueryChange,
+                        modifier = Modifier.weight(1f),
+                        placeholder = { Text("Buscar ejercicios...", fontSize = 14.sp) },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = "Buscar",
+                                modifier = Modifier.size(20.dp)
                             )
-                        }
+                        },
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.small,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFFE0E0E0),
+                            unfocusedBorderColor = Color(0xFFE0E0E0)
+                        )
+                    )
 
-
-                    } else {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
-
-                    if (!showUnitHeader) {
-                        OutlinedButton(
-                            onClick = {
-
-                                if (isReordering) {
-                                    isAddingExercise = false
-                                    val updates = reorderableList.mapIndexed { index, exItem ->
-                                        // Asumimos que id es válido, y index+1 es el nuevo orden
-                                        Pair(exItem.id, index + 1)
-                                    }
-                                    onReorder(updates)
-                                    println("Reordenando unidades con el siguiente orden: $updates")
-                                    isReordering = false
-                                } else {
-                                    isReordering = true
-                                    // Al iniciar reordenamiento, aseguramos usar toda la lista
-                                    reorderableList = exercises.sortedBy { it.orderExercise }
-                                }
-                            },
-                            shape = MaterialTheme.shapes.small,
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = if (isReordering) Color(0xFF003AB6) else Color.Transparent,
-                                contentColor = if (isReordering) Color.White else Color(0xFF4A4A4A)
-                            )
-                        ) {
-                            if (isReordering) {
-                                Icon(
-                                    Icons.Default.Save,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Guardar Orden")
-                            } else {
-                                Text("Orden")
-                            }
-                        }
-                    }
-                }
-
-                // Formulario desplegable para agregar ejercicio
-                AnimatedVisibility(
-                    visible = isAddingExercise,
-                    enter = expandVertically(),
-                    exit = shrinkVertically()
-                ) {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    IconButton(
+                        onClick = { /* Abrir filtros */ },
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(Color.White, shape = MaterialTheme.shapes.small)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Text("Nuevo Ejercicio", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-
-                            OutlinedTextField(
-                                value = newExerciseName,
-                                onValueChange = { newExerciseName = it },
-                                label = { Text("Nombre del ejercicio*") },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true,
-                                isError = newExerciseName.isBlank()
-                            )
-
-                            OutlinedTextField(
-                                value = newExerciseDescription,
-                                onValueChange = { newExerciseDescription = it },
-                                label = { Text("Descripción") },
-                                modifier = Modifier.fillMaxWidth(),
-                                isError = newExerciseDescription.isBlank()
-                            )
-                            if (actualUnit != null && selectedUnit == null) {
-                                selectedUnit = actualUnit
-                            }
-                            ExposedDropdownMenuBox(
-                                expanded = unitMenu,
-                                onExpandedChange = { unitMenu = !unitMenu }
-                            ) {
-
-                                OutlinedTextField(
-                                    value = selectedUnit?.name ?: "Selecciona una unidad",
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    label = { Text("Unidad asociada") },
-                                    trailingIcon = {
-                                        ExposedDropdownMenuDefaults.TrailingIcon(
-                                            expanded = unitMenu
-                                        )
-                                    },
-                                    modifier = Modifier
-                                        .menuAnchor(
-                                            MenuAnchorType.PrimaryNotEditable,
-                                            enabled = true
-                                        )
-                                        .fillMaxWidth(),
-                                    isError = selectedUnit == null
-                                )
-
-                                ExposedDropdownMenu(
-                                    expanded = unitMenu,
-                                    onDismissRequest = { unitMenu = false }
-                                ) {
-                                    unitsList.forEach { unitOp ->
-                                        DropdownMenuItem(
-                                            text = { Text(unitOp.name) },
-                                            onClick = {
-                                                selectedUnit = unitOp
-                                                unitMenu = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Button(
-                                    onClick = { isAddingExercise = false },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFFFFD4D4)
-                                    )
-                                ) {
-                                    Text("Cancelar", color = Color(0xFF8B0000))
-                                }
-                                Button(
-                                    onClick = {
-                                        if (newExerciseName.isBlank() || newExerciseDescription.isBlank()) {
-                                            onError(Error("Campos: Nombre, descripción y unidad son obligatorios"))
-                                            return@Button
-                                        }
-                                        if (selectedUnit == null) {
-                                            onError(Error("No hay unidad seleccionada"))
-                                            return@Button
-                                        }
-
-                                        selectedUnit?.id?.let { id ->
-                                            onAdd(
-                                                CreateExerciseDto(
-                                                    name = newExerciseName,
-                                                    description = newExerciseDescription,
-                                                    unitId = id,
-                                                )
-                                            )
-                                        } ?: onError(Error("Unidad seleccionada no es válida"))
-
-                                        // Reset fields
-                                        newExerciseName = ""
-                                        newExerciseDescription = ""
-                                        selectedUnit = null
-                                        isAddingExercise = false
-                                    },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(
-                                            0xFFB8F4C4
-                                        )
-                                    )
-                                ) {
-                                    Text("Guardar Ejercicio", color = Color(0xFF2D5E3D))
-                                }
-                            }
-                        }
+                        Icon(
+                            Icons.Default.FilterList,
+                            contentDescription = "Filtros",
+                            tint = Color(0xFF4A4A4A)
+                        )
                     }
                 }
+            } else {
+                Text(
+                    "Modo Ordenamiento: Usa las flechas para mover",
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF003AB6),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            // Botón de agregar nuevo ejercicio y ordenar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (!isReordering) {
+                    Button(
+                        onClick = {
+                            if (unitsList.isEmpty()) {
+                                onError(Error("Debe existir al menos una unidad para crear ejercicios"))
+                            } else {
+                                isAddingExercise = !isAddingExercise
+                            }
+                        },
+                        modifier = Modifier.weight(1f).padding(end = 8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = butonAddColor
+                        ),
+                        shape = MaterialTheme.shapes.small
+                    ) {
+
+                        Text(
+                            textAdd,
+                            color = Color(0xFF2D5E3D),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
 
 
-                if (exercises.isEmpty() && !isReordering) {
-                    Text("No hay ejercicios", color = Color.Gray)
                 } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.height(500.dp)
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+
+                if (!showUnitHeader) {
+                    OutlinedButton(
+                        onClick = {
+
+                            if (isReordering) {
+                                isAddingExercise = false
+                                val updates = reorderableList.mapIndexed { index, exItem ->
+                                    // Asumimos que id es válido, y index+1 es el nuevo orden
+                                    Pair(exItem.id, index + 1)
+                                }
+                                onReorder(updates)
+                                println("Reordenando unidades con el siguiente orden: $updates")
+                                isReordering = false
+                            } else {
+                                isReordering = true
+                                // Al iniciar reordenamiento, aseguramos usar toda la lista
+                                reorderableList = exercises.sortedBy { it.orderExercise }
+                            }
+                        },
+                        shape = MaterialTheme.shapes.small,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (isReordering) Color(0xFF003AB6) else Color.Transparent,
+                            contentColor = if (isReordering) Color.White else Color(0xFF4A4A4A)
+                        )
                     ) {
                         if (isReordering) {
-                            itemsIndexed(reorderableList) { index, exItem ->
-                                val isFirst = index == 0
-                                val isLast = index == reorderableList.lastIndex
-
-                                ReorderableUnitCard( // Reutilizamos el card de reordenar unidades
-                                    name = exItem.name,
-                                    index = index + 1,
-                                    isFirst = isFirst,
-                                    isLast = isLast,
-                                    onMoveUp = {
-                                        if (!isFirst) {
-                                            val mutable = reorderableList.toMutableList()
-                                            val current = mutable[index]
-                                            val previous = mutable[index - 1]
-                                            mutable[index] = previous
-                                            mutable[index - 1] = current
-                                            reorderableList = mutable
-                                        }
-                                    },
-                                    onMoveDown = {
-                                        if (!isLast) {
-                                            val mutable = reorderableList.toMutableList()
-                                            val current = mutable[index]
-                                            val next = mutable[index + 1]
-                                            mutable[index] = next
-                                            mutable[index + 1] = current
-                                            reorderableList = mutable
-                                        }
-                                    }
-                                )
-                            }
+                            Icon(
+                                Icons.Default.Save,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Guardar Orden")
                         } else {
-                            val filteredList =
-                                if (searchQuery.isBlank()) exercises else exercises.filter {
-                                    it.name.contains(
-                                        searchQuery,
-                                        ignoreCase = true
-                                    )
-                                }
-
-
-                            itemsIndexed(filteredList) { _, ex ->
-                                ExerciseCard(
-                                    exercises = ex,
-                                    onExerciseClick = {
-                                        navigator.push(
-                                            ExercisesDetailsScreen(
-                                                ex.id,
-                                                ex.unitId
-                                            )
-                                        )
-                                    },
-                                )
-                            }
-
+                            Text("Orden")
                         }
                     }
                 }
             }
+
+            // Formulario desplegable para agregar ejercicio
+            AnimatedVisibility(
+                visible = isAddingExercise,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text("Nuevo Ejercicio", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+
+                        OutlinedTextField(
+                            value = newExerciseName,
+                            onValueChange = { newExerciseName = it },
+                            label = { Text("Nombre del ejercicio*") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            isError = newExerciseName.isBlank()
+                        )
+
+                        OutlinedTextField(
+                            value = newExerciseDescription,
+                            onValueChange = { newExerciseDescription = it },
+                            label = { Text("Descripción") },
+                            modifier = Modifier.fillMaxWidth(),
+                            isError = newExerciseDescription.isBlank()
+                        )
+                        if (actualUnit != null && selectedUnit == null) {
+                            selectedUnit = actualUnit
+                        }
+                        ExposedDropdownMenuBox(
+                            expanded = unitMenu,
+                            onExpandedChange = { unitMenu = !unitMenu }
+                        ) {
+
+                            OutlinedTextField(
+                                value = selectedUnit?.name ?: "Selecciona una unidad",
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Unidad asociada") },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(
+                                        expanded = unitMenu
+                                    )
+                                },
+                                modifier = Modifier
+                                    .menuAnchor(
+                                        MenuAnchorType.PrimaryNotEditable,
+                                        enabled = true
+                                    )
+                                    .fillMaxWidth(),
+                                isError = selectedUnit == null
+                            )
+
+                            ExposedDropdownMenu(
+                                expanded = unitMenu,
+                                onDismissRequest = { unitMenu = false }
+                            ) {
+                                unitsList.forEach { unitOp ->
+                                    DropdownMenuItem(
+                                        text = { Text(unitOp.name) },
+                                        onClick = {
+                                            selectedUnit = unitOp
+                                            unitMenu = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Button(
+                                onClick = { isAddingExercise = false },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFFFD4D4)
+                                )
+                            ) {
+                                Text("Cancelar", color = Color(0xFF8B0000))
+                            }
+                            Button(
+                                onClick = {
+                                    if (newExerciseName.isBlank() || newExerciseDescription.isBlank()) {
+                                        onError(Error("Campos: Nombre, descripción y unidad son obligatorios"))
+                                        return@Button
+                                    }
+                                    if (selectedUnit == null) {
+                                        onError(Error("No hay unidad seleccionada"))
+                                        return@Button
+                                    }
+
+                                    selectedUnit?.id?.let { id ->
+                                        onAdd(
+                                            CreateExerciseDto(
+                                                name = newExerciseName,
+                                                description = newExerciseDescription,
+                                                unitId = id,
+                                            )
+                                        )
+                                    } ?: onError(Error("Unidad seleccionada no es válida"))
+
+                                    // Reset fields
+                                    newExerciseName = ""
+                                    newExerciseDescription = ""
+                                    selectedUnit = null
+                                    isAddingExercise = false
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(
+                                        0xFFB8F4C4
+                                    )
+                                )
+                            ) {
+                                Text("Guardar Ejercicio", color = Color(0xFF2D5E3D))
+                            }
+                        }
+                    }
+                }
+            }
+
+
+            if (exercises.isEmpty() && !isReordering) {
+                Text("No hay ejercicios", color = Color.Gray)
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.height(500.dp)
+                ) {
+                    if (isReordering) {
+                        itemsIndexed(reorderableList) { index, exItem ->
+                            val isFirst = index == 0
+                            val isLast = index == reorderableList.lastIndex
+
+                            ReorderableUnitCard( // Reutilizamos el card de reordenar unidades
+                                name = exItem.name,
+                                index = index + 1,
+                                isFirst = isFirst,
+                                isLast = isLast,
+                                onMoveUp = {
+                                    if (!isFirst) {
+                                        val mutable = reorderableList.toMutableList()
+                                        val current = mutable[index]
+                                        val previous = mutable[index - 1]
+                                        mutable[index] = previous
+                                        mutable[index - 1] = current
+                                        reorderableList = mutable
+                                    }
+                                },
+                                onMoveDown = {
+                                    if (!isLast) {
+                                        val mutable = reorderableList.toMutableList()
+                                        val current = mutable[index]
+                                        val next = mutable[index + 1]
+                                        mutable[index] = next
+                                        mutable[index + 1] = current
+                                        reorderableList = mutable
+                                    }
+                                }
+                            )
+                        }
+                    } else {
+                        val filteredList =
+                            if (searchQuery.isBlank()) exercises else exercises.filter {
+                                it.name.contains(
+                                    searchQuery,
+                                    ignoreCase = true
+                                )
+                            }
+
+
+                        itemsIndexed(filteredList) { _, ex ->
+                            ExerciseCard(
+                                exercises = ex,
+                                onExerciseClick = {
+                                    navigator.push(
+                                        ExercisesDetailsScreen(
+                                            ex.id,
+                                            ex.unitId
+                                        )
+                                    )
+                                },
+                            )
+                        }
+
+                    }
+                }
+            }
+
         }
     }
 }
@@ -689,7 +717,7 @@ fun ExerciseCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable { onExerciseClick() }
             .shadow(1.dp, shape = RoundedCornerShape(12.dp)),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
