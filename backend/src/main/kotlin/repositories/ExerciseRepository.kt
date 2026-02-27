@@ -6,7 +6,6 @@ import com.example.dtos.ExerciseCompletedDto
 import com.example.dtos.ExerciseDto
 import com.example.dtos.UpdateExerciseCompletedDto
 import com.example.dtos.UpdateExerciseDto
-import com.example.dtos.UpdateUnitCompletedDto
 import io.ktor.server.plugins.BadRequestException
 import models.ExerciseCompleted
 import models.Exercises
@@ -35,7 +34,7 @@ class ExerciseRepository {
     }
 
     fun getAll(): List<ExerciseDto> = transaction {
-        Exercises.selectAll().orderBy(Exercises.createdAt).map(::resultRowToExercise)
+        Exercises.selectAll().orderBy(Exercises.orderExercise).map(::resultRowToExercise)
     }
 
     fun getById(id: Int): ExerciseDto? = transaction {
@@ -51,13 +50,15 @@ class ExerciseRepository {
     fun create(dto: CreateExerciseDto): ExerciseDto = try {
         transaction {
 
-            val total = Exercises.selectAll().where { Exercises.unitId eq dto.unitId }.count()
+            val total = Exercises.selectAll().count()
 
             val newId = Exercises.insert {
                 it[unitId] = dto.unitId
                 it[name] = dto.name
                 it[description] = dto.description
+                it[orderExercise] = dto.orderExercise ?: (total.toInt() + 1)
                 it[isActive] = dto.isActive ?: false
+                it[createdAt] = LocalDateTime.now()
             }[Exercises.id]
 
             ExerciseDto(
@@ -86,20 +87,25 @@ class ExerciseRepository {
         }
     }
 
-    fun reorderExercises(exercises: List<Pair<Int, Int>>): Boolean {
-        return transaction {
-            exercises.forEach { (id, _) ->
+    fun reorderExercises(newOrders: List<Pair<Int, Int>>): Boolean = transaction {
+        try {
+            newOrders.forEach { (id, _) ->
                 Exercises.update({ Exercises.id eq id }) {
                     it[orderExercise] = -id
                 }
             }
-            exercises.forEach { (id, newOrder) ->
+            newOrders.forEach { (id, order) ->
                 Exercises.update({ Exercises.id eq id }) {
-                    it[orderExercise] = newOrder
+                    it[orderExercise] = order
                 }
             }
             true
+        }catch (e: Exception) {
+            e.printStackTrace()
+            rollback() // Revertir cambios si algo falla
+            throw BadRequestException("Error al reordenar los ejercicios: ${e.message}")
         }
+
     }
 
     fun delete(id: Int): Boolean = transaction {

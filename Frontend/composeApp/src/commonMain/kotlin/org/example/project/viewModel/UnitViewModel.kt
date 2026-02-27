@@ -42,12 +42,12 @@ class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : V
         _state.value = _state.value.copy(error = message)
     }
 
-    private fun getAllUnits() {
+    fun getAllUnits() {
         launchCatching(
             block = { unitRepo.getAllUnits() },
-            onSuccess = { unit ->
+            onSuccess = { units ->
 
-                _state.value = _state.value.copy(units = unit)
+                _state.value = _state.value.copy(units = units)
             },
             onError = { error ->
                 _state.value = _state.value.copy(error = error.message, units = emptyList())
@@ -75,7 +75,9 @@ class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : V
         }
     }
 
-
+    fun actualNull() {
+        _state.value = _state.value.copy(actualUnit = null)
+    }
     fun getUnitById(id: Int) {
         launchCatching(
             block = { unitRepo.getUnitById(id) },

@@ -16,7 +16,7 @@ import org.example.project.dtos.UnitDto
 import org.example.project.repository.ExerciseRepo
 
 data class ExercisesUiState(
-    val actualUnit: UnitDto,
+    val actualUnit: UnitDto? = null,
     val selectedExercise: ExerciseDto? = null,
     val exercise: List<ExerciseDto> = emptyList(),
     var error: String? = null,
@@ -26,8 +26,7 @@ data class ExercisesUiState(
 class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int? = null, private val exerciseId:Int? = null ) : ViewModel(), ScreenModel {
     private val _state = MutableStateFlow(
         ExercisesUiState(
-            actualUnit = UnitDto(0,DifficultyLevel.A1,"","",0,false,"",),
-            exercise = emptyList(),
+            isLoading = true
         )
     )
     val state: StateFlow<ExercisesUiState> = _state
@@ -36,6 +35,8 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
 
     fun updateMessage(message: String?) {
         generalMessage = message
+            _state.value = _state.value.copy(error = message)
+        println("Mensaje actualizado: $message")
     }
 
     init {
@@ -91,7 +92,6 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
         launchCatching(
             block = { repo.createExercise(dto) },
             onSuccess = { newExercise ->
-                // Actualizar lista local agregando el nuevo
                 val currentList = _state.value.exercise
                 _state.value = _state.value.copy(exercise = currentList + newExercise)
             },

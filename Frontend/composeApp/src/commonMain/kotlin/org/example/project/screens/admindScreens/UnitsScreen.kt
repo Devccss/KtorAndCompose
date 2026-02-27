@@ -323,7 +323,7 @@ fun UnitsSection(
                         onExpandedChange = { difficultyMenu = !difficultyMenu }
                     ) {
                         OutlinedTextField(
-                            value = selectedDifficulty?.name ?: "Selecciona una dificultad",
+                            value = selectedDifficulty.name ,
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Dificultad") },
@@ -359,44 +359,53 @@ fun UnitsSection(
                             )
                         }
                     }
-
-                    Button(
-                        onClick = {
-                            if (newUnitName.isBlank() || newUnitDescription.isBlank()) {
-                                onError(Error("El nombre y la descripción son obligatorios"))
-                                return@Button
-                            }
-
-                            if (selectedDifficulty == null) {
-                                onError(Error("Debes seleccionar una dificultad"))
-                                return@Button
-                            }
-
-                            // Ya se validó arriba que no sean nulos
-                            onCreateUnit(
-                                CreateUnitDto(
-                                    name = newUnitName,
-                                    description = newUnitDescription,
-                                    orderUnit = newUnitOrder.toIntOrNull(),
-                                    isActive = false,
-                                    difficulty = selectedDifficulty,
-                                    createdAt = null
-                                )
+                    Row( modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Button(
+                            onClick = {isAddingUnit = false },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFFFD4D4)
                             )
+                        ) {
+                            Text("Cancelar", color = Color(0xFF8B0000))
+                        }
 
-                            // Limpiar campos y cerrar formulario
-                            newUnitName = ""
-                            newUnitDescription = ""
-                            newUnitOrder = ""
-                            selectedDifficulty = DifficultyLevel.A1
-                            isAddingUnit = false
-                        },
-                        modifier = Modifier.align(Alignment.End),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFB8F4C4)
-                        )
-                    ) {
-                        Text("Guardar Unidad", color = Color(0xFF2D5E3D))
+                        Button(
+                            onClick = {
+                                if (newUnitName.isBlank() || newUnitDescription.isBlank()) {
+                                    onError(Error("El nombre y la descripción son obligatorios"))
+                                    return@Button
+                                }
+
+                                if (selectedDifficulty == null) {
+                                    onError(Error("Debes seleccionar una dificultad"))
+                                    return@Button
+                                }
+
+                                // Ya se validó arriba que no sean nulos
+                                onCreateUnit(
+                                    CreateUnitDto(
+                                        name = newUnitName,
+                                        description = newUnitDescription,
+                                        orderUnit = newUnitOrder.toIntOrNull(),
+                                        isActive = false,
+                                        difficulty = selectedDifficulty,
+                                        createdAt = null
+                                    )
+                                )
+
+                                // Limpiar campos y cerrar formulario
+                                newUnitName = ""
+                                newUnitDescription = ""
+                                newUnitOrder = ""
+                                selectedDifficulty = DifficultyLevel.A1
+                                isAddingUnit = false
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFB8F4C4)
+                            )
+                        ) {
+                            Text("Guardar Unidad", color = Color(0xFF2D5E3D))
+                        }
                     }
                 }
             }
@@ -409,6 +418,7 @@ fun UnitsSection(
             modifier = Modifier.weight(1f) // Ocupa el espacio restante
         ) {
             if (isReordering) {
+                isAddingUnit = false
                 // MODO REORDENAR: Usamos la lista local mutable (reorderableList)
                 itemsIndexed(reorderableList) { index, unitDto ->
                     val isFirst = index == 0
