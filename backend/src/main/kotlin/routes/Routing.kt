@@ -331,9 +331,10 @@ fun Application.configureRouting() {
                     val alternatives = questionService.getAlternativeByQuestionId(questionId)
                     call.respond(alternatives)
                 }
-                post {
+                post("{exerciseId}") {
+                    val exerciseId = call.parameters["exerciseId"]?.toIntOrNull() ?: throw BadRequestException("Invalid Exercise ID")
                     val dto = call.receive<CreateQuestionDto>()
-                    val created = questionService.createQuestion(dto)
+                    val created = questionService.createQuestion(exerciseId,dto)
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
@@ -354,9 +355,10 @@ fun Application.configureRouting() {
                     val alternatives = questionService.getAlternativeByQuestionId(questionId)
                     call.respond(alternatives)
                 }
-                post {
+                post ("{id}"){
+                    val questionId = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid Question ID")
                     val dto = call.receive<CreateAlternativeDto>()
-                    val created = questionService.createAlternative(dto)
+                    val created = questionService.createAlternative(questionId,dto)
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {

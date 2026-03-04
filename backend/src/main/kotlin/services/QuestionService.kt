@@ -18,13 +18,13 @@ class QuestionService(private val repo: QuestionRepository) {
     fun getQuestionsByExerciseId(exerciseId: Int): List<QuestionDto> = repo.getQuestionsByExerciseId(exerciseId)
     fun getQuestionById(id: Int): QuestionDto? = repo.getQuestionById(id)
 
-    fun createQuestion(dto: CreateQuestionDto): QuestionDto = repo.createQuestion(dto)
+    fun createQuestion(exerciseId: Int,dto: CreateQuestionDto): QuestionDto = repo.createQuestion(exerciseId,dto)
     fun updateQuestion(id: Int, dto: UpdateQuestionDto) = repo.updateQuestion(id, dto)
     fun deleteQuestion(id: Int): Boolean = repo.deleteQuestion(id)
 
     //Alternatives
     fun getAlternativeByQuestionId(questionId: Int): List<AlternativeDto> = repo.getAlternativesByQuestionId(questionId)
-    fun createAlternative(dto: CreateAlternativeDto): AlternativeDto = repo.createAlternative(dto)
+    fun createAlternative(questionId: Int,dto: CreateAlternativeDto): AlternativeDto = repo.createAlternative(questionId,dto)
     fun updateAlternative(id: Int, dto: UpdateAlternativeDto) = repo.updateAlternative(id, dto)
     fun deleteAlternative(id: Int): Boolean = repo.deleteAlternative(id)
 

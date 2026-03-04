@@ -31,7 +31,7 @@ data class UpdateUnitDto(
     val name: String? = null,
     val description: String? = null,
     val orderUnit: Int? = null,
-    val isActive: Boolean? = null
+    var isActive: Boolean? = null
 )
 @Serializable
 data class CreateUnitCompletedDto(

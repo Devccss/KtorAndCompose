@@ -26,8 +26,8 @@ class QuestionsRepo(private val httpClient: HttpClient, private val baseUrl: Str
     suspend fun getQuestionsByExerciseId(exerciseId: Int): List<QuestionDto> =
         httpClient.get("$baseUrl/api/v1/questions/exercise/$exerciseId").body()
 
-     suspend fun createQuestion(question: CreateQuestionDto): QuestionDto =
-        httpClient.post("$baseUrl/api/v1/questions") {
+     suspend fun createQuestion(exerciseId: Int,question: CreateQuestionDto): QuestionDto =
+        httpClient.post("$baseUrl/api/v1/questions/$exerciseId") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(question)
         }.body()
@@ -47,8 +47,8 @@ class QuestionsRepo(private val httpClient: HttpClient, private val baseUrl: Str
     suspend fun getAlternativesByQuestionId(questionId: Int): List<AlternativesDto> =
         httpClient.get("$baseUrl/api/v1/alternatives/question/$questionId").body()
 
-    suspend fun createAlternative(alternative: CreateAlternativeDto): AlternativesDto =
-        httpClient.post("$baseUrl/api/v1/alternatives") {
+    suspend fun createAlternative(questionId: Int ,alternative: CreateAlternativeDto): AlternativesDto =
+        httpClient.post("$baseUrl/api/v1/alternatives/$questionId") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(alternative)
         }.body()

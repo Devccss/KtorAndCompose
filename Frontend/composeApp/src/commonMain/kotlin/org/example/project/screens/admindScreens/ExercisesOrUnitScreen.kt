@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
@@ -19,9 +21,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -78,6 +83,7 @@ import org.example.project.components.AppLayout
 import org.example.project.dtos.CreateExerciseDto
 import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.UnitDto
+import org.example.project.dtos.UpdateUnitDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
 import org.example.project.viewModel.ExercisesViewModel
@@ -86,6 +92,7 @@ import org.jetbrains.compose.resources.Font
 
 class ExercisesOrUnitScreen(private val unitId: Int? = null) : Screen {
     override val key: ScreenKey = uniqueScreenKey
+
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -143,6 +150,9 @@ class ExercisesOrUnitScreen(private val unitId: Int? = null) : Screen {
                     onAdd = { dto ->
                         exerciseVm.createExercise(dto)
                     },
+                    onUnitEdit = { id, dto ->
+                        unitVm.updateUnit(id, dto)
+                    },
                     unitsList = unitUi.units,
                     onReorder = { updates ->
                         exerciseVm.reorderExercises(updates)
@@ -169,6 +179,7 @@ fun ExercisesSection(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     onAdd: (CreateExerciseDto) -> Unit, // Cambiado para recibir DTO
+    onUnitEdit: (Int, UpdateUnitDto) -> Unit, // Nuevo callback para editar ejercicio
     onReorder: (List<Pair<Int, Int>>) -> Unit, // Nuevo callback para reordenar
     onError: (Error) -> Unit,
     isLoading: Boolean = false
@@ -183,6 +194,15 @@ fun ExercisesSection(
     var unitMenu by remember { mutableStateOf(false) }
     var selectedUnit by remember { mutableStateOf<UnitDto?>(null) }
 
+
+    var updateUnit by remember { mutableStateOf<UpdateUnitDto?>(null) }
+    var isEditingUnit by remember { mutableStateOf(false) }
+    var editStatus by remember { mutableStateOf(false) }
+    var nameUnit by remember { mutableStateOf(actualUnit?.name) }
+    var descriptionUnit by remember { mutableStateOf(actualUnit?.description) }
+    var activeUnit by remember { mutableStateOf(actualUnit?.isActive ?: false) }
+
+
     // UI estados para el botón
     var textAdd by remember { mutableStateOf("") }
     var butonAddColor by remember { mutableStateOf(Color(0xFFB8F4C4)) }
@@ -195,6 +215,13 @@ fun ExercisesSection(
     LaunchedEffect(exercises) {
         if (!isReordering) {
             reorderableList = exercises
+        }
+    }
+    LaunchedEffect(actualUnit) {
+        if (actualUnit != null) {
+            nameUnit = actualUnit.name
+            descriptionUnit = actualUnit.description
+            activeUnit = actualUnit.isActive
         }
     }
 
@@ -219,171 +246,254 @@ fun ExercisesSection(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 20.dp)
         ) {
-            var isEditingExercise by remember { mutableStateOf(false) }
-            var editStatus by remember { mutableStateOf(false) }
-
             if (showUnitHeader && actualUnit != null) {
 
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
+                Row(
+                    modifier = Modifier.fillMaxWidth(), // Align items to the top
+                ) {
+                    // 1. Emoji Column
+                    Text(
+                        text = "📚",
+                        fontSize = 24.sp,
+                        modifier = Modifier.padding(end = 12.dp, top = 4.dp)
+                    )
 
+                    // 2. Middle Column: Name, Badge, Description
+                    Column(
+                        modifier = Modifier.weight(1f) // Takes available space
+                    ) {
+                        // Title Row: Name + Badge
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth() 
                         ) {
-                        if (!isEditingExercise) {
-                            Column {
-                                Row {
-                                    Text("📚")
-                                    Box(
-                                        modifier = Modifier
-                                            .wrapContentWidth() // Se ajusta al contenido
-                                            .padding(horizontal = 8.dp),
-                                        contentAlignment = Alignment.CenterStart
-                                    ) {
-                                        BasicTextField(
-                                            value = actualUnit.name,
-                                            onValueChange = {},
-                                            readOnly = true,
-                                            textStyle = MaterialTheme.typography.headlineSmall.copy(
-                                                fontFamily = encodeSansFamily,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 20.sp,
-                                                color = Color(0xFF131313)
-                                            ),
-                                            singleLine = true,
-                                            modifier = Modifier
-                                                .wrapContentWidth()
-                                                .background(
-                                                    Color.Transparent,
-                                                    shape = RoundedCornerShape(4.dp)
-                                                )
-                                        )
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f, fill = false) // Allow text to wrap/shrink, don't force full width if short
+                                    .padding(end = 8.dp),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                BasicTextField(
+                                    value = nameUnit ?: "Nombre de la unidad",
+                                    onValueChange = { nameUnit = it },
+                                    readOnly = !isEditingUnit,
+                                    textStyle = MaterialTheme.typography.headlineSmall.copy(
+                                        fontFamily = encodeSansFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 20.sp,
+                                        color = Color(0xFF131313)
+                                    ),
+                                    maxLines = 2, // Allow title to wrap a bit
+                                    modifier = if (isEditingUnit) {
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .background(
+                                                Color.Transparent,
+                                                shape = RoundedCornerShape(4.dp)
+                                            )
+                                            .padding(6.dp)
+                                            .border(
+                                                1.dp,
+                                                Color(0xFFE0E0E0),
+                                                shape = RoundedCornerShape(4.dp),
+                                            )
+                                    } else {
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .background(
+                                                Color.Transparent,
+                                                shape = RoundedCornerShape(4.dp)
+                                            )
+                                            .padding(6.dp)
                                     }
-                                    // Badge de estado
-                                    // Badge de estado (Dropdown pequeño)
-                                    ExposedDropdownMenuBox(
-                                        expanded = editStatus,
-                                        onExpandedChange = { editStatus = !editStatus }
-                                    ) {
-                                        // Definir colores basados en el estado actual
-                                        val badgeColor =
-                                            if (actualUnit.isActive) Color(0xFFB8F4C4) else Color(
+                                )
+                            }
+                            
+                            // Badge
+                           if (!isEditingUnit) {
+                                Badge(
+                                    containerColor = if (activeUnit) Color(0xFFB8F4C4) else Color(
+                                        0xFFFFD4D4
+                                    ),
+                                    contentColor = if (activeUnit) Color(0xFF2D5E3D) else Color(
+                                        0xFF8B0000
+                                    ),
+                                    modifier = Modifier.padding(10.dp)
+                                ) {
+                                    Text(
+                                        if (activeUnit) "Activo" else "Inactivo",
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            } else {
+                                ExposedDropdownMenuBox(
+                                    expanded = editStatus,
+                                    onExpandedChange = { editStatus = !editStatus }
+                                ) {
+                                    // Definir colores basados en el estado actual
+                                    val badgeColor =
+                                            if (activeUnit) Color(0xFFB8F4C4) else Color(
                                                 0xFFFFD4D4
                                             )
-                                        val textColor =
-                                            if (actualUnit.isActive) Color(0xFF2D5E3D) else Color(
+                                    val textColor =
+                                            if (activeUnit) Color(0xFF2D5E3D) else Color(
                                                 0xFF8B0000
                                             )
-                                        val textState =
-                                            if (actualUnit.isActive) "Activo" else "Inactivo"
+                                    val textState =
+                                            if (activeUnit) "Activo" else "Inactivo"
 
-                                        // Usamos Surface para darle forma de Chip/Badge
-                                        Surface(
-                                            modifier = Modifier
-                                                .menuAnchor(
-                                                    MenuAnchorType.PrimaryNotEditable,
-                                                    enabled = true
-                                                ) // Importante: Ancla el menú
-                                                .height(28.dp), // Altura pequeña tipo badge
-                                            shape = RoundedCornerShape(16.dp),
-                                            color = badgeColor,
-                                            border = null
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 8.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.Center
-                                            ) {
-                                                Text(
-                                                    text = textState,
-                                                    fontSize = 12.sp,
-                                                    color = textColor,
-                                                    fontWeight = FontWeight.Medium
-                                                )
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                // Icono pequeño de flecha hacia abajo
-                                                Icon(
-                                                    imageVector = if (editStatus) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(16.dp),
-                                                    tint = textColor
-                                                )
-                                            }
-                                        }
-
-                                        // El menú desplegable
-                                        ExposedDropdownMenu(
-                                            expanded = editStatus,
-                                            onDismissRequest = { editStatus = false }
-                                        ) {
-                                            DropdownMenuItem(
-                                                text = {
-                                                    Text(
-                                                        "Activo",
-                                                        color = Color(0xFF2D5E3D)
-                                                    )
-                                                },
-                                                onClick = {
-                                                    // Lógica para poner en activo
-                                                    // onUpdateStatus(true)
-                                                    editStatus = false
-                                                }
+                                    // Usamos Surface para darle forma de Chip/Badge
+                                    Surface(
+                                        modifier = Modifier
+                                            .menuAnchor(
+                                                MenuAnchorType.PrimaryNotEditable,
+                                                enabled = true
                                             )
-                                            DropdownMenuItem(
-                                                text = {
-                                                    Text(
-                                                        "Inactivo",
-                                                        color = Color(0xFF8B0000)
-                                                    )
-                                                },
-                                                onClick = {
-                                                    // Lógica para poner en inactivo
-                                                    // onUpdateStatus(false)
-                                                    editStatus = false
-                                                }
+                                            .height(28.dp),
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = if (activeUnit) Color(0xFFB8F4C4) else Color(0xFFFFD4D4),
+                                        border = null
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Center
+                                        ) {
+                                            Text(
+                                                text = if (activeUnit) "Activo" else "Inactivo",
+                                                fontSize = 12.sp,
+                                                color = if (activeUnit) Color(0xFF2D5E3D) else Color(0xFF8B0000),
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Icon(
+                                                imageVector = if (editStatus) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp),
+                                                tint = if (activeUnit) Color(0xFF2D5E3D) else Color(0xFF8B0000)
                                             )
                                         }
                                     }
-                                    IconButton(
-                                        onClick = {},
-                                        modifier = Modifier.size(32.dp)
+                                    // El menú desplegable
+                                    ExposedDropdownMenu(
+                                        expanded = editStatus,
+                                        onDismissRequest = { editStatus = false }
                                     ) {
-                                        Icon(
-                                            Icons.Default.Edit,
-                                            contentDescription = "Editar Unidad",
-                                            tint = Color(0xFF4A4A4A),
-                                            modifier = Modifier.size(20.dp)
+                                        DropdownMenuItem(
+                                            text = { Text("Activo", color = Color(0xFF2D5E3D)) },
+                                            onClick = {
+                                                activeUnit = true
+                                                editStatus = false
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Inactivo", color = Color(0xFF8B0000)) },
+                                            onClick = {
+                                                activeUnit = false
+                                                editStatus = false
+                                            }
                                         )
                                     }
-
                                 }
-                                Text(
-                                    text = actualUnit.description,
-                                    fontFamily = jetbrainsMonoFamily,
-                                    fontSize = 14.sp,
-                                    color = Color(0xFF4A4A4A),
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
-
                             }
-
                         }
 
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Description
+                        BasicTextField(
+                            value = descriptionUnit ?: "Descripcion de la unidad",
+                            onValueChange = { descriptionUnit = it },
+                            readOnly = !isEditingUnit,
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                fontFamily = jetbrainsMonoFamily,
+                                fontSize = 14.sp,
+                                color = Color(0xFF4A4A4A),
+                                lineHeight = 20.sp
+                            ),
+                            modifier = if (isEditingUnit) {
+                                Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 120.dp) // Max height approx 5-6 lines
+                                    .verticalScroll(rememberScrollState())
+                                    .background(
+                                        Color.Transparent,
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(6.dp)
+                                    .border(1.dp, Color(0xFFE0E0E0), shape = RoundedCornerShape(4.dp))
+                            } else {
+                                Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 120.dp)
+                                    .verticalScroll(rememberScrollState())
+                                    .background(
+                                        Color.Transparent,
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(6.dp)
+                            }
+                        )
                     }
 
-
-                    Spacer(Modifier.height(8.dp))
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        color = Color.Gray.copy(alpha = 0.2f)
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Column {
-                        Text("Ejercicios asociados")
+                    // 3. Right Column: Action Button
+                    Column(
+                        modifier = Modifier.padding(start = 8.dp),
+                        verticalArrangement = Arrangement.Top
+                    ) {
+                        if (isEditingUnit) {
+                            IconButton(
+                                onClick = {
+                                    isEditingUnit = !isEditingUnit
+                                    actualUnit.id?.let {
+                                        onUnitEdit(
+                                            it,
+                                            UpdateUnitDto(
+                                                name = nameUnit ?: "",
+                                                description = descriptionUnit ?: "",
+                                                isActive = activeUnit
+                                            )
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.size(32.dp).background(
+                                    shape = RoundedCornerShape(50.dp),
+                                    color = Color(0xFFB8F4C4)
+                                ),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Guardar unidad",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = Color(0xFF2D5E3D) // Darker green for visibility
+                                )
+                            }
+                        } else {
+                            IconButton(
+                                onClick = { isEditingUnit = !isEditingUnit },
+                                modifier = Modifier.size(32.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Editar Unidad",
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
                     }
-
                 }
+                
+                Spacer(Modifier.height(14.dp))
+                Column {
+                    Text("Ejercicios asociados")
+                }
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = Color.Gray.copy(alpha = 0.2f)
+                )
+                Spacer(Modifier.height(4.dp))
             }
+
             // Barra de búsqueda y filtro (Visible si no reordenamos)
             if (!isReordering) {
                 Row(
@@ -511,7 +621,8 @@ fun ExercisesSection(
             AnimatedVisibility(
                 visible = isAddingExercise,
                 enter = expandVertically(),
-                exit = shrinkVertically()
+                exit = shrinkVertically(),
+                modifier = Modifier.verticalScroll( rememberScrollState())
             ) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),

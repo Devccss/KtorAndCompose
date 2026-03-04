@@ -70,7 +70,7 @@ class QuestionRepository {
         Questions.selectAll().where { Questions.id eq id }.singleOrNull()?.let(::resultRowToQuestion)
     }
 
-    fun createQuestion(dto: CreateQuestionDto): QuestionDto = try {
+    fun createQuestion(exercise: Int,dto: CreateQuestionDto): QuestionDto = try {
         transaction {
             var order= 0
             if(dto.orderQuestion == null) {
@@ -83,7 +83,7 @@ class QuestionRepository {
                 it[grammarExplanation] = dto.grammarExplanation
                 it[audioUrl] = dto.audioUrl
                 it[isActive] = dto.isActive ?: false
-                it[exerciseId] = dto.exerciseId
+                it[exerciseId] = exercise
                 it[questionText] = dto.questionText
                 it[typeQuestion] = dto.typeQuestion
                 it[orderQuestion] = dto.orderQuestion?: order
@@ -96,7 +96,7 @@ class QuestionRepository {
                 grammarExplanation = dto.grammarExplanation,
                 audioUrl = dto.audioUrl,
                 isActive = dto.isActive ?: false,
-                exerciseId = dto.exerciseId,
+                exerciseId = exercise,
                 questionText = dto.questionText,
                 typeQuestion = dto.typeQuestion,
                 orderQuestion = dto.orderQuestion ?: order,
@@ -136,17 +136,17 @@ class QuestionRepository {
     fun getAlternativesByQuestionId(questionId: Int): List<AlternativeDto> = transaction {
         Alternatives.selectAll().where { Alternatives.questionId eq questionId }.map(::resultRowToAlternative)
     }
-    fun createAlternative(dto: CreateAlternativeDto): AlternativeDto = try {
+    fun createAlternative(question: Int,dto: CreateAlternativeDto): AlternativeDto = try {
         transaction {
             val newId = Alternatives.insert {
-                it[questionId] = dto.questionId
+                it[questionId] = question
                 it[text] = dto.text
                 it[isCorrect] = dto.isCorrect?: false
             }[Alternatives.id]
 
             AlternativeDto(
                 id = newId.value,
-                questionId = dto.questionId,
+                questionId = question,
                 text = dto.text,
                 isCorrect = dto.isCorrect?: false,
                 createdAt = LocalDateTime.now().toString()

@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.example.project.dtos.AlternativesDto
+import org.example.project.dtos.CreateAlternativeDto
+import org.example.project.dtos.CreateQuestionDto
 import org.example.project.dtos.QuestionDto
 import org.example.project.dtos.UpdateAlternativeDto
 import org.example.project.dtos.UpdateQuestionDto
@@ -40,8 +42,9 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
 
     fun updateMessage(message: String?) {
         generalMessage = message
+            _state.value = _state.value.copy(error = message)
     }
-    private fun getQuestionsByExerciseId(exerciseId: Int) {
+    fun getQuestionsByExerciseId(exerciseId: Int) {
         launchCatching(
             block = { repo.getQuestionsByExerciseId(exerciseId) },
             onSuccess = { questions ->
@@ -74,7 +77,33 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
         }
     }
 
+    fun createQuestion(exerciseId: Int,newQuestion: CreateQuestionDto) {
+        launchCatching(
+            block = { repo.createQuestion(exerciseId,newQuestion) },
+            onSuccess = {
+                getQuestionsByExerciseId(exerciseId)
+            },
+            onError = { error ->
+                _state.value =
+                    _state.value.copy(error = error.message)
+            }
+        )
+    }
 
+    fun createAlternativeForQuestion(questionId: Int, newAlternative: CreateAlternativeDto) {
+        launchCatching(
+            block = { repo.createAlternative(questionId, newAlternative) },
+            onSuccess = {
+                if (exerciseId != null) {
+                    getQuestionsByExerciseId(exerciseId)
+                }
+            },
+            onError = { error ->
+                _state.value =
+                    _state.value.copy(error = error.message)
+            }
+        )
+    }
 
     fun updateQuestion(questionId: Int, updatedQuestion: UpdateQuestionDto) {
         launchCatching(
@@ -99,7 +128,7 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
 
 
     //Alternatives
-    private fun getAlternativesByQuestionId(questionId: Int) {
+    fun getAlternativesByQuestionId(questionId: Int) {
         launchCatching(
 
             block = { repo.getAlternativesByQuestionId(questionId) },

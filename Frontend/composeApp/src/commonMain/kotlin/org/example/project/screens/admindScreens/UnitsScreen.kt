@@ -79,6 +79,9 @@ class UnitsScreen : Screen {
                 snackbarHostState.showSnackbar(it)
             }
         }
+        LaunchedEffect(Unit){
+            unitVm.getAllUnits()
+        }
 
 
         AppLayout(
@@ -569,19 +572,21 @@ fun UnitCard(
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.Top,
                     ) {
                         Text(
                             text = lessonUnit.title,
+                            modifier = Modifier.weight(1f),
                             fontWeight = FontWeight.SemiBold,
                             color = Color(0xFF2D2D2D),
                             fontSize = 16.sp,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
+                            softWrap = true,
                             fontFamily = encodeSansFamily,
                         )
 
-                        Spacer(modifier = Modifier.width(2.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
 
                         val (badgeColor, badgeTextColor, badgeLabel) = if (lessonUnit.status == UnitStatus.PUBLISHED) {
                             Triple(Color(0xFFB8F4C4), Color(0xFF2D5E3D), "Publicado")

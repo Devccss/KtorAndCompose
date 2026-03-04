@@ -28,7 +28,6 @@ data class CreateQuestionDto(
     val grammarExplanation: String,
     val audioUrl: String?,
     val isActive: Boolean? = false,
-    val exerciseId: Int,
     val questionText: String,
     val typeQuestion: TypeQuestion,
     val orderQuestion: Int? = null,

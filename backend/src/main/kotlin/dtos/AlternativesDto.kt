@@ -13,7 +13,6 @@ data class AlternativeDto(
 
 @Serializable
 data class CreateAlternativeDto(
-    val questionId: Int,
     val text: String,
     val isCorrect: Boolean? = false
 )

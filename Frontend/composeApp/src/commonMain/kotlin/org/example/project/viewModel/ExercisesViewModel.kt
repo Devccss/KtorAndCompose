@@ -13,6 +13,7 @@ import org.example.project.dtos.CreateExerciseDto
 import org.example.project.dtos.DifficultyLevel
 import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.UnitDto
+import org.example.project.dtos.UpdateExerciseDto
 import org.example.project.repository.ExerciseRepo
 
 data class ExercisesUiState(
@@ -97,6 +98,23 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
             },
             onError = { error ->
                 _state.value = _state.value.copy(error = "Error al crear ejercicio: ${error.message}")
+            }
+        )
+    }
+
+    fun updateExercise(exerciseId: Int, dto: UpdateExerciseDto) {
+        launchCatching(
+            block = { repo.updateExercise(exerciseId, dto) },
+            onSuccess = { updatedExercise ->
+                val currentList = _state.value.exercise.toMutableList()
+                val index = currentList.indexOfFirst { it.id == exerciseId }
+                if (index != -1) {
+                    currentList[index] = updatedExercise
+                    _state.value = _state.value.copy(exercise = currentList)
+                }
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al actualizar ejercicio: ${error.message}")
             }
         )
     }

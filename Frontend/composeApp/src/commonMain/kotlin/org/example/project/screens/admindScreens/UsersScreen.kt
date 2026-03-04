@@ -1,5 +1,8 @@
 package org.example.project.screens.admindScreens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -25,6 +28,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgeDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -94,7 +98,19 @@ class UsersScreen : Screen {
 
         var editing by remember { mutableStateOf<UserDto?>(null) }
         var confirmDelete by remember { mutableStateOf<UserDto?>(null) }
-        var showAddUser by remember { mutableStateOf(false) }
+        // Changed: showAddUser logic now follows Units/Exercises pattern (toggle boolean for inline form)
+        var isAddingUser by remember { mutableStateOf(false) }
+
+        // Form fields state
+        var newUserName by remember { mutableStateOf("") }
+        var newUserEmail by remember { mutableStateOf("") }
+        var newUserPassword by remember { mutableStateOf("") }
+        var newUserRole by remember { mutableStateOf(Role.STUDENT) }
+        var newUserUnit by remember { mutableStateOf<UnitDto?>(null) }
+
+        // Dropdown states
+        var roleMenuExpanded by remember { mutableStateOf(false) }
+        var unitMenuExpanded by remember { mutableStateOf(false) }
 
         var showFilterOpcions by remember { mutableStateOf(false) }
         var filterUser by remember { mutableStateOf<FilterUsersDto?>(null) }
@@ -111,8 +127,18 @@ class UsersScreen : Screen {
 
         var textSearch by remember { mutableStateOf("") }
         var searchUsers by remember { mutableStateOf(false) }
-        var filtered by remember { mutableStateOf<List<UserDto>>(emptyList()) }
 
+        // UI Text variables
+        var textAdd by remember { mutableStateOf("") }
+        var butonAddColor by remember { mutableStateOf(Color(0xFFB8F4C4)) }
+
+        if (isAddingUser) {
+            textAdd = "Cancelar creación"
+            butonAddColor = Color(0xFFFFD4D4)
+        } else {
+            textAdd = "+ Agregar nuevo usuario"
+            butonAddColor = Color(0xFFB8F4C4)
+        }
 
         // usa la variable showFilterOpcions para abrir/cerrar el DropdownMenu
         var filterMenuExpanded by remember { mutableStateOf(false) }
@@ -362,17 +388,182 @@ class UsersScreen : Screen {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             androidx.compose.material3.Button(
-                                onClick = { showAddUser = true },
+                                onClick = { isAddingUser = !isAddingUser },
                                 modifier = Modifier.weight(1f).padding(end = 8.dp),
                                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFFB8F4C4)
+                                    containerColor = butonAddColor
                                 ),
                                 shape = MaterialTheme.shapes.small
                             ) {
                                 Text(
-                                    "+ Agregar nuevo usuario",
-                                    color = Color(0xFF2D5E3D)
+                                    textAdd,
+                                    color = if (isAddingUser) Color(0xFF8B0000) else Color(0xFF2D5E3D)
                                 )
+                            }
+                        }
+
+                         // Formulario desplegable para agregar usuario
+                        AnimatedVisibility(
+                            visible = isAddingUser,
+                            enter = expandVertically(),
+                            exit = shrinkVertically(),
+                            modifier = Modifier.verticalScroll( rememberScrollState())
+                        ) {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Text("Nuevo Usuario", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+
+                                    OutlinedTextField(
+                                        value = newUserName,
+                                        onValueChange = { newUserName = it },
+                                        label = { Text("Nombre*") },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true,
+                                        isError = newUserName.isBlank()
+                                    )
+
+                                    OutlinedTextField(
+                                        value = newUserEmail,
+                                        onValueChange = { newUserEmail = it },
+                                        label = { Text("Email*") },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true,
+                                        isError = newUserEmail.isBlank()
+                                    )
+
+                                    OutlinedTextField(
+                                        value = newUserPassword,
+                                        onValueChange = { newUserPassword = it },
+                                        label = { Text("Contraseña*") },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true,
+                                        isError = newUserPassword.isBlank(),
+                                        // Visual transformation could be added here if needed
+                                    )
+
+                                    // Role Dropdown
+                                    ExposedDropdownMenuBox(
+                                        expanded = roleMenuExpanded,
+                                        onExpandedChange = { roleMenuExpanded = !roleMenuExpanded }
+                                    ) {
+                                        OutlinedTextField(
+                                            value = newUserRole.name,
+                                            onValueChange = {},
+                                            readOnly = true,
+                                            label = { Text("Rol") },
+                                            trailingIcon = {
+                                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = roleMenuExpanded)
+                                            },
+                                            modifier = Modifier
+                                                .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+                                                .fillMaxWidth()
+                                        )
+                                        ExposedDropdownMenu(
+                                            expanded = roleMenuExpanded,
+                                            onDismissRequest = { roleMenuExpanded = false }
+                                        ) {
+                                            Role.entries.forEach { role ->
+                                                DropdownMenuItem(
+                                                    text = { Text(role.name) },
+                                                    onClick = {
+                                                        newUserRole = role
+                                                        roleMenuExpanded = false
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // Unit Dropdown
+                                    if(ui.unit.isNotEmpty() && newUserUnit == null) {
+                                        newUserUnit = ui.unit.first()
+                                    }
+
+                                    ExposedDropdownMenuBox(
+                                        expanded = unitMenuExpanded,
+                                        onExpandedChange = { unitMenuExpanded = !unitMenuExpanded }
+                                    ) {
+                                        OutlinedTextField(
+                                            value = newUserUnit?.name ?: "Selecciona unidad",
+                                            onValueChange = {},
+                                            readOnly = true,
+                                            label = { Text("Unidad Inicial") },
+                                            trailingIcon = {
+                                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = unitMenuExpanded)
+                                            },
+                                            modifier = Modifier
+                                                .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+                                                .fillMaxWidth()
+                                        )
+                                        ExposedDropdownMenu(
+                                            expanded = unitMenuExpanded,
+                                            onDismissRequest = { unitMenuExpanded = false }
+                                        ) {
+                                            ui.unit.forEach { unit ->
+                                                DropdownMenuItem(
+                                                    text = { Text(unit.name) },
+                                                    onClick = {
+                                                        newUserUnit = unit
+                                                        unitMenuExpanded = false
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        androidx.compose.material3.Button(
+                                            onClick = { isAddingUser = false },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color(0xFFFFD4D4)
+                                            )
+                                        ) {
+                                            Text("Cancelar", color = Color(0xFF8B0000))
+                                        }
+
+                                        androidx.compose.material3.Button(
+                                            onClick = {
+                                                if (newUserName.isBlank() || newUserEmail.isBlank() || newUserPassword.isBlank()) {
+                                                    // Handle error (show snackbar ideally via callback or local state)
+                                                    return@Button
+                                                }
+
+                                                vm.registerUser(
+                                                    CreateUserDto(
+                                                        name = newUserName,
+                                                        email = newUserEmail,
+                                                        password = newUserPassword,
+                                                        role = newUserRole,
+                                                        currentUnitId = newUserUnit?.id
+                                                    )
+                                                )
+
+                                                // Reset and close
+                                                newUserName = ""
+                                                newUserEmail = ""
+                                                newUserPassword = ""
+                                                newUserRole = Role.STUDENT
+                                                newUserUnit = null
+                                                isAddingUser = false
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color(0xFFB8F4C4)
+                                            )
+                                        ) {
+                                            Text("Guardar Usuario", color = Color(0xFF2D5E3D))
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -404,38 +595,6 @@ class UsersScreen : Screen {
                 }
             }
 
-
-            // Add user dialog
-            if (showAddUser && !ui.isLoading) {
-                EditUser(
-                    initial = UserDto(
-                        id = null,
-                        name = "",
-                        email = "",
-                        password = "",
-                        role = Role.STUDENT,
-                        currentUnitId = ui.unit.firstOrNull()?.id,
-                        provider = "",
-                        preferences = "",
-                        activeNow = false,
-                        createdAt = ""
-                    ),
-                    levels = ui.unit,
-                    onSave = { newUser ->
-                        vm.registerUser(
-                            CreateUserDto(
-                                name = newUser.name,
-                                email = newUser.email,
-                                password = newUser.password ?: "",
-                                role = newUser.role,
-                                currentUnitId = newUser.currentUnitId
-                            )
-                        )
-                        showAddUser = false
-                    },
-                    onDismiss = { showAddUser = false }
-                )
-            }
 
         }
     }

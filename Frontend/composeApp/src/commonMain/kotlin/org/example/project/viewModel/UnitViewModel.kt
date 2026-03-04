@@ -65,16 +65,6 @@ class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : V
         }
     }
 
-    fun refreshUnits() {
-        if (unitId != null) {
-            getUnitById(unitId)
-            _state.value = _state.value.copy(units = emptyList())
-        } else {
-            getAllUnits()
-            _state.value = _state.value.copy(actualUnit = null)
-        }
-    }
-
     fun actualNull() {
         _state.value = _state.value.copy(actualUnit = null)
     }
