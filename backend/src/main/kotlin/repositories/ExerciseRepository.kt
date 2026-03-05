@@ -84,6 +84,7 @@ class ExerciseRepository {
                 dto.description?.let { u[description] = it }
                 dto.isActive?.let { u[isActive] = it }
             }
+            return@transaction true
         }
     }
 

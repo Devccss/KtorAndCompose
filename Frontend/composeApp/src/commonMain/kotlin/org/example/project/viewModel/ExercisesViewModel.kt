@@ -59,7 +59,7 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
                 _state.value = _state.value.copy(exercise = exercise)
             },
             onError = { error ->
-                _state.value = _state.value.copy(error = error.message, exercise = emptyList())
+                _state.value = _state.value.copy(error = "Error al obtener todos los ejercicios: ${error.message}", exercise = emptyList())
             }
         )
     }
@@ -71,7 +71,7 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
                 _state.value = _state.value.copy(selectedExercise = exercise)
             },
             onError = { error ->
-                _state.value = _state.value.copy(error = error.message, selectedExercise = null)
+                _state.value = _state.value.copy(error = "Error al obtener ejercicio por id: ${error.message}", selectedExercise = null)
             }
         )
     }
@@ -84,7 +84,7 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
                 _state.value = _state.value.copy(exercise = exercise)
             },
             onError = { error ->
-                _state.value = _state.value.copy(error = error.message, exercise = emptyList())
+                _state.value = _state.value.copy(error = "Error al obtener ejercicios por unidad: ${error.message}", exercise = emptyList())
             }
         )
     }
@@ -105,13 +105,8 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
     fun updateExercise(exerciseId: Int, dto: UpdateExerciseDto) {
         launchCatching(
             block = { repo.updateExercise(exerciseId, dto) },
-            onSuccess = { updatedExercise ->
-                val currentList = _state.value.exercise.toMutableList()
-                val index = currentList.indexOfFirst { it.id == exerciseId }
-                if (index != -1) {
-                    currentList[index] = updatedExercise
-                    _state.value = _state.value.copy(exercise = currentList)
-                }
+            onSuccess = {
+                getExerciseById(exerciseId)
             },
             onError = { error ->
                 _state.value = _state.value.copy(error = "Error al actualizar ejercicio: ${error.message}")

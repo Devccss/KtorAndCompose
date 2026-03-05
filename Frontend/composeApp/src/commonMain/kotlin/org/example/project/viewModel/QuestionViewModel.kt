@@ -21,7 +21,6 @@ import org.example.project.repository.QuestionsRepo
 data class QuestionUIState(
     val selectedQuestions: List<QuestionDto> = emptyList(),
     val allQuestions: List<QuestionDto> = emptyList(),
-    // Agregamos el mapa: ID Pregunta -> Lista de Alternativas
     val alternatives: Map<Int, List<AlternativesDto>> = emptyMap(),
     var error: String? = null,
     val isLoading: Boolean = false,
@@ -42,8 +41,9 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
 
     fun updateMessage(message: String?) {
         generalMessage = message
-            _state.value = _state.value.copy(error = message)
+        _state.value = _state.value.copy(error = message)
     }
+
     fun getQuestionsByExerciseId(exerciseId: Int) {
         launchCatching(
             block = { repo.getQuestionsByExerciseId(exerciseId) },
@@ -53,14 +53,14 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
             },
             onError = { error ->
                 _state.value =
-                    _state.value.copy(error = error.message, selectedQuestions = emptyList())
+                    _state.value.copy(error = "Error al obtener preguntas por id del ejercicio: ${error.message}", selectedQuestions = emptyList())
             }
         )
     }
 
     init {
         if (exerciseId != null) {
-        getQuestionsByExerciseId(exerciseId)
+            getQuestionsByExerciseId(exerciseId)
 
         } else {
             launchCatching(
@@ -71,21 +71,23 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
                 },
                 onError = { error ->
                     _state.value =
-                        _state.value.copy(error = error.message, allQuestions = emptyList())
+                        _state.value.copy(error = "Error al cargar todas la preguntas", allQuestions = emptyList())
                 }
             )
         }
     }
 
-    fun createQuestion(exerciseId: Int,newQuestion: CreateQuestionDto) {
+    fun createQuestion(exerciseId: Int, newQuestion: CreateQuestionDto, onQuestionCreated: (Int) -> Unit = {}) {
         launchCatching(
-            block = { repo.createQuestion(exerciseId,newQuestion) },
-            onSuccess = {
+            block = { repo.createQuestion(exerciseId, newQuestion) },
+            onSuccess = { createdQuestion ->
                 getQuestionsByExerciseId(exerciseId)
+                // Asumimos que createdQuestion tiene un ID.
+                onQuestionCreated(createdQuestion.id)
             },
             onError = { error ->
                 _state.value =
-                    _state.value.copy(error = error.message)
+                    _state.value.copy(error = "Error al crear la pregunta: ${error.message}")
             }
         )
     }
@@ -100,7 +102,7 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
             },
             onError = { error ->
                 _state.value =
-                    _state.value.copy(error = error.message)
+                    _state.value.copy(error = "Error al crear la alternativa: ${error.message}")
             }
         )
     }
@@ -108,20 +110,17 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
     fun updateQuestion(questionId: Int, updatedQuestion: UpdateQuestionDto) {
         launchCatching(
             block = { repo.updateQuestion(questionId, updatedQuestion) },
-            onSuccess = { question ->
+            onSuccess = {
                 if (exerciseId != null) {
                     getQuestionsByExerciseId(exerciseId)
                 } else {
-                    // Si no hay un exerciseId específico, actualizamos la lista general
-                    val updatedList = _state.value.allQuestions.map {
-                        if (it.id == questionId) question else it
-                    }
-                    _state.value = _state.value.copy(allQuestions = updatedList)
+                    _state.value =
+                        _state.value.copy(error = "No hay ejercicio asociado para actualizar la pregunta")
                 }
             },
             onError = { error ->
                 _state.value =
-                    _state.value.copy(error = error.message)
+                    _state.value.copy(error = "Error al actualizar la pregunta: ${error.message}")
             }
         )
     }
@@ -139,7 +138,7 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
             },
             onError = { error ->
                 _state.value =
-                    _state.value.copy(error = error.message)
+                    _state.value.copy(error = "Error al obtener alternativas por id de pregunta: ${error.message}")
             }
         )
     }
@@ -155,7 +154,7 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
             },
             onError = { error ->
                 _state.value =
-                    _state.value.copy(error = error.message)
+                    _state.value.copy(error = "Error al actualizar la alternativa: ${error.message}")
             }
         )
     }

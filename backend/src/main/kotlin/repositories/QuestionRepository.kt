@@ -122,6 +122,7 @@ class QuestionRepository {
                 dto.typeQuestion?.let { update[typeQuestion] = it }
                 dto.orderQuestion?.let { update[orderQuestion] = it}
             }
+            return@transaction true
         }
     }
 

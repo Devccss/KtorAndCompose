@@ -8,6 +8,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import org.example.project.dtos.CreateExerciseDto
 import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.UpdateExerciseDto
@@ -29,17 +30,17 @@ class ExerciseRepo(private val httpClient: HttpClient, private val baseUrl: Stri
             setBody(exercise)
         }.body()
 
-    suspend fun updateExercise(id: Int, exercise: UpdateExerciseDto): ExerciseDto =
+    suspend fun updateExercise(id: Int, exercise: UpdateExerciseDto): Boolean =
         httpClient.put("$baseUrl/api/v1/exercises/$id") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(exercise)
-        }.body()
+        }.status.isSuccess()
 
     suspend fun reorderExercises(orders: List<Pair<Int, Int>>): Boolean =
         httpClient.put("$baseUrl/api/v1/exercises/reorder") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(orders)
-        }.body()
+        }.status.isSuccess()
 
 
     suspend fun deleteExercise(id: Int): Boolean =

@@ -26,6 +26,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -103,14 +104,21 @@ import org.example.project.viewModel.QuestionViewModel
 import org.jetbrains.compose.resources.Font
 
 // Local state holder for Question Edits
-data class QuestionDraftState(
+// Se cambia de data class a class con propiedades delegadas (mutableStateOf) para que Compose detecte los cambios.
+class QuestionDraftState(
     val id: Int,
-    var textContent: String,
-    var grammarExplanation: String,
-    var questionText: String,
-    var typeQuestion: TypeQuestion,
-    var alternatives: List<AlternativesDto>
-)
+    textContent: String,
+    grammarExplanation: String,
+    questionText: String,
+    typeQuestion: TypeQuestion,
+    alternatives: List<AlternativesDto>
+) {
+    var textContent by mutableStateOf(textContent)
+    var grammarExplanation by mutableStateOf(grammarExplanation)
+    var questionText by mutableStateOf(questionText)
+    var typeQuestion by mutableStateOf(typeQuestion)
+    var alternatives by mutableStateOf(alternatives)
+}
 
 class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: Int) : Screen {
 
@@ -159,10 +167,12 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
 
         // --- ERROR / SNACKBAR SYNC ---
         LaunchedEffect(exerciseUi.error) {
+            println( "Exercise UI Error: ${exerciseUi.error}") // Debug log
             exerciseUi.error?.let { snackbarHostState.showSnackbar(it) }
         }
         LaunchedEffect(questionUi.error) {
             questionUi.error?.let { snackbarHostState.showSnackbar(it) }
+            println( "Question UI Error: ${questionUi.error}") // Debug log
         }
 
         // --- SYNC DATA TO DRAFTS ---
@@ -205,7 +215,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                     questionsValid = false
                 }
                 if (draft.typeQuestion == TypeQuestion.ALTERNATIVE && draft.alternatives.isEmpty()) {
-                    scope.launch { snackbarHostState.showSnackbar("Pregunta alternativa debe tener opciones") }
+                    scope.launch { snackbarHostState.showSnackbar("La pregunta de alternativas debe tener minimo dos opciones") }
                     return
                 }
             }
@@ -277,7 +287,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // --- HEADER ROW (Emoji, Info, Edit Actions) ---
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.Top
@@ -421,7 +431,10 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                             }
 
                             // Edit / Save Actions
-                            Column(modifier = Modifier.padding(start = 8.dp)) {
+                            Column(
+                                modifier = Modifier.padding(start = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
                                 IconButton(
                                     onClick = {
                                         if (isEditing) {
@@ -431,10 +444,10 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                         }
                                     },
                                     modifier = Modifier
-                                        .size(36.dp)
+                                        .size(20.dp)
                                         .background(
                                             if (isEditing) Color(0xFFB8F4C4) else Color(0xFFF5F5F5),
-                                            RoundedCornerShape(8.dp)
+                                            RoundedCornerShape(20.dp)
                                         )
                                 ) {
                                     Icon(
@@ -447,15 +460,35 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                     )
                                 }
 
+                                AnimatedVisibility(visible = isEditing){
+                                    IconButton(
+                                        onClick = { isEditing = false },
+                                        modifier = Modifier
+                                            .padding(top = 8.dp)
+                                            .size(20.dp)
+                                            .background(
+                                                Color(0xFFFFD4D4),
+                                                RoundedCornerShape(20.dp)
+                                            )
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Cancel,
+                                            contentDescription = "Cancelar",
+                                            tint = Color(0xFF8B0000),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                
                                 AnimatedVisibility(visible = isEditing) {
                                     IconButton(
                                         onClick = { /* Lógica de eliminar ejercicio */ },
                                         modifier = Modifier
                                             .padding(top = 8.dp)
-                                            .size(36.dp)
+                                            .size(20.dp)
                                             .background(
                                                 Color(0xFFFFD4D4),
-                                                RoundedCornerShape(8.dp)
+                                                RoundedCornerShape(20.dp)
                                             )
                                     ) {
                                         Icon(
@@ -520,20 +553,18 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                         AddQuestionSection(
                             isAdding = isAddingQuestion,
                             onAddingChange = { isAddingQuestion = it },
-                            onAdd = { newQuestion ->
-                                questionVm.createQuestion(exerciseId, newQuestion)
+                            onAdd = { newQuestion, newAlternatives ->
+                                questionVm.createQuestion(exerciseId, newQuestion) { createdId ->
+                                    // Una vez creada la pregunta, creamos sus alternativas
+                                    newAlternatives.forEach { alt ->
+                                        questionVm.createAlternativeForQuestion(createdId, alt)
+                                    }
+                                }
                                 isAddingQuestion = false
                             },
                             encodeSansFamily = encodeSansFamily,
                             jetbrainsMonoFamily = jetbrainsMonoFamily,
-                            onAddAlternatives = { questionId, alternatives ->
-                                alternatives.forEach {
-                                    questionVm.createAlternativeForQuestion(
-                                        questionId,
-                                        it
-                                    )
-                                }
-                            }
+                            onAddAlternatives = { _, _ -> /* Deprecated/Unused in this flow */ }
                         )
                     }
                 }
@@ -547,7 +578,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
 fun AddQuestionSection(
     isAdding: Boolean,
     onAddingChange: (Boolean) -> Unit = {},
-    onAdd: (CreateQuestionDto) -> Unit,
+    onAdd: (CreateQuestionDto, List<CreateAlternativeDto>) -> Unit,
     onAddAlternatives: (Int, List<CreateAlternativeDto>) -> Unit,
     encodeSansFamily: FontFamily,
     jetbrainsMonoFamily: FontFamily
@@ -558,6 +589,10 @@ fun AddQuestionSection(
     var questionText by remember { mutableStateOf("") }
     var audioUrl by remember { mutableStateOf("") }
     var typeSelect by remember { mutableStateOf(false) }
+
+    // Estado para nuevas alternativas
+    var alternatives by remember { mutableStateOf(listOf<CreateAlternativeDto>()) }
+    var newAltText by remember { mutableStateOf("") }
 
     AnimatedVisibility(
         visible = isAdding,
@@ -633,6 +668,87 @@ fun AddQuestionSection(
                         }
                     }
                 }
+                
+                // --- SECCION DE ALTERNATIVAS (Solo si es tipo Alternativa) ---
+                AnimatedVisibility(visible = typeQuestion == TypeQuestion.ALTERNATIVE) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFF0F4F8), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                    ) {
+                        Text("Configuración de Alternativas", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF003AB6))
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Lista de alternativas agregadas
+                        if (alternatives.isEmpty()) {
+                            Text("Agrega al menos 2 alternativas.", fontSize = 12.sp, color = Color.Gray, fontStyle = FontStyle.Italic)
+                        }
+                        
+                        alternatives.forEachIndexed { index, alt ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                RadioButton(
+                                    selected = alt.isCorrect == true,
+                                    onClick = {
+                                        // Marcar esta como correcta y las demas false
+                                        alternatives = alternatives.mapIndexed { i, a ->
+                                            a.copy(isCorrect = i == index)
+                                        }
+                                    },
+                                    colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF2E7D32))
+                                )
+                                Text(
+                                    alt.text, 
+                                    modifier = Modifier.weight(1f),
+                                    fontFamily = jetbrainsMonoFamily,
+                                    fontSize = 13.sp
+                                )
+                                IconButton(onClick = {
+                                    val list = alternatives.toMutableList()
+                                    list.removeAt(index)
+                                    alternatives = list
+                                }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color.Red, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                            HorizontalDivider(color = Color.White)
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // Input para nueva alternativa
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(
+                                value = newAltText,
+                                onValueChange = { newAltText = it },
+                                placeholder = { Text("Texto de alternativa") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                textStyle = TextStyle(fontSize = 13.sp, fontFamily = jetbrainsMonoFamily),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = Color.White,
+                                    unfocusedContainerColor = Color.White
+                                )
+                            )
+                            IconButton(
+                                onClick = {
+                                    if (newAltText.isNotBlank()) {
+                                        // Si es la primera, marcarla como correcta por defecto (para asegurar que haya una)
+                                        val isCorrect = alternatives.isEmpty()
+                                        alternatives = alternatives + CreateAlternativeDto(newAltText, isCorrect)
+                                        newAltText = ""
+                                    }
+                                },
+                                enabled = newAltText.isNotBlank()
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Agregar", tint = Color(0xFF003AB6))
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
@@ -658,7 +774,7 @@ fun AddQuestionSection(
                         focusedContainerColor = Color.White,
                         unfocusedContainerColor = Color.White
                     ),
-                    isError = questionText.isNullOrBlank()
+                    isError = questionText.isBlank()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
@@ -676,18 +792,29 @@ fun AddQuestionSection(
                     Button(
                         onClick = {
 
-                            onAdd(
+                            // Validación rápida de alternativas
+                            if (typeQuestion == TypeQuestion.ALTERNATIVE) {
+                                if (alternatives.size < 2) {
+                                    // TODO: Mostrar error visual
+                                    return@Button
+                                }
+                                if (alternatives.none { it.isCorrect == true }) {
+                                    return@Button
+                                }
+                            }
 
+                            onAdd(
                                 CreateQuestionDto(
                                     textContent = textContent,
                                     grammarExplanation = grammarExplanation,
                                     questionText = questionText,
                                     typeQuestion = typeQuestion ?: TypeQuestion.OPEN,
-                                    audioUrl = audioUrl?.ifBlank { null },
+                                    audioUrl = audioUrl.ifBlank { null },
                                     isActive = false,
                                     typeText = TypeTextExercise.NORMAL,
                                     orderQuestion = null
-                                )
+                                ),
+                                alternatives // Pasamos las alternativas
                             )
 
                             // Reset fields
@@ -696,6 +823,7 @@ fun AddQuestionSection(
                             questionText = ""
                             audioUrl = ""
                             typeQuestion = null
+                            alternatives = emptyList() // Reset alternatives
 
                             onAddingChange(false)
                         },
@@ -722,6 +850,7 @@ fun QuestionEditableRegion(
     jetbrainsMonoFamily: FontFamily,
     onAlert: (String) -> Unit
 ) {
+
     // Alert State for Type Change
     var showTypeChangeAlert by remember { mutableStateOf(false) }
     var pendingTypeChange by remember { mutableStateOf<TypeQuestion?>(null) }
@@ -737,9 +866,6 @@ fun QuestionEditableRegion(
                     onClick = {
                         pendingTypeChange?.let {
                             draft.typeQuestion = it
-                            // Here we normally would clear list, but user might want to keep data if they revert?
-                            // Requirement: "se buscará eliminar alternativas". Visually we can clear them.
-                            // draft.alternatives = emptyList() // Uncomment to enforce clear
                         }
                         showTypeChangeAlert = false
                     }
