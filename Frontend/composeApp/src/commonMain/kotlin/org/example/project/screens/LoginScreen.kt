@@ -24,8 +24,10 @@ import cafe.adriel.voyager.core.model.rememberScreenModel
 import org.example.project.dtos.LoginDto
 import org.example.project.dtos.Role
 import org.example.project.network.RepositoryProvider
+import org.example.project.network.UserSession
 import org.example.project.screens.admindScreens.AdminDashboard
 import org.example.project.screens.admindScreens.RegisterScreen
+import org.example.project.screens.studentScreens.StudentWelcomeScreen
 
 class LoginScreen(private val logout: Boolean? = false) : Screen {
     @Composable
@@ -145,12 +147,6 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
 
                         // Error
                         if (showError && uiState.error != null) {
-                            Text(
-                                text = uiState.error ?: "",
-                                color = Color.Red,
-                                fontSize = 14.sp,
-                                modifier = Modifier.fillMaxWidth()
-                            )
                             println("--->>>>>>>>>>${uiState.error}")
                         }
 
@@ -267,7 +263,10 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
                         LaunchedEffect(uiState.currentUser) {
                             if (uiState.currentUser?.role == Role.STUDENT && uiState.currentUser?.id != null) {
                                 //Estudiante
-
+                                UserSession.set(uiState.currentUser?.name, uiState.currentUser?.role)
+                                navigator.push(StudentWelcomeScreen(
+                                    studentName = uiState.currentUser?.name ?: "Estudiante"
+                                ))
                             }
                             else if (uiState.currentUser?.role == Role.ADMIN && uiState.currentUser?.id != null) {
                                 navigator.push(AdminDashboard(

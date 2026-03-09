@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Save
@@ -42,6 +43,7 @@ import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import org.example.project.components.AppLayout
 import org.example.project.dtos.CreateUnitDto
 import org.example.project.dtos.DifficultyLevel
+import org.example.project.dtos.FilterUnitsDto
 import org.example.project.dtos.Role
 import org.example.project.dtos.UnitDto
 import org.example.project.network.RepositoryProvider
@@ -61,13 +63,11 @@ class UnitsScreen : Screen {
         var selectedIndex by remember { mutableStateOf(2) }
         val snackbarHostState = remember { SnackbarHostState() }
 
-        // Convertimos a mutable para manejo local del UI durante el reordenamiento
-        // Pero usamos los datos del viewmodel como fuente de verdad
         val lessonUnits = unitUi.units.sortedBy { it.orderUnit }.map { u ->
             LessonUnit(
                 id = u.id ?: 0,
                 title = u.name,
-                description = u.description ?: "",
+                description = u.description ,
                 status = if (u.isActive) UnitStatus.PUBLISHED else UnitStatus.DRAFT,
                 emoji = "📚"
             )
@@ -109,7 +109,8 @@ class UnitsScreen : Screen {
                     onSearchQueryChange = { searchQuery = it },
                     onCreateUnit = { dto -> unitVm.createUnit(dto) },
                     onReorderUnits = { updatedList -> unitVm.updateUnitsOrder(updatedList) }, // Callback
-                    onError = { error -> unitVm.updateMessage(error.message) }
+                    onError = { error -> unitVm.updateMessage(error.message) },
+                    onFilter = { filterDto -> unitVm.searchUnits(filterDto) } // Callback para búsqueda backend
                 )
             }
         }
@@ -127,6 +128,7 @@ fun UnitsSection(
     onSearchQueryChange: (String) -> Unit,
     onCreateUnit: (CreateUnitDto) -> Unit,
     onReorderUnits: (List<Pair<Int, Int>>) -> Unit,
+    onFilter: (FilterUnitsDto) -> Unit, // Callback para filtros
     onError: (Error) -> Unit
 ) {
     // Estados existentes
@@ -134,11 +136,17 @@ fun UnitsSection(
     var newUnitName by remember { mutableStateOf("") }
     var newUnitDescription by remember { mutableStateOf("") }
     var newUnitOrder by remember { mutableStateOf("") }
-    var newUnitDifficulty by remember { mutableStateOf<DifficultyLevel?>(null) }
     var textAdd by remember { mutableStateOf("") }
     var butonAddColor by remember { mutableStateOf(Color(0xFFB8F4C4)) }
     var difficultyMenu by remember { mutableStateOf(false) }
     var selectedDifficulty by remember { mutableStateOf(DifficultyLevel.A1) }
+
+    // Estados para filtrado
+    var isFiltering by remember { mutableStateOf(false) }
+    var filterDifficulty by remember { mutableStateOf<DifficultyLevel?>(null) }
+    var filterDifficultyExpanded by remember { mutableStateOf(false) }
+    var filterActive by remember { mutableStateOf<Boolean?>(null) }
+    var filterActiveExpanded by remember { mutableStateOf(false) }
 
     // Estado para modo ordenar
     var isReordering by remember { mutableStateOf(false) }
@@ -185,6 +193,17 @@ fun UnitsSection(
                             modifier = Modifier.size(20.dp)
                         )
                     },
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            onFilter(FilterUnitsDto(name = searchQuery, difficulty = filterDifficulty, isActive = filterActive))
+                        }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Send,
+                                contentDescription = "Enviar búsqueda",
+                                tint = Color(0xFF4A4A4A).copy(alpha = 0.5f)
+                            )
+                        }
+                    },
                     singleLine = true,
                     shape = MaterialTheme.shapes.small,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -194,16 +213,122 @@ fun UnitsSection(
                 )
 
                 IconButton(
-                    onClick = { /* Abrir filtros */ },
+                    onClick = { isFiltering = !isFiltering },
                     modifier = Modifier
                         .size(48.dp)
-                        .background(Color.White, shape = MaterialTheme.shapes.small)
+                        .background(
+                            if (isFiltering) Color(0xFFE0E0E0) else Color.White,
+                            shape = MaterialTheme.shapes.small
+                        )
                 ) {
                     Icon(
                         Icons.Default.FilterList,
                         contentDescription = "Filtros",
-                        tint = Color(0xFF4A4A4A)
+                        tint = if (isFiltering) Color(0xFF003AB6) else Color(0xFF4A4A4A)
                     )
+                }
+            }
+
+            // Formulario de Filtros Expandible
+            AnimatedVisibility(
+                visible = isFiltering,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F4F8)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text("Filtros de Unidades", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // Dificultad
+                            Box(Modifier.weight(1f)) {
+                                ExposedDropdownMenuBox(
+                                    expanded = filterDifficultyExpanded,
+                                    onExpandedChange = { filterDifficultyExpanded = !filterDifficultyExpanded }
+                                ) {
+                                    OutlinedTextField(
+                                        value = filterDifficulty?.name ?: "Todas",
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        label = { Text("Dificultad", fontSize = 12.sp) },
+                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = filterDifficultyExpanded) },
+                                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth(),
+                                        colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+                                    )
+                                    ExposedDropdownMenu(
+                                        expanded = filterDifficultyExpanded,
+                                        onDismissRequest = { filterDifficultyExpanded = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("Todas") },
+                                            onClick = { filterDifficulty = null; filterDifficultyExpanded = false }
+                                        )
+                                        DifficultyLevel.entries.forEach { diff ->
+                                            DropdownMenuItem(
+                                                text = { Text(diff.name) },
+                                                onClick = { filterDifficulty = diff; filterDifficultyExpanded = false }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Estado (Activo/Inactivo)
+                            Box(Modifier.weight(1f)) {
+                                ExposedDropdownMenuBox(
+                                    expanded = filterActiveExpanded,
+                                    onExpandedChange = { filterActiveExpanded = !filterActiveExpanded }
+                                ) {
+                                    val activeText = when (filterActive) {
+                                        true -> "Activa"
+                                        false -> "Inactiva"
+                                        else -> "Todas"
+                                    }
+                                    OutlinedTextField(
+                                        value = activeText,
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        label = { Text("Estado", fontSize = 12.sp) },
+                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = filterActiveExpanded) },
+                                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth(),
+                                        colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+                                    )
+                                    ExposedDropdownMenu(
+                                        expanded = filterActiveExpanded,
+                                        onDismissRequest = { filterActiveExpanded = false }
+                                    ) {
+                                        DropdownMenuItem(text = { Text("Todas") }, onClick = { filterActive = null; filterActiveExpanded = false })
+                                        DropdownMenuItem(text = { Text("Activa") }, onClick = { filterActive = true; filterActiveExpanded = false })
+                                        DropdownMenuItem(text = { Text("Inactiva") }, onClick = { filterActive = false; filterActiveExpanded = false })
+                                    }
+                                }
+                            }
+                        }
+
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            TextButton(onClick = {
+                                filterDifficulty = null
+                                filterActive = null
+                                onSearchQueryChange("")
+                                onFilter(FilterUnitsDto())
+                            }) { Text("Limpiar") }
+                            Spacer(Modifier.width(8.dp))
+                            androidx.compose.material3.Button(
+                                onClick = {
+                                    onFilter(FilterUnitsDto(name = searchQuery, difficulty = filterDifficulty, isActive = filterActive))
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF003AB6)),
+                                shape = RoundedCornerShape(8.dp)
+                            ) { Text("Aplicar") }
+                        }
+                    }
                 }
             }
         } else {
@@ -379,11 +504,6 @@ fun UnitsSection(
                                     return@Button
                                 }
 
-                                if (selectedDifficulty == null) {
-                                    onError(Error("Debes seleccionar una dificultad"))
-                                    return@Button
-                                }
-
                                 // Ya se validó arriba que no sean nulos
                                 onCreateUnit(
                                     CreateUnitDto(
@@ -471,7 +591,6 @@ fun UnitsSection(
                     UnitCard(
                         lessonUnit = unit,
                         onClick = { navigator.push(ExercisesOrUnitScreen(unit.id)) },
-                        onExerciseClick = { navigator.push(ExercisesOrUnitScreen(unit.id)) }
                     )
                 }
             }
@@ -533,8 +652,7 @@ fun ReorderableUnitCard(
 @Composable
 fun UnitCard(
     lessonUnit: LessonUnit,
-    onClick: () -> Unit = {},
-    onExerciseClick: () -> Unit = {}
+    onClick: () -> Unit = {}
 ) {
     val encodeSansFamily = FontFamily(Font(Res.font.encode_sans_variable))
     val jetbrainsMonoFamily = FontFamily(Font(Res.font.jetbrains_mono_regular))

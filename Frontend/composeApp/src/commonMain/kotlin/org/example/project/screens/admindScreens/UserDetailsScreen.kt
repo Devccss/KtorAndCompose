@@ -1,7 +1,8 @@
 package org.example.project.screens.admindScreens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,34 +18,46 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgeDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,10 +68,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.model.rememberScreenModel
@@ -67,10 +80,11 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_variable
+import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import kotlinx.coroutines.launch
 import org.example.project.components.AppLayout
-import org.example.project.components.NavItem
 import org.example.project.components.ReusableBottomBar
+import org.example.project.dtos.Role
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UserDto
 import org.example.project.network.RepositoryProvider
@@ -79,6 +93,7 @@ import org.example.project.viewModel.UserViewModel
 import org.jetbrains.compose.resources.Font
 
 class UserDetailsScreen(private val userId: Int) : Screen {
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val vm = rememberScreenModel {
@@ -89,9 +104,26 @@ class UserDetailsScreen(private val userId: Int) : Screen {
         val navigator = LocalNavigator.currentOrThrow
         val scope = rememberCoroutineScope()
 
-        var editing by remember { mutableStateOf<UserDto?>(null) }
+        // Fuentes
+        val encodeSansFamily = FontFamily(Font(Res.font.encode_sans_variable))
+        val jetbrainsMonoFamily = FontFamily(Font(Res.font.jetbrains_mono_regular))
+
         var confirmDelete by remember { mutableStateOf<UserDto?>(null) }
-        var selectedIndex by remember { mutableStateOf(1) } // bottom bar index
+        var selectedIndex by remember { mutableStateOf(1) }
+
+        // Estado de Edición Inline
+        var isEditing by remember { mutableStateOf(false) }
+
+        // Campos Editables
+        var user by remember { mutableStateOf(ui.currentUser) }
+        var editedName by remember { mutableStateOf("") }
+        var editedEmail by remember { mutableStateOf("") }
+        var editedRole by remember { mutableStateOf<Role?>(Role.STUDENT) }
+        var editedUnitId by remember { mutableStateOf<Int?>(null) }
+        
+        // Logica para Dropdowns
+        var roleMenuExpanded by remember { mutableStateOf(false) }
+        var unitMenuExpanded by remember { mutableStateOf(false) }
 
         LaunchedEffect(ui.error) {
             ui.error?.let {
@@ -99,17 +131,32 @@ class UserDetailsScreen(private val userId: Int) : Screen {
             }
         }
 
-        // Try to find the user in current state
-        val user = ui.users.find { it.id == userId }
+        // Sincronizar estados locales con el usuario cargado
+        LaunchedEffect(userId) {
+            vm.getUserById(userId)
+        }
+
+        // NUEVO: Actualizar el estado local cuando llega el usuario del VM
+        LaunchedEffect(ui.currentUser) {
+            ui.currentUser?.let { loadedUser ->
+                if (loadedUser.id == userId) {
+                    user = loadedUser
+                    editedName = loadedUser.name
+                    editedEmail = loadedUser.email
+                    editedRole = loadedUser.role ?: Role.STUDENT
+                    editedUnitId = loadedUser.currentUnitId
+                }
+            }
+        }
 
         AppLayout(
-            actualScreen = "Administrar Unidades",
+            actualScreen = "Detalles de Usuario",
             selectedIndex = selectedIndex,
             onSelect = { idx -> selectedIndex = idx },
             initialUserName = UserSession.name,
             role = UserSession.role,
             snackbarHostState = snackbarHostState
-        ) { _,_,_ ->
+        ) { _, _, _ ->
 
             Card(
                 modifier = Modifier
@@ -123,7 +170,7 @@ class UserDetailsScreen(private val userId: Int) : Screen {
 
                 if (ui.isLoading && user == null) {
                     Column(
-                        Modifier.fillMaxSize(),
+                        Modifier.fillMaxSize().padding(20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
@@ -132,15 +179,11 @@ class UserDetailsScreen(private val userId: Int) : Screen {
                         Text("Cargando usuario...", style = MaterialTheme.typography.bodyMedium)
                     }
                 } else if (user == null) {
-                    // Usuario no encontrado
                     Column(
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 20.dp)
-                            .wrapContentHeight()
-                            .verticalScroll(rememberScrollState()),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text("Usuario no encontrado", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         Spacer(Modifier.height(12.dp))
@@ -151,136 +194,363 @@ class UserDetailsScreen(private val userId: Int) : Screen {
                         }
                     }
                 } else {
-                    // Main content
+                    // Contenido Principal
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 12.dp, vertical = 20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                            .padding(horizontal = 16.dp, vertical = 20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Header card: avatar, name, email, role, actions
-                        Card(
-                            Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
+
+                        // --- HEADER CARD: Avatar, Datos Principales y Botones de Acción ---
+                        Row(
+                            verticalAlignment = Alignment.Top,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Row( verticalAlignment = Alignment.CenterVertically) {
-                                // Avatar box
-                                Box(
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF4A4A4A)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        Icons.Default.Person,
-                                        contentDescription = "Avatar",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(28.dp)
+                            // Avatar
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFE0E0E0)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                user?.name?.take(1)?.let {
+                                    Text(
+                                        it.uppercase(),
+                                        fontSize = 28.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF4A4A4A),
+                                        fontFamily = encodeSansFamily
                                     )
-                                }
+                                }?: "Usuario sin nombre"
+                            }
 
-                                Spacer(Modifier.width(12.dp))
+                            Spacer(Modifier.width(16.dp))
 
-                                Column(Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(user.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                                        Spacer(Modifier.width(8.dp))
-                                        Badge(containerColor = BadgeDefaults.containerColor) {
-                                            user.role?.let { Text(it.name, fontSize = 12.sp) }
+                            // Columna Central: Campos Editables
+                            Column(Modifier.weight(1f)) {
+                                // Nombre
+                                BasicTextField(
+                                    value = editedName,
+                                    onValueChange = { editedName = it },
+                                    readOnly = !isEditing,
+                                    textStyle = MaterialTheme.typography.headlineSmall.copy(
+                                        fontFamily = encodeSansFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 20.sp,
+                                        color = Color(0xFF131313)
+                                    ),
+                                    modifier = if (isEditing) {
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .background(
+                                                Color.Transparent,
+                                                shape = RoundedCornerShape(4.dp)
+                                            )
+                                            .border(1.dp, Color(0xFFE0E0E0), shape = RoundedCornerShape(4.dp))
+                                            .padding(6.dp)
+                                    } else {
+                                        Modifier.fillMaxWidth().padding(vertical = 6.dp)
+                                    }
+                                )
+
+                                Spacer(Modifier.height(4.dp))
+
+                                // Rol y Email
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    // Dropdown de Rol (Editable) o Badge (Lectura)
+                                    if (isEditing) {
+                                        ExposedDropdownMenuBox(
+                                            expanded = roleMenuExpanded,
+                                            onExpandedChange = { roleMenuExpanded = !roleMenuExpanded }
+                                        ) {
+                                            Surface(
+                                                modifier = Modifier
+                                                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+                                                    .height(28.dp),
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = Color(0xFFF0F0F0),
+                                                border = null
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        editedRole?.name ?: "Sin Rol",
+                                                        fontSize = 12.sp,
+                                                        fontWeight = FontWeight.Medium
+                                                    )
+                                                    Icon(
+                                                        if (roleMenuExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                                        "Expandir", modifier = Modifier.size(16.dp)
+                                                    )
+                                                }
+                                            }
+                                            ExposedDropdownMenu(
+                                                expanded = roleMenuExpanded,
+                                                onDismissRequest = { roleMenuExpanded = false }
+                                            ) {
+                                                Role.entries.forEach { role ->
+                                                    DropdownMenuItem(
+                                                        text = { Text(role.name) },
+                                                        onClick = {
+                                                            editedRole = role
+                                                            roleMenuExpanded = false
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        Badge(containerColor = Color(0xFFE0E0E0), contentColor = Color(0xFF4A4A4A)) {
+                                            Text(user?.role?.name ?: "Estudiante", fontSize = 12.sp)
                                         }
                                     }
-                                    Spacer(Modifier.height(6.dp))
-                                    Text(user.email, style = MaterialTheme.typography.bodyMedium)
                                 }
 
-                                // Action buttons
-                                IconButton(onClick = { editing = user }) {
-                                    Icon(Icons.Default.Edit, contentDescription = "Editar")
-                                }
-                                IconButton(onClick = { confirmDelete = user }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Eliminar")
+                                Spacer(Modifier.height(8.dp))
+
+                                // Email Field
+                                BasicTextField(
+                                    value = editedEmail,
+                                    onValueChange = { editedEmail = it },
+                                    readOnly = !isEditing,
+                                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                        fontFamily = jetbrainsMonoFamily,
+                                        fontSize = 14.sp,
+                                        color = Color(0xFF666666)
+                                    ),
+                                    modifier = if (isEditing) {
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .background(
+                                                Color.Transparent,
+                                                shape = RoundedCornerShape(4.dp)
+                                            )
+                                            .border(1.dp, Color(0xFFE0E0E0), shape = RoundedCornerShape(4.dp))
+                                            .padding(6.dp)
+                                    } else {
+                                        Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                    }
+                                )
+                            }
+
+                            // Columna Derecha: Botones
+                            Column(horizontalAlignment = Alignment.End) {
+                                if (isEditing) {
+                                    // Botón Guardar
+                                    IconButton(
+                                        onClick = {
+                                            isEditing = false
+                                            // Lógica de guardado
+                                            val updatedDto = ui.currentUser?.copy(
+                                                name = editedName,
+                                                email = editedEmail,
+                                                role = editedRole,
+                                                currentUnitId = editedUnitId
+                                            )
+                                            ui.currentUser?.id?.let {
+                                                if (updatedDto != null) {
+                                                    vm.updateUser(it, updatedDto)
+                                                }
+                                            }
+                                            scope.launch { snackbarHostState.showSnackbar("Cambios guardados") }
+                                        },
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .background(Color(0xFFB8F4C4), CircleShape)
+                                    ) {
+                                        Icon(Icons.Default.Check, "Guardar", tint = Color(0xFF2D5E3D), modifier = Modifier.size(20.dp))
+                                    }
+                                    Spacer(Modifier.height(8.dp))
+                                    // Botón Cancelar
+                                    IconButton(
+                                        onClick = {
+                                            isEditing = false
+                                            // Revertir cambios
+                                            editedName = user?.name?: ""
+                                            editedEmail = user?.email?: ""
+                                            editedRole = user?.role?: Role.STUDENT
+                                            editedUnitId = user?.currentUnitId
+                                        },
+                                        modifier = Modifier.size(36.dp).background(Color(0xFFFFD4D4), CircleShape)
+                                    ) {
+                                        Icon(Icons.Default.Close, "Cancelar", tint = Color(0xFF8B0000), modifier = Modifier.size(20.dp))
+                                    }
+                                } else {
+                                    // Botón Editar
+                                    IconButton(
+                                        onClick = { isEditing = true },
+                                        modifier = Modifier.size(36.dp).background(Color.Transparent, CircleShape)
+                                    ) {
+                                        Icon(Icons.Default.Edit, "Editar", tint = Color(0xFF4A4A4A), modifier = Modifier.size(20.dp))
+                                    }
+                                    Spacer(Modifier.height(8.dp))
+                                    // Botón Eliminar
+                                    IconButton(
+                                        onClick = { confirmDelete = user },
+                                        modifier = Modifier.size(36.dp).background(Color.Transparent, CircleShape)
+                                    ) {
+                                        Icon(Icons.Default.Delete, "Eliminar", tint = Color(0xFF8B0000), modifier = Modifier.size(20.dp))
+                                    }
                                 }
                             }
                         }
 
-                        // Stats row
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                        HorizontalDivider(color = Color(0xFFEEEEEE))
+
+                        // --- ESTADÍSTICAS Y PROGRESO ---
+                        Text(
+                            "Progreso Académico",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontFamily = encodeSansFamily,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        // Fila de Progreso y Unidad Actual
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            // Card Unidad Actual
                             Card(
                                 modifier = Modifier.weight(1f),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF7FFF3))
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF7FFF3)),
+                                border = if(isEditing) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2D5E3D)) else null
                             ) {
-                                Column(Modifier.padding(12.dp)) {
-                                    Text("Unidades asignada", style = MaterialTheme.typography.labelSmall)
-                                    Spacer(Modifier.height(6.dp))
-                                    val currentUnitName = ui.unit.find { it.id == user.currentUnitId }?.name ?: "Ninguna"
-                                    Text(currentUnitName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                Column(Modifier.padding(16.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.School, null, tint = Color(0xFF2D5E3D), modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Unidad Actual", style = MaterialTheme.typography.labelMedium, color = Color(0xFF2D5E3D))
+                                    }
+                                    Spacer(Modifier.height(8.dp))
+                                    
+                                    if (isEditing) {
+                                        // Dropdown para cambiar unidad
+                                        ExposedDropdownMenuBox(
+                                            expanded = unitMenuExpanded,
+                                            onExpandedChange = { unitMenuExpanded = !unitMenuExpanded }
+                                        ) {
+                                            val currentUnitName = ui.unit.find { it.id == editedUnitId }?.name ?: "Sin asignar"
+                                            
+                                            OutlinedTextField(
+                                                value = currentUnitName,
+                                                onValueChange = {},
+                                                readOnly = true,
+                                                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth(),
+                                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = unitMenuExpanded) },
+                                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
+                                                    focusedContainerColor = Color.White,
+                                                    unfocusedContainerColor = Color.White
+                                                )
+                                            )
+                                            ExposedDropdownMenu(
+                                                expanded = unitMenuExpanded,
+                                                onDismissRequest = { unitMenuExpanded = false }
+                                            ) {
+                                                ui.unit.forEach { unit ->
+                                                    DropdownMenuItem(
+                                                        text = { Text(unit.name) },
+                                                        onClick = {
+                                                            editedUnitId = unit.id
+                                                            unitMenuExpanded = false
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        val currentUnitName = ui.unit.find { it.id == editedUnitId }?.name ?: "Sin asignar"
+                                        Text(
+                                            currentUnitName,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = encodeSansFamily
+                                        )
+                                    }
                                 }
                             }
+
+                            // Card Progreso (Calculado)
                             Card(
                                 modifier = Modifier.weight(1f),
                                 colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF9EA))
                             ) {
-                                /*Column(Modifier.padding(12.dp)) {
-                                    Text("Unidades completadas", style = MaterialTheme.typography.labelSmall)
-                                    Spacer(Modifier.height(6.dp))
-                                    // Placeholder: si en el state hay progreso, reemplazar por conteo real
-                                    val completed = ui.progress?.count { it.userId == user.id } ?: 0
-                                    Text(completed.toString(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                                }*/
+                                Column(Modifier.padding(16.dp)) {
+                                    Text("Progreso Global", style = MaterialTheme.typography.labelMedium, color = Color(0xFFB08C00))
+                                    Spacer(Modifier.height(12.dp))
+                                    
+                                    // Calcular progreso basado en la posición de la unidad
+                                    val totalUnits = ui.unit.size
+                                    val currentUnitIndex = ui.unit.indexOfFirst { it.id == editedUnitId }
+                                    val progress = if (totalUnits > 0 && currentUnitIndex >= 0) {
+                                        ((currentUnitIndex + 1).toFloat() / totalUnits.toFloat())
+                                    } else 0f
+                                    
+                                    LinearProgressIndicator(
+                                        progress = { progress },
+                                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                                        color = Color(0xFFFFD700),
+                                        trackColor = Color(0xFFFFE0B2),
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        "${(progress * 100).toInt()}% Completado",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
 
-                        // Additional info card
+                        // --- INFORMACIÓN ADICIONAL ---
                         Card(
                             Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F7FF))
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB))
                         ) {
-                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Información", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
-                                Text("Proveedor: ${user.provider ?: "N/A"}", style = MaterialTheme.typography.bodySmall)
-                                Text("Activo ahora: ${if (user.activeNow == true) "Sí" else "No"}", style = MaterialTheme.typography.bodySmall)
-                                Text("Creado: ${user.createdAt ?: "Desconocido"}", style = MaterialTheme.typography.bodySmall)
+                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Información del Sistema", style = MaterialTheme.typography.labelLarge, color = Color.Gray)
+                                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                    Text("ID Usuario:", style = MaterialTheme.typography.bodySmall, fontFamily = jetbrainsMonoFamily)
+                                    Text("#${user?.id}", style = MaterialTheme.typography.bodySmall, fontFamily = jetbrainsMonoFamily, fontWeight = FontWeight.Bold)
+                                }
+                                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Proveedor:", style = MaterialTheme.typography.bodySmall, fontFamily = jetbrainsMonoFamily)
+                                    Text(user?.provider ?: "Local", style = MaterialTheme.typography.bodySmall, fontFamily = jetbrainsMonoFamily)
+                                }
+                                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Miembro desde:", style = MaterialTheme.typography.bodySmall, fontFamily = jetbrainsMonoFamily)
+                                    Text(user?.createdAt ?: "Desconocido", style = MaterialTheme.typography.bodySmall, fontFamily = jetbrainsMonoFamily)
+                                }
+                                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Estado Actual:", style = MaterialTheme.typography.bodySmall, fontFamily = jetbrainsMonoFamily)
+                                    Text(if (user?.activeNow == true) "🟢 Online" else "⚫ Offline", style = MaterialTheme.typography.bodySmall, fontFamily = jetbrainsMonoFamily)
+                                }
                             }
                         }
-
-
-                        Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
             }
 
-            // Edit dialog
-            editing?.let { u ->
-                EditUser(
-                    initial = u,
-                    levels = ui.unit,
-                    onSave = { updated ->
-                        updated.id?.let { id -> vm.updateUser(id, updated) }
-                        editing = null
-                        // refresh or show snackbar
-                        scope.launch { snackbarHostState.showSnackbar("Usuario actualizado") }
-                    },
-                    onDismiss = { editing = null }
-                )
-            }
-
-            // Delete confirm
+            // Dialogo de Confirmación de Borrado
             confirmDelete?.let { u ->
                 AlertDialog(
                     onDismissRequest = { confirmDelete = null },
+                    containerColor = Color.White,
                     title = { Text("Eliminar Usuario") },
-                    text = { Text("¿Seguro de eliminar a ${u.name}? Esta acción no se puede deshacer.") },
+                    text = { Text("¿Seguro que deseas eliminar a ${u.name}? Esta acción eliminará todo su progreso y no se puede deshacer.") },
                     confirmButton = {
-                        TextButton(onClick = {
-                            u.id?.let { id ->
-                                vm.deleteUser(id)
-                                confirmDelete = null
-                                // volver atrás después de borrar
-                                navigator.pop()
-                            }
-                        }) { Text("Eliminar") }
+                        TextButton(
+                            onClick = {
+                                u.id?.let { id ->
+                                    vm.deleteUser(id)
+                                    confirmDelete = null
+                                    navigator.pop()
+                                }
+                            },
+                            colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF8B0000))
+                        ) { Text("Eliminar definitivamente") }
                     },
                     dismissButton = {
                         TextButton(onClick = { confirmDelete = null }) { Text("Cancelar") }

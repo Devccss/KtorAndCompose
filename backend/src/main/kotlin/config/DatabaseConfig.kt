@@ -22,6 +22,7 @@ import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mindrot.jbcrypt.BCrypt
 import java.time.LocalDateTime
@@ -41,7 +42,7 @@ fun configureDatabases() {
         SchemaUtils.create(
             Users, Units, Exercises, Notifications, Words, Questions,
             Tests, TestExercises, ExercisesOnHold, UnitsCompleted,
-            ExerciseCompleted, TestCompleted, QuestionWords,Alternatives
+            ExerciseCompleted, TestCompleted, QuestionWords, Alternatives
         )
         createAdminUserIfNotExists()
     }
@@ -53,7 +54,15 @@ fun createAdminUserIfNotExists() {
     val adminEmail = dotenv["ADMIN_EMAIL"]
     val adminPassword = dotenv["ADMIN_PASSWORD"]
 
-    val exists = Users.select ( Users.email eq  adminEmail ).count() > 0
+    val student = dotenv["STUDENT_NAME"]
+    val studentEmail = dotenv["STUDENT_EMAIL"]
+    val studentPassword = dotenv["STUDENT_PASSWORD"]
+
+    val editor = dotenv["EDITOR_NAME"]
+    val editorEmail = dotenv["EDITOR_EMAIL"]
+    val editorPassword = dotenv["EDITOR_PASSWORD"]
+
+    val exists = Users.selectAll().where{ Users.email eq adminEmail }.count() > 0
     if (!exists) {
         val hashed = BCrypt.hashpw(adminPassword, BCrypt.gensalt())
         val newId = Users.insert {
@@ -76,6 +85,57 @@ fun createAdminUserIfNotExists() {
             currentUnitId = null,
             createdAt = LocalDateTime.now().toString(),
             role = Role.ADMIN,
+        )
+    }
+    val studentExists = Users.selectAll().where { Users.email eq studentEmail }.count() > 0
+    if (!studentExists) {
+        val hashed = BCrypt.hashpw(studentPassword, BCrypt.gensalt())
+        val newId = Users.insert {
+            it[email] = studentEmail
+            it[password] = hashed
+            it[name] = student
+            it[preferences] = null
+            it[provider] = "Created"
+            it[currentUnitId] = null
+            it[role] = Role.STUDENT
+        }[Users.id]
+        UserDto(
+            id = newId.value,
+            name = student,
+            email = studentEmail,
+            password = hashed,
+            provider = "Created",
+            preferences = null,
+            activeNow = true,
+            currentUnitId = null,
+            createdAt = LocalDateTime.now().toString(),
+            role = Role.STUDENT,
+        )
+    }
+
+    val editorExists = Users.selectAll().where { Users.email eq editorEmail }.count() > 0
+    if (!editorExists) {
+        val hashed = BCrypt.hashpw(editorPassword, BCrypt.gensalt())
+        val newId = Users.insert {
+            it[email] = editorEmail
+            it[password] = hashed
+            it[name] = editor
+            it[preferences] = null
+            it[provider] = "Created"
+            it[currentUnitId] = null
+            it[role] = Role.CONTENT_EDITOR
+        }[Users.id]
+        UserDto(
+            id = newId.value,
+            name = editor,
+            email = editorEmail,
+            password = hashed,
+            provider = "Created",
+            preferences = null,
+            activeNow = true,
+            currentUnitId = null,
+            createdAt = LocalDateTime.now().toString(),
+            role = Role.CONTENT_EDITOR,
         )
     }
 }

@@ -4,11 +4,14 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
+import io.ktor.client.request.url
 import io.ktor.http.contentType
 import org.example.project.dtos.CreateUnitDto
+import org.example.project.dtos.FilterUnitsDto
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UpdateUnitDto
 
@@ -16,6 +19,15 @@ class UnitRepo(private val httpClient: HttpClient, private val baseUrl: String) 
 
     suspend fun getAllUnits(): List<UnitDto> =
         httpClient.get("$baseUrl/api/v1/units").body()
+
+    suspend fun searchUnits(filterUnits: FilterUnitsDto): List<UnitDto> {
+        return httpClient.get {
+            url("$baseUrl/api/v1/units/search")
+            filterUnits.name?.let { parameter("name", it) }
+            filterUnits.difficulty?.let { parameter("difficulty", it) }
+        }.body()
+    }
+
 
     suspend fun getUnitById(id: Int): UnitDto? =
         httpClient.get("$baseUrl/api/v1/units/$id").body()

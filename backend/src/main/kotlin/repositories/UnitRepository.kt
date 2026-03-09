@@ -2,6 +2,7 @@ package repositories
 
 import com.example.dtos.CreateUnitCompletedDto
 import com.example.dtos.CreateUnitDto
+import com.example.dtos.FilterUnitsDto
 import com.example.dtos.UnitCompletedDto
 import com.example.dtos.UnitDto
 import com.example.dtos.UpdateUnitCompletedDto
@@ -13,6 +14,7 @@ import models.UnitsCompleted
 
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -54,6 +56,24 @@ class UnitRepository {
     fun getUnitsByDifficulty(difficulty: DifficultyLevel): List<UnitDto> = transaction {
         Units.selectAll().where { Units.difficulty eq difficulty }.map(::resultRowToUnit)
     }
+
+    fun searchUnits(filters: FilterUnitsDto): List<UnitDto> =
+        transaction {
+            var query = Units.selectAll()
+
+            filters.name?.let {
+                query = query.andWhere { Units.name like "%$it%" }
+            }
+            filters.difficulty?.let {
+                query = query.andWhere { Units.difficulty eq it }
+            }
+            filters.isActive?.let {
+                query = query.andWhere { Units.isActive eq it }
+            }
+
+            return@transaction query.orderBy(Units.createdAt).map(::resultRowToUnit)
+        }
+
 
     fun createUnit(dto: CreateUnitDto): UnitDto = try {
         transaction {

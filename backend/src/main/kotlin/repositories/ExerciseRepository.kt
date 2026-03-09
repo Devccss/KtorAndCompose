@@ -4,6 +4,7 @@ import com.example.dtos.CreateExerciseCompletedDto
 import com.example.dtos.CreateExerciseDto
 import com.example.dtos.ExerciseCompletedDto
 import com.example.dtos.ExerciseDto
+import com.example.dtos.FilterExercisesDto
 import com.example.dtos.UpdateExerciseCompletedDto
 import com.example.dtos.UpdateExerciseDto
 import io.ktor.server.plugins.BadRequestException
@@ -12,6 +13,7 @@ import models.Exercises
 
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -36,7 +38,21 @@ class ExerciseRepository {
     fun getAll(): List<ExerciseDto> = transaction {
         Exercises.selectAll().orderBy(Exercises.orderExercise).map(::resultRowToExercise)
     }
+    fun searchExercises(filters:FilterExercisesDto){
+        transaction {
+            var query = Exercises.selectAll()
 
+            filters.name?.let {
+                query = query.andWhere { Exercises.name like "%$it%" }
+            }
+            filters.isActive?.let {
+                query = query.andWhere { Exercises.isActive eq it }
+            }
+
+            return@transaction query.orderBy(Exercises.orderExercise).map(::resultRowToExercise)
+        }
+
+    }
     fun getById(id: Int): ExerciseDto? = transaction {
         Exercises.selectAll().where { Exercises.id eq id }.singleOrNull()
             ?.let(::resultRowToExercise)

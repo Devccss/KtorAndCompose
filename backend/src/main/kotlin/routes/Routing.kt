@@ -16,6 +16,7 @@ import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import kotlinx.serialization.Serializable
+import models.DifficultyLevel
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.koin.ktor.ext.get
 
@@ -37,7 +38,7 @@ fun Application.configureRouting() {
             call.respond(HttpStatusCode.BadRequest, mapOf("error" to cause.message))
         }
     }
-    
+
     val userService = get<UserService>()
 
     // Obtener el resto de servicios via Koin
@@ -157,9 +158,28 @@ fun Application.configureRouting() {
                     call.respond(unitService.getAllUnits())
                 }
                 get("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = unitService.getUnitById(id) ?: throw NotFoundException("Unit not found")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val item =
+                        unitService.getUnitById(id) ?: throw NotFoundException("Unit not found")
                     call.respond(item)
+                }
+                get("/search") {
+                    val name = call.request.queryParameters["name"]
+                    val difficulty =
+                        call.request.queryParameters["difficulty"]?.let { DifficultyLevel.valueOf(it) }
+                    val isActiveParam = call.request.queryParameters["isActive"]
+                    val isActive = isActiveParam?.let {
+                        when (it.lowercase()) {
+                            "true", "1", "yes" -> true
+                            "false", "0", "no" -> false
+                            else -> null
+                        }
+                    }
+                    val filters =
+                        FilterUnitsDto(name = name, difficulty = difficulty, isActive = isActive)
+                    val results = unitService.searchUnits(filters)
+                    call.respond(results)
                 }
                 post {
                     val dto = call.receive<CreateUnitDto>()
@@ -167,7 +187,8 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateUnitDto>()
                     unitService.updateUnit(id, dto)
                     call.respond(HttpStatusCode.OK)
@@ -180,7 +201,8 @@ fun Application.configureRouting() {
                 }
 
                 delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     call.respond(unitService.deleteUnit(id))
                 }
             }
@@ -189,12 +211,29 @@ fun Application.configureRouting() {
             route("/exercises") {
                 get { call.respond(exerciseService.getAll()) }
                 get("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = exerciseService.getById(id) ?: throw NotFoundException("Exercise not found")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val item =
+                        exerciseService.getById(id) ?: throw NotFoundException("Exercise not found")
                     call.respond(item)
                 }
+                get("/search") {
+                    val name = call.request.queryParameters["name"]
+                    val isActiveParam = call.request.queryParameters["isActive"]
+                    val isActive = isActiveParam?.let {
+                        when (it.lowercase()) {
+                            "true", "1", "yes" -> true
+                            "false", "0", "no" -> false
+                            else -> null
+                        }
+                    }
+                    val filters = FilterExercisesDto(name = name, isActive = isActive)
+                    val results = exerciseService.searchExercises(filters)
+                    call.respond(results)
+                }
                 get("unit/{unitId}") {
-                    val unitId = call.parameters["unitId"]?.toIntOrNull() ?: throw BadRequestException("Invalid Unit ID")
+                    val unitId = call.parameters["unitId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Unit ID")
                     val exercises = exerciseService.getByUnitId(unitId)
                     call.respond(exercises)
                 }
@@ -204,7 +243,8 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateExerciseDto>()
                     val success = exerciseService.update(id, dto)
                     call.respond(success)
@@ -216,7 +256,8 @@ fun Application.configureRouting() {
                     call.respond(success)
                 }
                 delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     call.respond(exerciseService.delete(id))
                 }
             }
@@ -225,8 +266,10 @@ fun Application.configureRouting() {
             route("/question-exercises") {
                 get { call.respond(questionWordService.getAll()) }
                 get("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = questionWordService.getById(id) ?: throw NotFoundException("ContentExercise not found")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val item = questionWordService.getById(id)
+                        ?: throw NotFoundException("ContentExercise not found")
                     call.respond(item)
                 }
                 post {
@@ -235,13 +278,15 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateQuestionWordDto>()
                     questionWordService.update(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     call.respond(questionWordService.delete(id))
                 }
             }
@@ -250,8 +295,10 @@ fun Application.configureRouting() {
             route("/question-words") {
                 get { call.respond(questionWordService.getAll()) }
                 get("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = questionWordService.getById(id) ?: throw NotFoundException("ContentWord not found")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val item = questionWordService.getById(id)
+                        ?: throw NotFoundException("ContentWord not found")
                     call.respond(item)
                 }
                 post {
@@ -269,7 +316,8 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateQuestionWordDto>()
                     val question = dto.questionId?.let { questionService.getQuestionById(it) }
                     val word = dto.wordId?.let { wordService.getById(it) }
@@ -283,7 +331,8 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     call.respond(questionWordService.delete(id))
                 }
             }
@@ -292,7 +341,8 @@ fun Application.configureRouting() {
             route("/words") {
                 get { call.respond(wordService.getAll()) }
                 get("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     val item = wordService.getById(id) ?: throw NotFoundException("Word not found")
                     call.respond(item)
                 }
@@ -302,13 +352,15 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateWordDto>()
                     wordService.update(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     call.respond(wordService.delete(id))
                 }
             }
@@ -317,58 +369,69 @@ fun Application.configureRouting() {
             route("/questions") {
                 get { call.respond(questionService.getAllQuestions()) }
                 get("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = questionService.getQuestionById(id) ?: throw NotFoundException("Question not found")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val item = questionService.getQuestionById(id)
+                        ?: throw NotFoundException("Question not found")
                     call.respond(item)
                 }
-                get ("exercise/{exerciseId}") {
-                    val exerciseId = call.parameters["exerciseId"]?.toIntOrNull() ?: throw BadRequestException("Invalid Exercise ID")
+                get("exercise/{exerciseId}") {
+                    val exerciseId = call.parameters["exerciseId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Exercise ID")
                     val questions = questionService.getQuestionsByExerciseId(exerciseId)
                     call.respond(questions)
                 }
-                get("alternatives/{questionId}"){
-                    val questionId = call.parameters["questionId"]?.toIntOrNull() ?: throw BadRequestException("Invalid Question ID")
+                get("alternatives/{questionId}") {
+                    val questionId = call.parameters["questionId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Question ID")
                     val alternatives = questionService.getAlternativeByQuestionId(questionId)
                     call.respond(alternatives)
                 }
                 post("{exerciseId}") {
-                    val exerciseId = call.parameters["exerciseId"]?.toIntOrNull() ?: throw BadRequestException("Invalid Exercise ID")
+                    val exerciseId = call.parameters["exerciseId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Exercise ID")
                     val dto = call.receive<CreateQuestionDto>()
-                    val created = questionService.createQuestion(exerciseId,dto)
+                    val created = questionService.createQuestion(exerciseId, dto)
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateQuestionDto>()
                     val success = questionService.updateQuestion(id, dto)
                     call.respond(success)
                 }
                 delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     call.respond(questionService.deleteQuestion(id))
                 }
             }
 
-            route("/alternatives"){
-                get("question/{questionId}"){
-                    val questionId = call.parameters["questionId"]?.toIntOrNull() ?: throw BadRequestException("Invalid Question ID")
+            route("/alternatives") {
+                get("question/{questionId}") {
+                    val questionId = call.parameters["questionId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Question ID")
                     val alternatives = questionService.getAlternativeByQuestionId(questionId)
                     call.respond(alternatives)
                 }
-                post ("{id}"){
-                    val questionId = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid Question ID")
+                post("{id}") {
+                    val questionId = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Question ID")
                     val dto = call.receive<CreateAlternativeDto>()
-                    val created = questionService.createAlternative(questionId,dto)
+                    val created = questionService.createAlternative(questionId, dto)
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateAlternativeDto>()
                     questionService.updateAlternative(id, dto)
                     call.respond(true)
                 }
                 delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     call.respond(questionService.deleteAlternative(id))
                 }
             }
@@ -377,7 +440,8 @@ fun Application.configureRouting() {
             route("/tests") {
                 get { call.respond(testService.getAll()) }
                 get("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     val item = testService.getById(id) ?: throw NotFoundException("Test not found")
                     call.respond(item)
                 }
@@ -387,13 +451,15 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateTestDto>()
                     testService.update(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     call.respond(testService.delete(id))
                 }
             }
@@ -402,8 +468,10 @@ fun Application.configureRouting() {
             route("/test-exercises") {
                 get { call.respond(testExerciseService.getAll()) }
                 get("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = testExerciseService.getById(id) ?: throw NotFoundException("TestExercise not found")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val item = testExerciseService.getById(id)
+                        ?: throw NotFoundException("TestExercise not found")
                     call.respond(item)
                 }
                 post {
@@ -412,13 +480,15 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateTestExerciseDto>()
                     testExerciseService.update(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     call.respond(testExerciseService.delete(id))
                 }
             }
@@ -427,8 +497,10 @@ fun Application.configureRouting() {
             route("/exercises-on-hold") {
                 get { call.respond(exerciseOnHoldService.getAll()) }
                 get("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = exerciseOnHoldService.getById(id) ?: throw NotFoundException("ExerciseOnHold not found")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val item = exerciseOnHoldService.getById(id)
+                        ?: throw NotFoundException("ExerciseOnHold not found")
                     call.respond(item)
                 }
                 post {
@@ -437,13 +509,15 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateExerciseOnHoldDto>()
                     exerciseOnHoldService.update(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     call.respond(exerciseOnHoldService.delete(id))
                 }
             }
@@ -452,8 +526,10 @@ fun Application.configureRouting() {
             route("/units-completed") {
                 get { call.respond(unitService.getAllUnitsCompleted()) }
                 get("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = unitService.getUnitCompletedById(id) ?: throw NotFoundException("UnitCompleted not found")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val item = unitService.getUnitCompletedById(id)
+                        ?: throw NotFoundException("UnitCompleted not found")
                     call.respond(item)
                 }
                 post {
@@ -462,13 +538,15 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateUnitCompletedDto>()
                     unitService.editUnitsCompleted(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     call.respond(unitService.deleteUnitsCompleted(id))
                 }
             }
@@ -477,8 +555,10 @@ fun Application.configureRouting() {
             route("/exercises-completed") {
                 get { call.respond(exerciseService.getAllExerciseCompleted()) }
                 get("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = exerciseService.getExerciseCompletedById(id) ?: throw NotFoundException("ExerciseCompleted not found")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val item = exerciseService.getExerciseCompletedById(id)
+                        ?: throw NotFoundException("ExerciseCompleted not found")
                     call.respond(item)
                 }
                 post {
@@ -487,13 +567,15 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateExerciseCompletedDto>()
                     exerciseService.updateExerciseCompleted(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     call.respond(exerciseService.deleteExerciseCompleted(id))
                 }
             }
@@ -502,8 +584,10 @@ fun Application.configureRouting() {
             route("/tests-completed") {
                 get { call.respond(testService.getAllTestCompleted()) }
                 get("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = testService.getTestCompletedById(id) ?: throw NotFoundException("TestCompleted not found")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val item = testService.getTestCompletedById(id)
+                        ?: throw NotFoundException("TestCompleted not found")
                     call.respond(item)
                 }
                 post {
@@ -512,13 +596,15 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateTestCompletedDto>()
                     testService.updateTestCompleted(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     call.respond(testService.deleteTestCompleted(id))
                 }
             }
@@ -527,8 +613,10 @@ fun Application.configureRouting() {
             route("/questions-completed") {
                 get { call.respond(questionService.getAllQuestionsCompleted()) }
                 get("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = questionService.getQuestionCompletedById(id) ?: throw NotFoundException("QuestionCompleted not found")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val item = questionService.getQuestionCompletedById(id)
+                        ?: throw NotFoundException("QuestionCompleted not found")
                     call.respond(item)
                 }
                 post {
@@ -537,13 +625,15 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateQuestionCompletedDto>()
                     questionService.updateQuestionsCompleted(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     call.respond(questionService.deleteQuestionsCompleted(id))
                 }
             }
@@ -552,8 +642,10 @@ fun Application.configureRouting() {
             route("/notifications") {
                 get { call.respond(notificationsService.getAll()) }
                 get("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
-                    val item = notificationsService.getById(id) ?: throw NotFoundException("Notification not found")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val item = notificationsService.getById(id)
+                        ?: throw NotFoundException("Notification not found")
                     call.respond(item)
                 }
                 post {
@@ -562,13 +654,15 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateNotificationDto>()
                     notificationsService.update(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
                 delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull() ?: throw BadRequestException("Invalid ID")
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
                     call.respond(notificationsService.delete(id))
                 }
             }

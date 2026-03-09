@@ -32,6 +32,14 @@ data class UpdateUnitDto(
     val orderUnit: Int? = null,
     val isActive: Boolean? = null
 )
+
+@Serializable
+data class FilterUnitsDto(
+    val name: String? = null,
+    val difficulty: DifficultyLevel? = null,
+    val isActive: Boolean? = null
+)
+
 @Serializable
 data class CreateUnitCompletedDto(
     val userId: Int,
@@ -53,3 +61,4 @@ data class UpdateUnitCompletedDto(
     val unitId: Int? = null,
     val completedAt: String? = null
 )
+

@@ -58,31 +58,13 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
         )
     }
 
-    init {
-        if (exerciseId != null) {
-            getQuestionsByExerciseId(exerciseId)
-
-        } else {
-            launchCatching(
-                block = { repo.getAllQuestions() },
-                onSuccess = { question ->
-
-                    _state.value = _state.value.copy(allQuestions = question)
-                },
-                onError = { error ->
-                    _state.value =
-                        _state.value.copy(error = "Error al cargar todas la preguntas", allQuestions = emptyList())
-                }
-            )
-        }
-    }
-
     fun createQuestion(exerciseId: Int, newQuestion: CreateQuestionDto, onQuestionCreated: (Int) -> Unit = {}) {
         launchCatching(
             block = { repo.createQuestion(exerciseId, newQuestion) },
             onSuccess = { createdQuestion ->
-                getQuestionsByExerciseId(exerciseId)
-                // Asumimos que createdQuestion tiene un ID.
+                _state.value = _state.value.copy(
+                    selectedQuestions = _state.value.selectedQuestions + createdQuestion
+                )
                 onQuestionCreated(createdQuestion.id)
             },
             onError = { error ->
@@ -95,10 +77,13 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
     fun createAlternativeForQuestion(questionId: Int, newAlternative: CreateAlternativeDto) {
         launchCatching(
             block = { repo.createAlternative(questionId, newAlternative) },
-            onSuccess = {
-                if (exerciseId != null) {
-                    getQuestionsByExerciseId(exerciseId)
-                }
+            onSuccess = {alt ->
+                // Actualizar estado local agregando la nueva alternativa a la lista existente
+                val currentAlts = _state.value.alternatives[questionId] ?: emptyList()
+                val newAlts = currentAlts + alt
+                _state.value = _state.value.copy(
+                    alternatives = _state.value.alternatives + (questionId to newAlts)
+                )
             },
             onError = { error ->
                 _state.value =
@@ -111,12 +96,25 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
         launchCatching(
             block = { repo.updateQuestion(questionId, updatedQuestion) },
             onSuccess = {
-                if (exerciseId != null) {
-                    getQuestionsByExerciseId(exerciseId)
-                } else {
-                    _state.value =
-                        _state.value.copy(error = "No hay ejercicio asociado para actualizar la pregunta")
+                // Actualización OPTIMISTA / MANUAL:
+                // Como el backend devuelve Boolean (o no devuelve el DTO actualizado al fallar deserialización),
+                // actualizamos el estado local con los datos que acabamos de enviar.
+                // Esto evita recargar datos antiguos por condiciones de carrera.
+
+                val currentList = _state.value.selectedQuestions
+                val newList = currentList.map { q ->
+                    if (q.id == questionId) {
+                        q.copy(
+                            textContent = updatedQuestion.textContent ?: q.textContent,
+                            grammarExplanation = updatedQuestion.grammarExplanation ?: q.grammarExplanation,
+                            questionText = updatedQuestion.questionText?: q.questionText,
+                            typeQuestion = updatedQuestion.typeQuestion?: q.typeQuestion,
+                        )
+                    } else {
+                        q
+                    }
                 }
+                _state.value = _state.value.copy(selectedQuestions = newList)
             },
             onError = { error ->
                 _state.value =
@@ -148,13 +146,62 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
         launchCatching(
             block = { repo.updateAlternative(alternativeId, alternative) },
             onSuccess = {
-                if (exerciseId != null) {
-                    getQuestionsByExerciseId(exerciseId)
+
+                val currentMap = _state.value.alternatives.toMutableMap()
+                var found = false
+
+                for ((qId, altList) in currentMap) {
+                    val index = altList.indexOfFirst { it.id == alternativeId }
+                    if (index != -1) {
+                        val currentAlt = altList[index]
+                        val updatedAlt = currentAlt.copy(
+                            text = alternative.text ?: currentAlt.text,
+                            isCorrect = alternative.isCorrect ?: currentAlt.isCorrect
+                        )
+
+                        val newList = altList.toMutableList()
+                        newList[index] = updatedAlt
+                        currentMap[qId] = newList
+                        found = true
+                        break
+                    }
+                }
+
+                if (found) {
+                    _state.value = _state.value.copy(alternatives = currentMap)
                 }
             },
             onError = { error ->
                 _state.value =
                     _state.value.copy(error = "Error al actualizar la alternativa: ${error.message}")
+            }
+        )
+    }
+
+    fun deleteAlternative(alternativeId: Int) {
+        launchCatching(
+            block = { repo.deleteAlternative(alternativeId) },
+            onSuccess = {
+                // Actualización OPTIMISTA local: remover del mapa sin recargar
+                val currentMap = _state.value.alternatives.toMutableMap()
+                var foundKey: Int? = null
+
+                for ((qId, list) in currentMap) {
+                    if (list.any { it.id == alternativeId }) {
+                        foundKey = qId
+                        break
+                    }
+                }
+
+                if (foundKey != null) {
+                    val newList = currentMap[foundKey]!!.filter { it.id != alternativeId }
+                    currentMap[foundKey] = newList
+                    _state.value = _state.value.copy(alternatives = currentMap)
+                }
+            },
+            onError = { error ->
+                _state.value =
+                    _state.value.copy(error = "Error al eliminar la alternativa: ${error.message}")
             }
         )
     }

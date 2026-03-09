@@ -5,6 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -102,6 +103,18 @@ import org.example.project.network.UserSession
 import org.example.project.viewModel.ExercisesViewModel
 import org.example.project.viewModel.QuestionViewModel
 import org.jetbrains.compose.resources.Font
+import kotlin.random.Random
+
+// Wrapper para manejar alternativas existentes y nuevas en el mismo draft
+class DraftAlternative(
+    val id: Int? = null, // Null si es nueva, int si viene del backend
+    text: String,
+    isCorrect: Boolean,
+    val tempId: Long = Random.nextLong() // ID único para la UI (LazyColumn key, etc)
+) {
+    var text by mutableStateOf(text)
+    var isCorrect by mutableStateOf(isCorrect)
+}
 
 // Local state holder for Question Edits
 // Se cambia de data class a class con propiedades delegadas (mutableStateOf) para que Compose detecte los cambios.
@@ -111,13 +124,15 @@ class QuestionDraftState(
     grammarExplanation: String,
     questionText: String,
     typeQuestion: TypeQuestion,
-    alternatives: List<AlternativesDto>
+    alternatives: List<DraftAlternative>
 ) {
     var textContent by mutableStateOf(textContent)
     var grammarExplanation by mutableStateOf(grammarExplanation)
     var questionText by mutableStateOf(questionText)
     var typeQuestion by mutableStateOf(typeQuestion)
-    var alternatives by mutableStateOf(alternatives)
+    var alternatives = mutableStateMapOf<Long, DraftAlternative>().apply {
+        alternatives.forEach { put(it.tempId, it) }
+    }
 }
 
 class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: Int) : Screen {
@@ -185,16 +200,21 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
         }
 
         // Keep drafts in sync when not editing
-        LaunchedEffect(questionUi.selectedQuestions, questionUi.alternatives, isEditing) {
+        LaunchedEffect(questionUi.selectedQuestions, questionUi.alternatives) {
             if (!isEditing) {
                 questionUi.selectedQuestions.forEach { q ->
+                    val domainAlts = questionUi.alternatives[q.id] ?: emptyList()
+                    val draftAlts = domainAlts.map { 
+                        DraftAlternative(id = it.id, text = it.text, isCorrect = it.isCorrect ?: false)
+                    }
+                    
                     questionDrafts[q.id] = QuestionDraftState(
                         id = q.id,
                         textContent = q.textContent,
                         grammarExplanation = q.grammarExplanation,
                         questionText = q.questionText,
                         typeQuestion = q.typeQuestion,
-                        alternatives = questionUi.alternatives[q.id] ?: emptyList()
+                        alternatives = draftAlts
                     )
                 }
             }
@@ -214,7 +234,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                 if (draft.textContent.isBlank() || draft.questionText.isBlank()) {
                     questionsValid = false
                 }
-                if (draft.typeQuestion == TypeQuestion.ALTERNATIVE && draft.alternatives.isEmpty()) {
+                if (draft.typeQuestion == TypeQuestion.ALTERNATIVE && draft.alternatives.size < 2) {
                     scope.launch { snackbarHostState.showSnackbar("La pregunta de alternativas debe tener minimo dos opciones") }
                     return
                 }
@@ -243,16 +263,38 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                         typeQuestion = draft.typeQuestion
                     )
                 )
-                // Alternatives update
-                draft.alternatives.forEach { alt ->
-                    questionVm.updateAlternativesForQuestion(
-                        alt.id,
-                        UpdateAlternativeDto(text = alt.text, isCorrect = alt.isCorrect)
-                    )
+                
+                // Alternatives handling
+                draft.alternatives.values.forEach { alt ->
+                    if (alt.id != null) {
+                        // Es una alternativa existente -> Actualizar
+                         questionVm.updateAlternativesForQuestion(
+                            alt.id,
+                            UpdateAlternativeDto(text = alt.text, isCorrect = alt.isCorrect)
+                        )
+                    } else {
+                        // Es una alternativa nueva -> Crear
+                        questionVm.createAlternativeForQuestion(
+                            questionId = draft.id,
+                            newAlternative = CreateAlternativeDto(text = alt.text, isCorrect = alt.isCorrect)
+                        )
+                    }
+                }
+                
+                // Lógica para borrar alternativas removidas del draft
+                val originalAlternatives = questionUi.alternatives[draft.id] ?: emptyList()
+                val currentAlternativeIds = draft.alternatives.values.mapNotNull { it.id }.toSet()
+                
+                originalAlternatives.forEach { originalAlt ->
+                    if (originalAlt.id !in currentAlternativeIds) {
+                        questionVm.deleteAlternative(originalAlt.id)
+                    }
                 }
             }
             isEditing = false
-            scope.launch { snackbarHostState.showSnackbar("Cambios guardados exitosamente") }
+            scope.launch { snackbarHostState.showSnackbar("Cambios guardados exitosamente.") }
+            // IMPORTANTE: No recargar aquí para mantener los datos editados visibles
+            // exerciseVm.getExerciseById(exerciseId) 
         }
 
 
@@ -310,8 +352,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                             .padding(end = 8.dp)
                                     ) {
                                         BasicTextField(
-                                            value = if (isEditing) draftName else exerciseUi.selectedExercise?.name
-                                                ?: "",
+                                            value = draftName,
                                             onValueChange = { draftName = it },
                                             readOnly = !isEditing,
                                             textStyle = MaterialTheme.typography.headlineSmall.copy(
@@ -335,8 +376,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
 
                                     // Badge & Status Dropdown
                                     Box {
-                                        val isActive =
-                                            if (isEditing) draftActive else exerciseUi.selectedExercise?.isActive == true
+                                        val isActive = draftActive
                                         val badgeColor =
                                             if (isActive) Color(0xFFB8F4C4) else Color(0xFFFFD4D4)
                                         val textColor =
@@ -402,8 +442,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
 
                                 // Description Field
                                 BasicTextField(
-                                    value = if (isEditing) draftDescription else exerciseUi.selectedExercise?.description
-                                        ?: "",
+                                    value = draftDescription,
                                     onValueChange = { draftDescription = it },
                                     readOnly = !isEditing,
                                     textStyle = MaterialTheme.typography.bodyMedium.copy(
@@ -538,13 +577,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                         isEditing = isEditing,
                                         encodeSansFamily = encodeSansFamily,
                                         jetbrainsMonoFamily = jetbrainsMonoFamily,
-                                        onAlert = { msg ->
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar(
-                                                    msg
-                                                )
-                                            }
-                                        }
+                                        onAlert = { msg -> scope.launch { snackbarHostState.showSnackbar(msg) } }
                                     )
                                 }
                             }
@@ -564,7 +597,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                             },
                             encodeSansFamily = encodeSansFamily,
                             jetbrainsMonoFamily = jetbrainsMonoFamily,
-                            onAddAlternatives = { _, _ -> /* Deprecated/Unused in this flow */ }
+                            onAlert = { msg -> scope.launch { snackbarHostState.showSnackbar(msg) } }
                         )
                     }
                 }
@@ -579,9 +612,9 @@ fun AddQuestionSection(
     isAdding: Boolean,
     onAddingChange: (Boolean) -> Unit = {},
     onAdd: (CreateQuestionDto, List<CreateAlternativeDto>) -> Unit,
-    onAddAlternatives: (Int, List<CreateAlternativeDto>) -> Unit,
     encodeSansFamily: FontFamily,
-    jetbrainsMonoFamily: FontFamily
+    jetbrainsMonoFamily: FontFamily,
+    onAlert: (String) -> Unit
 ) {
     var textContent by remember { mutableStateOf("") }
     var grammarExplanation by remember { mutableStateOf("") }
@@ -855,6 +888,7 @@ fun QuestionEditableRegion(
     var showTypeChangeAlert by remember { mutableStateOf(false) }
     var pendingTypeChange by remember { mutableStateOf<TypeQuestion?>(null) }
     var typeMenuExpanded by remember { mutableStateOf(false) }
+    var newAltText by remember { mutableStateOf("") }
 
     if (showTypeChangeAlert) {
         AlertDialog(
@@ -884,6 +918,7 @@ fun QuestionEditableRegion(
             .background(Color(0xFFFAFAFA), RoundedCornerShape(8.dp))
             .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(8.dp))
             .padding(16.dp)
+            .verticalScroll( rememberScrollState() )
     ) {
         // --- 1. Text Content ---
         Column {
@@ -994,6 +1029,7 @@ fun QuestionEditableRegion(
                             text = { Text("Abierta") },
                             onClick = {
                                 typeMenuExpanded = false
+                                // Verificar map en vez de list
                                 if (draft.typeQuestion == TypeQuestion.ALTERNATIVE && draft.alternatives.isNotEmpty()) {
                                     pendingTypeChange = TypeQuestion.OPEN
                                     showTypeChangeAlert = true
@@ -1006,7 +1042,7 @@ fun QuestionEditableRegion(
                 }
             }
         }
-
+        
         if (isEditing) {
             OutlinedTextField(
                 value = draft.questionText,
@@ -1035,33 +1071,57 @@ fun QuestionEditableRegion(
         if (draft.typeQuestion == TypeQuestion.ALTERNATIVE) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (isEditing) {
-                    draft.alternatives.forEachIndexed { index, alt ->
+                    // Input para nueva alternativa
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = newAltText,
+                            onValueChange = { newAltText = it },
+                            placeholder = { Text("Texto de alternativa") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            textStyle = TextStyle(fontSize = 13.sp, fontFamily = jetbrainsMonoFamily),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White
+                            )
+                        )
+                        IconButton(
+                            onClick = {
+                                if (newAltText.isNotBlank()) {
+                                    // Agregar al mapa del draft directamente
+                                    val isCorrect = draft.alternatives.isEmpty()
+                                    val newDraftAlt = DraftAlternative(
+                                        id = null, // Marca como nuevo
+                                        text = newAltText,
+                                        isCorrect = isCorrect
+                                    )
+                                    draft.alternatives[newDraftAlt.tempId] = newDraftAlt
+                                    newAltText = ""
+                                }
+                            },
+                            enabled = newAltText.isNotBlank()
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Agregar", tint = Color(0xFF003AB6))
+                        }
+                    }
+                    
+                    // Renderizar alternativas del Draft
+                    draft.alternatives.values.forEach { alt ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             RadioButton(
-                                selected = alt.isCorrect == true,
+                                selected = alt.isCorrect,
                                 onClick = {
-                                    // Set only this one as correct
-                                    val newAlts = draft.alternatives.map {
-                                        it.copy(isCorrect = (it.id == alt.id))
-                                    }
-                                    draft.alternatives = newAlts
+                                    // Update visual state in map
+                                    draft.alternatives.values.forEach { it.isCorrect = false }
+                                    alt.isCorrect = true
                                 },
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = Color(
-                                        0xFF2E7D32
-                                    )
-                                )
+                                colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF2E7D32))
                             )
-                            // We can't edit text of Alternative DTO directly if it's not var in DTO.
-                            // Since DTOs are vals, we replaced the list with copies.
-                            // But TextField needs a way to update the string.
-                            // We do a hacky immutable update:
+
                             OutlinedTextField(
                                 value = alt.text,
                                 onValueChange = { newText ->
-                                    val newAlts = draft.alternatives.toMutableList()
-                                    newAlts[index] = alt.copy(text = newText)
-                                    draft.alternatives = newAlts
+                                    alt.text = newText
                                 },
                                 modifier = Modifier.weight(1f),
                                 colors = OutlinedTextFieldDefaults.colors(
@@ -1070,23 +1130,23 @@ fun QuestionEditableRegion(
                                     unfocusedBorderColor = Color.Transparent
                                 )
                             )
+                            
+                            // Boton eliminar (opcional, solo visual por ahora)
+                             IconButton(onClick = {
+                                draft.alternatives.remove(alt.tempId)
+                            }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Quitar", tint = Color.Red, modifier = Modifier.size(18.dp))
+                            }
                         }
-                    }
-                    if (draft.alternatives.isEmpty()) {
-                        Text(
-                            "Añade alternativas (no implementado en backend para 'Crear' en este flow, solo editar existentes)",
-                            color = Color.Red,
-                            fontSize = 12.sp
-                        )
                     }
                 } else {
                     // Read Mode
-                    draft.alternatives.forEach { alt ->
+                    draft.alternatives.values.forEach { alt ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = if (alt.isCorrect == true) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                                imageVector = if (alt.isCorrect) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
                                 contentDescription = null,
-                                tint = if (alt.isCorrect == true) Color(0xFF2E7D32) else Color.Gray,
+                                tint = if (alt.isCorrect) Color(0xFF2E7D32) else Color.Gray,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -1094,9 +1154,7 @@ fun QuestionEditableRegion(
                                 text = alt.text,
                                 fontFamily = jetbrainsMonoFamily,
                                 fontSize = 14.sp,
-                                color = if (alt.isCorrect == true) Color(0xFF2E7D32) else Color(
-                                    0xFF131313
-                                )
+                                color = if (alt.isCorrect) Color(0xFF2E7D32) else Color(0xFF131313)
                             )
                         }
                     }

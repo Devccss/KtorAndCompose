@@ -2,6 +2,7 @@ package com.example.services
 
 import com.example.dtos.CreateUnitCompletedDto
 import com.example.dtos.CreateUnitDto
+import com.example.dtos.FilterUnitsDto
 import com.example.dtos.UnitCompletedDto
 import com.example.dtos.UnitDto
 import com.example.dtos.UpdateUnitCompletedDto
@@ -20,6 +21,10 @@ class UnitService(private val unitRepository: UnitRepository) {
 
     fun getUnitById(id: Int): UnitDto? {
         return unitRepository.getUnitById(id)
+    }
+
+    fun searchUnits(filters: FilterUnitsDto): List<UnitDto> {
+        return unitRepository.searchUnits(filters)
     }
 
     fun createUnit(dto: CreateUnitDto): UnitDto {

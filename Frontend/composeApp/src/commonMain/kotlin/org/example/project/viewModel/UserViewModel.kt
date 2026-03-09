@@ -126,7 +126,41 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
         )
     }
 
-    private fun getUserByEmail(email: String) {
+    fun getUserById(id: Int) {
+        launchCatching(
+            block = { repo.getUserById(id) },
+            onSuccess = { user ->
+                if (user != null) {
+                    _state.value = _state.value.copy(
+                        users = _state.value.users + UserDto(
+                            id = user.id,
+                            name = user.name,
+                            email = user.email,
+                            password = user.password,
+                            currentUnitId = user.currentUnitId,
+                            createdAt = user.createdAt
+                        )
+                    )
+                    _state.value = _state.value.copy(
+                        currentUser = user,
+                    )
+                } else {
+                    _state.value = _state.value.copy(
+                        error = "User not found",
+
+                    )
+                }
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(
+                    error = error.message,
+
+                )
+            }
+        )
+    }
+
+     fun getUserByEmail(email: String) {
         launchCatching(
             block = { repo.getUserByEmail(email) },
             onSuccess = { user ->

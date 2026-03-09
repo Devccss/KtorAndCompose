@@ -3,6 +3,7 @@ package com.example.services
 import com.example.dtos.CreateExerciseCompletedDto
 import com.example.dtos.CreateExerciseDto
 import com.example.dtos.ExerciseDto
+import com.example.dtos.FilterExercisesDto
 import com.example.dtos.UpdateExerciseCompletedDto
 import com.example.dtos.UpdateExerciseDto
 import repositories.ExerciseRepository
@@ -10,6 +11,7 @@ import repositories.ExerciseRepository
 class ExerciseService(private val repo: ExerciseRepository) {
     fun getAll(): List<ExerciseDto> = repo.getAll()
     fun getById(id: Int): ExerciseDto? = repo.getById(id)
+    fun searchExercises(filters:FilterExercisesDto) = repo.searchExercises(filters)
     fun getByUnitId(unitId: Int): List<ExerciseDto> = repo.getByUnitId(unitId)
     fun create(dto: CreateExerciseDto): ExerciseDto = repo.create(dto)
     fun update(id: Int, dto: UpdateExerciseDto) = repo.update(id, dto)

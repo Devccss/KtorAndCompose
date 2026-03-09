@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterList
@@ -53,6 +54,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -82,6 +84,7 @@ import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import org.example.project.components.AppLayout
 import org.example.project.dtos.CreateExerciseDto
 import org.example.project.dtos.ExerciseDto
+import org.example.project.dtos.FilterExercisesDto
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UpdateUnitDto
 import org.example.project.network.RepositoryProvider
@@ -158,7 +161,7 @@ class ExercisesOrUnitScreen(private val unitId: Int? = null) : Screen {
                         exerciseVm.reorderExercises(updates)
                     },
                     onError = { error -> exerciseVm.updateMessage(error.message) },
-                    isLoading = exerciseUi.isLoading || unitUi.isLoading
+                    onFilter = { filterDto -> exerciseVm.searchExercises(filterDto) }
                 )
             }
         }
@@ -181,8 +184,8 @@ fun ExercisesSection(
     onAdd: (CreateExerciseDto) -> Unit, // Cambiado para recibir DTO
     onUnitEdit: (Int, UpdateUnitDto) -> Unit, // Nuevo callback para editar ejercicio
     onReorder: (List<Pair<Int, Int>>) -> Unit, // Nuevo callback para reordenar
+    onFilter: (FilterExercisesDto) -> Unit, // Callback para fitros backend
     onError: (Error) -> Unit,
-    isLoading: Boolean = false
 ) {
     val encodeSansFamily = FontFamily(Font(Res.font.encode_sans_variable))
     val jetbrainsMonoFamily = FontFamily(Font(Res.font.jetbrains_mono_regular))
@@ -195,13 +198,17 @@ fun ExercisesSection(
     var selectedUnit by remember { mutableStateOf<UnitDto?>(null) }
 
 
-    var updateUnit by remember { mutableStateOf<UpdateUnitDto?>(null) }
     var isEditingUnit by remember { mutableStateOf(false) }
     var editStatus by remember { mutableStateOf(false) }
     var nameUnit by remember { mutableStateOf(actualUnit?.name) }
     var descriptionUnit by remember { mutableStateOf(actualUnit?.description) }
     var activeUnit by remember { mutableStateOf(actualUnit?.isActive ?: false) }
 
+    // Estados para filtrado
+    var isFiltering by remember { mutableStateOf(false) }
+    var filterUnit by remember { mutableStateOf<UnitDto?>(null) }
+    var filterActive by remember { mutableStateOf<Boolean?>(null) }
+    var filterActiveExpanded by remember { mutableStateOf(false) }
 
     // UI estados para el botón
     var textAdd by remember { mutableStateOf("") }
@@ -330,19 +337,6 @@ fun ExercisesSection(
                                     expanded = editStatus,
                                     onExpandedChange = { editStatus = !editStatus }
                                 ) {
-                                    // Definir colores basados en el estado actual
-                                    val badgeColor =
-                                            if (activeUnit) Color(0xFFB8F4C4) else Color(
-                                                0xFFFFD4D4
-                                            )
-                                    val textColor =
-                                            if (activeUnit) Color(0xFF2D5E3D) else Color(
-                                                0xFF8B0000
-                                            )
-                                    val textState =
-                                            if (activeUnit) "Activo" else "Inactivo"
-
-                                    // Usamos Surface para darle forma de Chip/Badge
                                     Surface(
                                         modifier = Modifier
                                             .menuAnchor(
@@ -513,6 +507,17 @@ fun ExercisesSection(
                                 modifier = Modifier.size(20.dp)
                             )
                         },
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                onFilter(FilterExercisesDto(name = searchQuery, isActive = filterActive))
+                            }) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Send,
+                                    contentDescription = "Enviar búsqueda",
+                                    tint = Color(0xFF4A4A4A).copy(alpha = 0.5f)
+                                )
+                            }
+                        },
                         singleLine = true,
                         shape = MaterialTheme.shapes.small,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -522,18 +527,94 @@ fun ExercisesSection(
                     )
 
                     IconButton(
-                        onClick = { /* Abrir filtros */ },
+                        onClick = { isFiltering = !isFiltering },
                         modifier = Modifier
                             .size(48.dp)
-                            .background(Color.White, shape = MaterialTheme.shapes.small)
+                            .background(
+                                if (isFiltering) Color(0xFFE0E0E0) else Color.White,
+                                shape = MaterialTheme.shapes.small
+                            )
                     ) {
                         Icon(
                             Icons.Default.FilterList,
                             contentDescription = "Filtros",
-                            tint = Color(0xFF4A4A4A)
+                            tint = if (isFiltering) Color(0xFF003AB6) else Color(0xFF4A4A4A)
                         )
                     }
                 }
+
+                // Formulario de Filtros Expandible
+                AnimatedVisibility(
+                    visible = isFiltering,
+                    enter = expandVertically(),
+                    exit = shrinkVertically()
+                ) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F4F8)),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text("Filtros de Ejercicios", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                // Estado
+                                Box(Modifier.weight(1f)) {
+                                    ExposedDropdownMenuBox(
+                                        expanded = filterActiveExpanded,
+                                        onExpandedChange = { filterActiveExpanded = !filterActiveExpanded }
+                                    ) {
+                                        val activeText = when (filterActive) {
+                                            true -> "Activo"
+                                            false -> "Inactivo"
+                                            else -> "Todos"
+                                        }
+                                        OutlinedTextField(
+                                            value = activeText,
+                                            onValueChange = {},
+                                            readOnly = true,
+                                            label = { Text("Estado", fontSize = 12.sp) },
+                                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = filterActiveExpanded) },
+                                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth(),
+                                            colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+                                        )
+                                        ExposedDropdownMenu(
+                                            expanded = filterActiveExpanded,
+                                            onDismissRequest = { filterActiveExpanded = false }
+                                        ) {
+                                            DropdownMenuItem(text = { Text("Todos") }, onClick = { filterActive = null; filterActiveExpanded = false })
+                                            DropdownMenuItem(text = { Text("Activo") }, onClick = { filterActive = true; filterActiveExpanded = false })
+                                            DropdownMenuItem(text = { Text("Inactivo") }, onClick = { filterActive = false; filterActiveExpanded = false })
+                                        }
+                                    }
+                                }
+                            }
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                TextButton(onClick = {
+                                    filterUnit = null
+                                    filterActive = null
+                                    onSearchQueryChange("")
+                                    onFilter(FilterExercisesDto(null))
+                                }) { Text("Limpiar") }
+                                Spacer(Modifier.width(8.dp))
+                                androidx.compose.material3.Button(
+                                    onClick = {
+                                        onFilter(FilterExercisesDto(
+                                            isActive = filterActive
+                                        ))
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF003AB6)),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) { Text("Aplicar") }
+                            }
+                        }
+                    }
+                }
+
             } else {
                 Text(
                     "Modo Ordenamiento: Usa las flechas para mover",
@@ -820,7 +901,6 @@ fun ExercisesSection(
 @Composable
 fun ExerciseCard(
     exercises: ExerciseDto,
-    onClick: () -> Unit = {},
     onExerciseClick: () -> Unit = {}
 ) {
     val encodeSansFamily = FontFamily(Font(Res.font.encode_sans_variable))

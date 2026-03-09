@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.example.project.dtos.CreateUnitDto
 import org.example.project.dtos.CreateUserDto
+import org.example.project.dtos.FilterUnitsDto
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UpdateUnitDto
 import org.example.project.dtos.UserDto
@@ -88,6 +89,18 @@ class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : V
                     error = error.message,
 
                     )
+            }
+        )
+    }
+
+    fun searchUnits(filters: FilterUnitsDto){
+        launchCatching(
+            block = { unitRepo.searchUnits(filters) },
+            onSuccess = { units ->
+                _state.value = _state.value.copy(units = units)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = error.message, units = emptyList())
             }
         )
     }

@@ -10,6 +10,7 @@ import models.Users
 
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -45,8 +46,8 @@ class UsersRepository {
     fun getFilterUsers(filters: FilterUsersDto): List<UserDto> = transaction {
         var query = Users.selectAll()
 
-        filters.name?.takeIf { it.isNotBlank() }?.let { name -> query = query.where { Users.name like "%$name%" } }
-        filters.role?.let { query = query.where { Users.role eq it } }
+        filters.name?.takeIf { it.isNotBlank() }?.let { name -> query = query.andWhere { Users.name like "%$name%" } }
+        filters.role?.let { query = query.andWhere { Users.role eq it } }
 
         query.orderBy(Users.createdAt).map(::resultRowToUser)
     }
@@ -123,7 +124,6 @@ class UsersRepository {
             throw BadRequestException("Email o contraseña inválidos.")
         }
 
-        // Devolver usuario sin contraseña
         resultRowToUser(row)
     }
 }

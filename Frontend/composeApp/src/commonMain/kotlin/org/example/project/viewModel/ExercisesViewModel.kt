@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import org.example.project.dtos.CreateExerciseDto
 import org.example.project.dtos.DifficultyLevel
 import org.example.project.dtos.ExerciseDto
+import org.example.project.dtos.FilterExercisesDto
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UpdateExerciseDto
 import org.example.project.repository.ExerciseRepo
@@ -49,6 +50,19 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
         }else{
             getAllExercises()
         }
+    }
+
+    fun searchExercises(filters: FilterExercisesDto){
+        launchCatching(
+            block = { repo.searchExercises(filters)},
+            onSuccess = { exercise ->
+
+                _state.value = _state.value.copy(exercise = exercise)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al buscar ejercicios: ${error.message}", exercise = emptyList())
+            }
+        )
     }
 
     fun getAllExercises() {

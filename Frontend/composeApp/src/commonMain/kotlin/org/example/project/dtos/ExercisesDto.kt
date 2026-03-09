@@ -51,3 +51,9 @@ data class UpdateExerciseCompletedDto(
     val exerciseId: Int? = null,
     val completedAt: String? = null
 )
+
+@Serializable
+data class FilterExercisesDto(
+    val name: String? = null,
+    val isActive: Boolean? = null
+)
