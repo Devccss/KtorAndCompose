@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -164,421 +166,466 @@ class UsersScreen : Screen {
             snackbarHostState = snackbarHostState
         ) { _, _, _ ->
 
-            Column(
+            Card(
                 modifier = Modifier
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .fillMaxSize() // Cambiado de fillMaxWidth a fillMaxSize
+                    .shadow(1.dp, shape = RoundedCornerShape(12.dp)),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                ),
             ) {
-                Card(
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(1.dp, shape = RoundedCornerShape(12.dp)),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color.White
-                    ),
+                        .fillMaxSize() // Cambiado de fillMaxWidth a fillMaxSize
+                        .padding(horizontal = 12.dp, vertical = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            OutlinedTextField(
-                                value = searchQuery,
-                                onValueChange = { searchQuery = it },
-                                modifier = Modifier.weight(1f),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Color(0xFFE0E0E0),
-                                    unfocusedBorderColor = Color(0xFFE0E0E0)
-                                ),
-                                shape = MaterialTheme.shapes.small,
-                                placeholder = {
-                                    Text(
-                                        "Buscar usuarios...",
-                                        fontSize = MaterialTheme.typography.bodyMedium.fontSize.value.sp
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Search,
-                                        modifier = Modifier.size(20.dp),
-                                        contentDescription = "Buscar"
-                                    )
-                                },
-                                singleLine = true,
-                                trailingIcon = {
-                                    IconButton(onClick = {
-                                        vm.getFilterUsers(
-                                            FilterUsersDto(
-                                                name = searchQuery,
-                                                role = selectedRole,
-                                                unitId = selectedUnit?.id
-                                            )
-                                        )
-                                    }) {
-                                        Icon(
-                                            Icons.AutoMirrored.Filled.Send,
-                                            modifier = Modifier.size(20.dp),
-                                            contentDescription = "Buscar enviar",
-                                            tint = Color(0xFF4A4A4A).copy(alpha = 0.5f)
-                                        )
-                                    }
-                                },
-                            )
-
-                            // Botón para alternar visibilidad del filtro (Formulario inline)
-                            IconButton(
-                                onClick = { isFiltering = !isFiltering },
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .background(
-                                        if (isFiltering) Color(0xFFE0E0E0) else Color.White,
-                                        shape = MaterialTheme.shapes.small
-                                    )
-                            ) {
-                                Icon(
-                                    Icons.Default.FilterList,
-                                    contentDescription = "Filtros",
-                                    tint = if (isFiltering) Color(0xFF003AB6) else Color(0xFF4A4A4A)
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFFE0E0E0),
+                                unfocusedBorderColor = Color(0xFFE0E0E0)
+                            ),
+                            shape = MaterialTheme.shapes.small,
+                            placeholder = {
+                                Text(
+                                    "Buscar usuarios...",
+                                    fontSize = MaterialTheme.typography.bodyMedium.fontSize.value.sp
                                 )
-                            }
-                        }
-
-                        // Formulario de Filtros Expandible
-                        AnimatedVisibility(
-                            visible = isFiltering,
-                            enter = expandVertically(),
-                            exit = shrinkVertically()
-                        ) {
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F4F8)),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Text("Filtros de Búsqueda", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-
-                                    // Filtros en fila o columna
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        // Rol Dropdown
-                                        Box(Modifier.weight(1f)) {
-                                            ExposedDropdownMenuBox(
-                                                expanded = roleExpanded,
-                                                onExpandedChange = { roleExpanded = !roleExpanded }
-                                            ) {
-                                                OutlinedTextField(
-                                                    value = selectedRole?.name ?: "Todos los roles",
-                                                    onValueChange = {},
-                                                    readOnly = true,
-                                                    label = { Text("Rol", fontSize = 12.sp) },
-                                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = roleExpanded) },
-                                                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth(),
-                                                    colors = OutlinedTextFieldDefaults.colors(
-                                                        focusedContainerColor = Color.White,
-                                                        unfocusedContainerColor = Color.White
-                                                    )
-                                                )
-                                                ExposedDropdownMenu(
-                                                    expanded = roleExpanded,
-                                                    onDismissRequest = { roleExpanded = false }
-                                                ) {
-                                                    DropdownMenuItem(
-                                                        text = { Text("Todos") },
-                                                        onClick = { selectedRole = null; roleExpanded = false }
-                                                    )
-                                                    Role.entries.forEach { rol ->
-                                                        DropdownMenuItem(
-                                                            text = { Text(rol.name) },
-                                                            onClick = { selectedRole = rol; roleExpanded = false }
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        // Unidad Dropdown
-                                        Box(Modifier.weight(1f)) {
-                                            ExposedDropdownMenuBox(
-                                                expanded = unitExpanded,
-                                                onExpandedChange = { unitExpanded = !unitExpanded }
-                                            ) {
-                                                OutlinedTextField(
-                                                    value = selectedUnit?.name ?: "Todas las unidades",
-                                                    onValueChange = {},
-                                                    readOnly = true,
-                                                    label = { Text("Unidad", fontSize = 12.sp) },
-                                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = unitExpanded) },
-                                                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth(),
-                                                    colors = OutlinedTextFieldDefaults.colors(
-                                                        focusedContainerColor = Color.White,
-                                                        unfocusedContainerColor = Color.White
-                                                    )
-                                                )
-                                                ExposedDropdownMenu(
-                                                    expanded = unitExpanded,
-                                                    onDismissRequest = { unitExpanded = false }
-                                                ) {
-                                                    DropdownMenuItem(
-                                                        text = { Text("Todas") },
-                                                        onClick = { selectedUnit = null; unitExpanded = false }
-                                                    )
-                                                    ui.unit.forEach { unit ->
-                                                        DropdownMenuItem(
-                                                            text = { Text(unit.name) },
-                                                            onClick = { selectedUnit = unit; unitExpanded = false }
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.End
-                                    ) {
-                                        TextButton(onClick = {
-                                            // Limpiar
-                                            searchQuery = ""
-                                            selectedRole = null
-                                            selectedUnit = null
-                                            vm.getFilterUsers(FilterUsersDto())
-                                        }) {
-                                            Text("Limpiar filtros")
-                                        }
-
-                                        Spacer(Modifier.width(8.dp))
-
-                                        androidx.compose.material3.Button(
-                                            onClick = {
-                                                vm.getFilterUsers(
-                                                    FilterUsersDto(
-                                                        name = searchQuery,
-                                                        role = selectedRole,
-                                                        unitId = selectedUnit?.id
-                                                    )
-                                                )
-                                                // Opcional: cerrar filtros al aplicar
-                                                // isFiltering = false
-                                            },
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF003AB6)),
-                                            shape = RoundedCornerShape(8.dp)
-                                        ) {
-                                            Text("Aplicar Filtros")
-                                        }
-                                    }
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Search,
+                                    modifier = Modifier.size(20.dp),
+                                    contentDescription = "Buscar"
+                                )
+                            },
+                            singleLine = true,
+                            trailingIcon = {
+                                IconButton(onClick = {
+                                    vm.getFilterUsers(
+                                        FilterUsersDto(
+                                            name = searchQuery,
+                                            role = selectedRole,
+                                            unitId = selectedUnit?.id
+                                        )
+                                    )
+                                }) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Send,
+                                        modifier = Modifier.size(20.dp),
+                                        contentDescription = "Buscar enviar",
+                                        tint = Color(0xFF4A4A4A).copy(alpha = 0.5f)
+                                    )
                                 }
-                            }
-                        }
+                            },
+                        )
 
-                        // Botones (Agregar / Orden) - la acción de agregar también está en FAB
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        // Botón para alternar visibilidad del filtro (Formulario inline)
+                        IconButton(
+                            onClick = { isFiltering = !isFiltering },
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(
+                                    if (isFiltering) Color(0xFFE0E0E0) else Color.White,
+                                    shape = MaterialTheme.shapes.small
+                                )
                         ) {
-                            androidx.compose.material3.Button(
-                                onClick = { isAddingUser = !isAddingUser },
-                                modifier = Modifier.weight(1f).padding(end = 8.dp),
-                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                    containerColor = butonAddColor
-                                ),
-                                shape = MaterialTheme.shapes.small
+                            Icon(
+                                Icons.Default.FilterList,
+                                contentDescription = "Filtros",
+                                tint = if (isFiltering) Color(0xFF003AB6) else Color(0xFF4A4A4A)
+                            )
+                        }
+                    }
+
+                    // Formulario de Filtros Expandible
+                    AnimatedVisibility(
+                        visible = isFiltering,
+                        enter = expandVertically(),
+                        exit = shrinkVertically()
+                    ) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F4F8)),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 Text(
-                                    textAdd,
-                                    color = if (isAddingUser) Color(0xFF8B0000) else Color(0xFF2D5E3D)
+                                    "Filtros de Búsqueda",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp
                                 )
-                            }
-                        }
 
-                         // Formulario desplegable para agregar usuario
-                        AnimatedVisibility(
-                            visible = isAddingUser,
-                            enter = expandVertically(),
-                            exit = shrinkVertically(),
-                            modifier = Modifier.verticalScroll( rememberScrollState())
-                        ) {
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                // Filtros en fila o columna
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Text("Nuevo Usuario", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-
-                                    OutlinedTextField(
-                                        value = newUserName,
-                                        onValueChange = { newUserName = it },
-                                        label = { Text("Nombre*") },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        singleLine = true,
-                                        isError = newUserName.isBlank()
-                                    )
-
-                                    OutlinedTextField(
-                                        value = newUserEmail,
-                                        onValueChange = { newUserEmail = it },
-                                        label = { Text("Email*") },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        singleLine = true,
-                                        isError = newUserEmail.isBlank()
-                                    )
-
-                                    OutlinedTextField(
-                                        value = newUserPassword,
-                                        onValueChange = { newUserPassword = it },
-                                        label = { Text("Contraseña*") },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        singleLine = true,
-                                        isError = newUserPassword.isBlank(),
-                                        // Visual transformation could be added here if needed
-                                    )
-
-                                    // Role Dropdown
-                                    ExposedDropdownMenuBox(
-                                        expanded = roleMenuExpanded,
-                                        onExpandedChange = { roleMenuExpanded = !roleMenuExpanded }
-                                    ) {
-                                        OutlinedTextField(
-                                            value = newUserRole.name,
-                                            onValueChange = {},
-                                            readOnly = true,
-                                            label = { Text("Rol") },
-                                            trailingIcon = {
-                                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = roleMenuExpanded)
-                                            },
-                                            modifier = Modifier
-                                                .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
-                                                .fillMaxWidth()
-                                        )
-                                        ExposedDropdownMenu(
-                                            expanded = roleMenuExpanded,
-                                            onDismissRequest = { roleMenuExpanded = false }
+                                    // Rol Dropdown
+                                    Box(Modifier.weight(1f)) {
+                                        ExposedDropdownMenuBox(
+                                            expanded = roleExpanded,
+                                            onExpandedChange = { roleExpanded = !roleExpanded }
                                         ) {
-                                            Role.entries.forEach { role ->
-                                                DropdownMenuItem(
-                                                    text = { Text(role.name) },
-                                                    onClick = {
-                                                        newUserRole = role
-                                                        roleMenuExpanded = false
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    // Unit Dropdown
-                                    if(ui.unit.isNotEmpty() && newUserUnit == null) {
-                                        newUserUnit = ui.unit.first()
-                                    }
-
-                                    ExposedDropdownMenuBox(
-                                        expanded = unitMenuExpanded,
-                                        onExpandedChange = { unitMenuExpanded = !unitMenuExpanded }
-                                    ) {
-                                        OutlinedTextField(
-                                            value = newUserUnit?.name ?: "Selecciona unidad",
-                                            onValueChange = {},
-                                            readOnly = true,
-                                            label = { Text("Unidad Inicial") },
-                                            trailingIcon = {
-                                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = unitMenuExpanded)
-                                            },
-                                            modifier = Modifier
-                                                .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
-                                                .fillMaxWidth()
-                                        )
-                                        ExposedDropdownMenu(
-                                            expanded = unitMenuExpanded,
-                                            onDismissRequest = { unitMenuExpanded = false }
-                                        ) {
-                                            ui.unit.forEach { unit ->
-                                                DropdownMenuItem(
-                                                    text = { Text(unit.name) },
-                                                    onClick = {
-                                                        newUserUnit = unit
-                                                        unitMenuExpanded = false
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        androidx.compose.material3.Button(
-                                            onClick = { isAddingUser = false },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = Color(0xFFFFD4D4)
-                                            )
-                                        ) {
-                                            Text("Cancelar", color = Color(0xFF8B0000))
-                                        }
-
-                                        androidx.compose.material3.Button(
-                                            onClick = {
-                                                if (newUserName.isBlank() || newUserEmail.isBlank() || newUserPassword.isBlank()) {
-                                                    // Handle error (show snackbar ideally via callback or local state)
-                                                    return@Button
-                                                }
-
-                                                vm.registerUser(
-                                                    CreateUserDto(
-                                                        name = newUserName,
-                                                        email = newUserEmail,
-                                                        password = newUserPassword,
-                                                        role = newUserRole,
-                                                        currentUnitId = newUserUnit?.id
+                                            OutlinedTextField(
+                                                value = selectedRole?.name ?: "Todos los roles",
+                                                onValueChange = {},
+                                                readOnly = true,
+                                                label = { Text("Rol", fontSize = 12.sp) },
+                                                trailingIcon = {
+                                                    ExposedDropdownMenuDefaults.TrailingIcon(
+                                                        expanded = roleExpanded
                                                     )
+                                                },
+                                                modifier = Modifier.menuAnchor(
+                                                    MenuAnchorType.PrimaryNotEditable,
+                                                    enabled = true
+                                                ).fillMaxWidth(),
+                                                colors = OutlinedTextFieldDefaults.colors(
+                                                    focusedContainerColor = Color.White,
+                                                    unfocusedContainerColor = Color.White
                                                 )
-
-                                                // Reset and close
-                                                newUserName = ""
-                                                newUserEmail = ""
-                                                newUserPassword = ""
-                                                newUserRole = Role.STUDENT
-                                                newUserUnit = null
-                                                isAddingUser = false
-                                            },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = Color(0xFFB8F4C4)
                                             )
-                                        ) {
-                                            Text("Guardar Usuario", color = Color(0xFF2D5E3D))
+                                            ExposedDropdownMenu(
+                                                expanded = roleExpanded,
+                                                onDismissRequest = { roleExpanded = false }
+                                            ) {
+                                                DropdownMenuItem(
+                                                    text = { Text("Todos") },
+                                                    onClick = {
+                                                        selectedRole = null; roleExpanded = false
+                                                    }
+                                                )
+                                                Role.entries.forEach { rol ->
+                                                    DropdownMenuItem(
+                                                        text = { Text(rol.name) },
+                                                        onClick = {
+                                                            selectedRole = rol; roleExpanded = false
+                                                        }
+                                                    )
+                                                }
+                                            }
                                         }
+                                    }
+
+                                    // Unidad Dropdown
+                                    Box(Modifier.weight(1f)) {
+                                        ExposedDropdownMenuBox(
+                                            expanded = unitExpanded,
+                                            onExpandedChange = { unitExpanded = !unitExpanded }
+                                        ) {
+                                            OutlinedTextField(
+                                                value = selectedUnit?.name ?: "Todas las unidades",
+                                                onValueChange = {},
+                                                readOnly = true,
+                                                label = { Text("Unidad", fontSize = 12.sp) },
+                                                trailingIcon = {
+                                                    ExposedDropdownMenuDefaults.TrailingIcon(
+                                                        expanded = unitExpanded
+                                                    )
+                                                },
+                                                modifier = Modifier.menuAnchor(
+                                                    MenuAnchorType.PrimaryNotEditable,
+                                                    enabled = true
+                                                ).fillMaxWidth(),
+                                                colors = OutlinedTextFieldDefaults.colors(
+                                                    focusedContainerColor = Color.White,
+                                                    unfocusedContainerColor = Color.White
+                                                )
+                                            )
+                                            ExposedDropdownMenu(
+                                                expanded = unitExpanded,
+                                                onDismissRequest = { unitExpanded = false }
+                                            ) {
+                                                DropdownMenuItem(
+                                                    text = { Text("Todas") },
+                                                    onClick = {
+                                                        selectedUnit = null; unitExpanded = false
+                                                    }
+                                                )
+                                                ui.unit.forEach { unit ->
+                                                    DropdownMenuItem(
+                                                        text = { Text(unit.name) },
+                                                        onClick = {
+                                                            selectedUnit = unit; unitExpanded =
+                                                            false
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.End
+                                ) {
+                                    TextButton(onClick = {
+                                        // Limpiar
+                                        searchQuery = ""
+                                        selectedRole = null
+                                        selectedUnit = null
+                                        vm.getFilterUsers(FilterUsersDto())
+                                    }) {
+                                        Text("Limpiar filtros")
+                                    }
+
+                                    Spacer(Modifier.width(8.dp))
+
+                                    androidx.compose.material3.Button(
+                                        onClick = {
+                                            vm.getFilterUsers(
+                                                FilterUsersDto(
+                                                    name = searchQuery,
+                                                    role = selectedRole,
+                                                    unitId = selectedUnit?.id
+                                                )
+                                            )
+                                            // Opcional: cerrar filtros al aplicar
+                                            // isFiltering = false
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(
+                                                0xFF003AB6
+                                            )
+                                        ),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text("Aplicar Filtros")
                                     }
                                 }
                             }
                         }
+                    }
 
-                        if (ui.isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-                        } else if (ui.users.isEmpty()) {
+                    // Botones (Agregar / Orden) - la acción de agregar también está en FAB
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        androidx.compose.material3.Button(
+                            onClick = { isAddingUser = !isAddingUser },
+                            modifier = Modifier.weight(1f).padding(end = 8.dp),
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = butonAddColor
+                            ),
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text(
+                                textAdd,
+                                color = if (isAddingUser) Color(0xFF8B0000) else Color(0xFF2D5E3D)
+                            )
+                        }
+                    }
+
+                    // Formulario desplegable para agregar usuario
+                    AnimatedVisibility(
+                        visible = isAddingUser,
+                        enter = expandVertically(),
+                        exit = shrinkVertically(),
+                        modifier = Modifier.verticalScroll(rememberScrollState())
+                    ) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(
+                                    "Nuevo Usuario",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
+
+                                OutlinedTextField(
+                                    value = newUserName,
+                                    onValueChange = { newUserName = it },
+                                    label = { Text("Nombre*") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    isError = newUserName.isBlank()
+                                )
+
+                                OutlinedTextField(
+                                    value = newUserEmail,
+                                    onValueChange = { newUserEmail = it },
+                                    label = { Text("Email*") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    isError = newUserEmail.isBlank()
+                                )
+
+                                OutlinedTextField(
+                                    value = newUserPassword,
+                                    onValueChange = { newUserPassword = it },
+                                    label = { Text("Contraseña*") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    isError = newUserPassword.isBlank(),
+                                    // Visual transformation could be added here if needed
+                                )
+
+                                // Role Dropdown
+                                ExposedDropdownMenuBox(
+                                    expanded = roleMenuExpanded,
+                                    onExpandedChange = { roleMenuExpanded = !roleMenuExpanded }
+                                ) {
+                                    OutlinedTextField(
+                                        value = newUserRole.name,
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        label = { Text("Rol") },
+                                        trailingIcon = {
+                                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = roleMenuExpanded)
+                                        },
+                                        modifier = Modifier
+                                            .menuAnchor(
+                                                MenuAnchorType.PrimaryNotEditable,
+                                                enabled = true
+                                            )
+                                            .fillMaxWidth()
+                                    )
+                                    ExposedDropdownMenu(
+                                        expanded = roleMenuExpanded,
+                                        onDismissRequest = { roleMenuExpanded = false }
+                                    ) {
+                                        Role.entries.forEach { role ->
+                                            DropdownMenuItem(
+                                                text = { Text(role.name) },
+                                                onClick = {
+                                                    newUserRole = role
+                                                    roleMenuExpanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Unit Dropdown
+                                if (ui.unit.isNotEmpty() && newUserUnit == null) {
+                                    newUserUnit = ui.unit.first()
+                                }
+
+                                ExposedDropdownMenuBox(
+                                    expanded = unitMenuExpanded,
+                                    onExpandedChange = { unitMenuExpanded = !unitMenuExpanded }
+                                ) {
+                                    OutlinedTextField(
+                                        value = newUserUnit?.name ?: "Selecciona unidad",
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        label = { Text("Unidad Inicial") },
+                                        trailingIcon = {
+                                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = unitMenuExpanded)
+                                        },
+                                        modifier = Modifier
+                                            .menuAnchor(
+                                                MenuAnchorType.PrimaryNotEditable,
+                                                enabled = true
+                                            )
+                                            .fillMaxWidth()
+                                    )
+                                    ExposedDropdownMenu(
+                                        expanded = unitMenuExpanded,
+                                        onDismissRequest = { unitMenuExpanded = false }
+                                    ) {
+                                        ui.unit.forEach { unit ->
+                                            DropdownMenuItem(
+                                                text = { Text(unit.name) },
+                                                onClick = {
+                                                    newUserUnit = unit
+                                                    unitMenuExpanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    androidx.compose.material3.Button(
+                                        onClick = { isAddingUser = false },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFFFFD4D4)
+                                        )
+                                    ) {
+                                        Text("Cancelar", color = Color(0xFF8B0000))
+                                    }
+
+                                    androidx.compose.material3.Button(
+                                        onClick = {
+                                            if (newUserName.isBlank() || newUserEmail.isBlank() || newUserPassword.isBlank()) {
+                                                // Handle error (show snackbar ideally via callback or local state)
+                                                return@Button
+                                            }
+
+                                            vm.registerUser(
+                                                CreateUserDto(
+                                                    name = newUserName,
+                                                    email = newUserEmail,
+                                                    password = newUserPassword,
+                                                    role = newUserRole,
+                                                    currentUnitId = newUserUnit?.id
+                                                )
+                                            )
+
+                                            // Reset and close
+                                            newUserName = ""
+                                            newUserEmail = ""
+                                            newUserPassword = ""
+                                            newUserRole = Role.STUDENT
+                                            newUserUnit = null
+                                            isAddingUser = false
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFFB8F4C4)
+                                        )
+                                    ) {
+                                        Text("Guardar Usuario", color = Color(0xFF2D5E3D))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (ui.isLoading) {
+                        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    } else if (ui.users.isEmpty()) {
+                        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
                             Text(
                                 "No hay usuarios disponibles.",
                                 style = MaterialTheme.typography.bodyMedium
                             )
-                        } else {
-                            ui.users.forEach { user ->
+                        }
+                    } else {
+                        // Cambiado de Column con verticalScroll a LazyColumn con weight
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(ui.users) { user ->
                                 UserCard(
                                     user = user,
                                     onClick = {
@@ -590,8 +637,6 @@ class UsersScreen : Screen {
                                     levels = ui.unit,
                                     onDelete = { confirmDelete = user }
                                 )
-                                Spacer(Modifier.height(4.dp))
-
                             }
                         }
                     }

@@ -44,6 +44,7 @@ fun Application.configureRouting() {
     // Obtener el resto de servicios via Koin
     val unitService = get<UnitService>()
     val exerciseService = get<ExerciseService>()
+    val exerciseContentService = get<ExerciseContentService>()
     val questionWordService = get<QuestionWordService>()
     val wordService = get<WordService>()
     val questionService = get<QuestionService>()
@@ -262,6 +263,36 @@ fun Application.configureRouting() {
                 }
             }
 
+            route("/exerciseContent"){
+                get { call.respond(exerciseContentService.getAllExerciseContent()) }
+                get("/exercise/{id}"){
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val item = exerciseContentService.getByExerciseId(id)
+                        ?: throw NotFoundException("ExerciseContent not found")
+                    call.respond(item)
+                }
+                post("/{id}"){
+                    val dto = call.receive<CreateExerciseContentDto>()
+                    val exerciseId = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Exercise ID")
+                    val created = exerciseContentService.createExerciseContent(exerciseId, dto)
+                    call.respond(HttpStatusCode.Created, created)
+                }
+                put("/exercise/{id}"){
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val dto = call.receive<UpdateExerciseContentDto>()
+                    val success = exerciseContentService.updateContentByExerciseId(id, dto)
+                    call.respond(success)
+                }
+                delete("/exercise/{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    call.respond(exerciseContentService.deleteByExerciseId(id))
+                }
+            }
+
             // QuestionExercises
             route("/question-exercises") {
                 get { call.respond(questionWordService.getAll()) }
@@ -375,10 +406,10 @@ fun Application.configureRouting() {
                         ?: throw NotFoundException("Question not found")
                     call.respond(item)
                 }
-                get("exercise/{exerciseId}") {
-                    val exerciseId = call.parameters["exerciseId"]?.toIntOrNull()
+                get("exercise/{contentId}") {
+                    val contentId = call.parameters["contentId"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid Exercise ID")
-                    val questions = questionService.getQuestionsByExerciseId(exerciseId)
+                    val questions = questionService.getQuestionsByExerciseId(contentId)
                     call.respond(questions)
                 }
                 get("alternatives/{questionId}") {
@@ -387,11 +418,11 @@ fun Application.configureRouting() {
                     val alternatives = questionService.getAlternativeByQuestionId(questionId)
                     call.respond(alternatives)
                 }
-                post("{exerciseId}") {
-                    val exerciseId = call.parameters["exerciseId"]?.toIntOrNull()
+                post("{contentId}") {
+                    val contentId = call.parameters["contentId"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid Exercise ID")
                     val dto = call.receive<CreateQuestionDto>()
-                    val created = questionService.createQuestion(exerciseId, dto)
+                    val created = questionService.createQuestion(contentId, dto)
                     call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
@@ -409,6 +440,7 @@ fun Application.configureRouting() {
             }
 
             route("/alternatives") {
+                get { call.respond(questionService.getAllAlternatives()) }
                 get("question/{questionId}") {
                     val questionId = call.parameters["questionId"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid Question ID")

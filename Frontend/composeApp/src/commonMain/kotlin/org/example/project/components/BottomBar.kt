@@ -64,15 +64,17 @@ fun ReusableBottomBar(
     )
 
     // Inicializar valores desde initial params o desde UserSession si no se pasan.
+    val sessionId = UserSession.idUser
     val sessionName = UserSession.name
     val sessionRole = UserSession.role
 
+    var rememberId by rememberSaveable { mutableStateOf(sessionId ?: -1) }
     var rememberedUserName by rememberSaveable { mutableStateOf(initialUserName ?: sessionName ?: "") }
     var rememberedRoleName by rememberSaveable { mutableStateOf(role?.name ?: sessionRole?.name ?: Role.STUDENT.name) }
 
     if (!initialUserName.isNullOrBlank() || role != null) {
         remember(initialUserName, role) {
-            UserSession.set(initialUserName ?: sessionName, role ?: sessionRole)
+            UserSession.set(sessionId?: -1,initialUserName ?: sessionName, role ?: sessionRole)
         }
     }
 
@@ -141,6 +143,7 @@ fun ReusableBottomBar(
                             0 -> {
                                 navigator.push(
                                     AdminDashboard(
+                                        rememberId,
                                         nameToUse.ifBlank { "Usuario" },
                                         rememberUserRole
                                     ))

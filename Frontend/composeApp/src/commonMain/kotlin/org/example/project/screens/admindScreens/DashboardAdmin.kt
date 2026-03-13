@@ -50,7 +50,7 @@ enum class UnitStatus {
     DRAFT, PUBLISHED
 }
 
-class AdminDashboard(private val adminName: String, private val rolAdmin:Role) : Screen {
+class AdminDashboard(private val id: Int? = null ,private val adminName: String, private val rolAdmin:Role) : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -71,7 +71,8 @@ class AdminDashboard(private val adminName: String, private val rolAdmin:Role) :
             selectedIndex = selectedIndex,
             onSelect = { idx -> selectedIndex = idx },
             initialUserName = adminName,
-            role = rolAdmin
+            role = rolAdmin,
+            id = id
         ) { _,_,_ ->
 
             if (rolAdmin != Role.ADMIN) {

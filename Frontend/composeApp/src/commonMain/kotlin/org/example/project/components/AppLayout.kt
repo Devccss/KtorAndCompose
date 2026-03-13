@@ -19,11 +19,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import cafe.adriel.voyager.navigator.LocalNavigator
 import org.example.project.dtos.Role
 import org.example.project.network.UserSession
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
+import org.example.project.screens.admindScreens.UserDetailsScreen
 import org.jetbrains.compose.resources.Font
 
 
@@ -35,18 +37,20 @@ fun AppLayout(
     modifier: Modifier = Modifier.fillMaxSize(),
     initialUserName: String? = null,
     role: Role? = null,
+    id: Int? = null,
     snackbarHostState: SnackbarHostState? = null,
     content: @Composable (paddingValues: PaddingValues, userName: String, role: Role) -> Unit
 ) {
+    val sessionId = UserSession.idUser
     val sessionName = UserSession.name
     val sessionRole = UserSession.role
     val userName = remember(initialUserName, sessionName) { initialUserName ?: sessionName ?: "" }
     val userRole = remember(role, sessionRole) { role ?: sessionRole ?: Role.STUDENT }
-
+    val navigator = LocalNavigator.current
 
     LaunchedEffect(initialUserName, role) {
         if (!initialUserName.isNullOrBlank() || role != null) {
-            UserSession.set(initialUserName ?: sessionName, role ?: sessionRole)
+            UserSession.set(sessionId?: id ?: -1 ,initialUserName ?: sessionName, role ?: sessionRole)
         }
     }
 
@@ -123,12 +127,21 @@ fun AppLayout(
                             .background(Color(0xFF4A4A4A)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = "Avatar",
-                            tint = Color.White,
-                            modifier = Modifier.size(28.dp)
-                        )
+                        IconButton(
+                            onClick = {
+                                if (sessionId != -1 && sessionId != null) {
+                                    navigator?.push(UserDetailsScreen(sessionId))
+
+                                }
+                            }
+                        ){
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Avatar",
+                                tint = Color.White,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
                     }
                 }
             }

@@ -2,17 +2,13 @@ package org.example.project.screens.admindScreens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,17 +20,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
@@ -44,14 +41,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
@@ -76,26 +69,21 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.currentOrThrow
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import kotlinx.coroutines.launch
 import org.example.project.components.AppLayout
-import org.example.project.dtos.AlternativesDto
+import org.example.project.dtos.ContentType
 import org.example.project.dtos.CreateAlternativeDto
-import org.example.project.dtos.CreateExerciseDto
+import org.example.project.dtos.CreateExerciseContentDto
 import org.example.project.dtos.CreateQuestionDto
-import org.example.project.dtos.QuestionDto
-import org.example.project.dtos.TypeQuestion
-import org.example.project.dtos.TypeTextExercise
 import org.example.project.dtos.UpdateAlternativeDto
+import org.example.project.dtos.UpdateExerciseContentDto
 import org.example.project.dtos.UpdateExerciseDto
 import org.example.project.dtos.UpdateQuestionDto
 import org.example.project.network.RepositoryProvider
@@ -105,41 +93,50 @@ import org.example.project.viewModel.QuestionViewModel
 import org.jetbrains.compose.resources.Font
 import kotlin.random.Random
 
-// Wrapper para manejar alternativas existentes y nuevas en el mismo draft
 class DraftAlternative(
-    val id: Int? = null, // Null si es nueva, int si viene del backend
+    val id: Int? = null,
     text: String,
     isCorrect: Boolean,
-    val tempId: Long = Random.nextLong() // ID único para la UI (LazyColumn key, etc)
+    val tempId: Long = Random.nextLong()
 ) {
     var text by mutableStateOf(text)
     var isCorrect by mutableStateOf(isCorrect)
 }
 
-// Local state holder for Question Edits
-// Se cambia de data class a class con propiedades delegadas (mutableStateOf) para que Compose detecte los cambios.
-class QuestionDraftState(
+class ContentDraft(
     val id: Int,
+    exerciseId: Int,
+    contentType: ContentType,
     textContent: String,
     grammarExplanation: String,
-    questionText: String,
-    typeQuestion: TypeQuestion,
-    alternatives: List<DraftAlternative>
+    audioUrl: String? = null,
 ) {
+    var exerciseId by mutableStateOf(exerciseId)
     var textContent by mutableStateOf(textContent)
     var grammarExplanation by mutableStateOf(grammarExplanation)
+    var contentType by mutableStateOf(contentType)
+    var audioUrl by mutableStateOf(audioUrl)
+}
+
+class QuestionDraftState(
+    val id: Int,
+    questionText: String,
+    alternatives: List<DraftAlternative>,
+    orderQuestion: Int,
+    isActive: Boolean = false,
+) {
     var questionText by mutableStateOf(questionText)
-    var typeQuestion by mutableStateOf(typeQuestion)
+    var orderQuestion by mutableStateOf(orderQuestion)
     var alternatives = mutableStateMapOf<Long, DraftAlternative>().apply {
         alternatives.forEach { put(it.tempId, it) }
     }
+    var isActive by mutableStateOf(isActive)
 }
 
 class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: Int) : Screen {
 
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
         val exerciseVm = rememberScreenModel {
             ExercisesViewModel(
                 RepositoryProvider.exerciseRepo,
@@ -159,13 +156,42 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
         val encodeSansFamily = FontFamily(Font(Res.font.encode_sans_variable))
         val jetbrainsMonoFamily = FontFamily(Font(Res.font.jetbrains_mono_regular))
 
+        //Content
+        var isAddingContent by remember { mutableStateOf(false) }
+        var isEditingContent by remember { mutableStateOf(false) }
+        var contentText by remember { mutableStateOf("") }
+        var contentGrammar by remember { mutableStateOf("") }
+        var contentUrlAudio by remember { mutableStateOf("") }
+        var contentDraft by remember {
+            mutableStateOf<ContentDraft>(
+                ContentDraft(
+                    id = 0,
+                    exerciseId = exerciseId,
+                    contentType = ContentType.READING,
+                    textContent = "Explicación nula",
+                    grammarExplanation = "Explicación gramatical nula",
+                    audioUrl = null
+                )
+            )
+        }
+
+
+        //Question
         var isAddingQuestion by remember { mutableStateOf(false) }
         var isEditing by remember { mutableStateOf(false) }
+        var questionText by remember { mutableStateOf("") }
+
+        // Estado para nuevas alternativas
+        var alternatives by remember { mutableStateOf(listOf<CreateAlternativeDto>()) }
+        var newAltText by remember { mutableStateOf("") }
 
         // --- EXERCISE DRAFTS ---
         var draftName by remember { mutableStateOf("") }
         var draftDescription by remember { mutableStateOf("") }
         var draftActive by remember { mutableStateOf(false) }
+
+        // ---Exercise Content Draft---
+
 
         // --- QUESTION DRAFTS ---
         val questionDrafts = remember { mutableStateMapOf<Int, QuestionDraftState>() }
@@ -182,12 +208,15 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
 
         // --- ERROR / SNACKBAR SYNC ---
         LaunchedEffect(exerciseUi.error) {
-            println( "Exercise UI Error: ${exerciseUi.error}") // Debug log
-            exerciseUi.error?.let { snackbarHostState.showSnackbar(it) }
+            println("Exercise UI Error: ${exerciseUi.error}") // Debug log
+            exerciseUi.error?.let {
+                snackbarHostState.showSnackbar(it)
+                println("Exercise UI Error: ${exerciseUi.error}") // Debug log
+            }
         }
         LaunchedEffect(questionUi.error) {
             questionUi.error?.let { snackbarHostState.showSnackbar(it) }
-            println( "Question UI Error: ${questionUi.error}") // Debug log
+            println("Question UI Error: ${questionUi.error}") // Debug log
         }
 
         // --- SYNC DATA TO DRAFTS ---
@@ -200,21 +229,40 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
         }
 
         // Keep drafts in sync when not editing
-        LaunchedEffect(questionUi.selectedQuestions, questionUi.alternatives) {
+        LaunchedEffect(
+            questionUi.selectedQuestions,
+            questionUi.alternatives,
+            exerciseUi.selectedContent
+        ) {
             if (!isEditing) {
+
+                exerciseUi.selectedContent?.let { contentEx ->
+                    contentDraft = ContentDraft(
+                        id = contentEx.id,
+                        exerciseId = contentEx.exerciseId,
+                        contentType = contentEx.contentType,
+                        textContent = contentEx.textContent,
+                        grammarExplanation = contentEx.grammarExplanation,
+                        audioUrl = contentEx.audioUrl
+                    )
+                }
+
                 questionUi.selectedQuestions.forEach { q ->
                     val domainAlts = questionUi.alternatives[q.id] ?: emptyList()
-                    val draftAlts = domainAlts.map { 
-                        DraftAlternative(id = it.id, text = it.text, isCorrect = it.isCorrect ?: false)
+                    val draftAlts = domainAlts.map {
+                        DraftAlternative(
+                            id = it.id,
+                            text = it.text,
+                            isCorrect = it.isCorrect ?: false
+                        )
                     }
-                    
+
                     questionDrafts[q.id] = QuestionDraftState(
                         id = q.id,
-                        textContent = q.textContent,
-                        grammarExplanation = q.grammarExplanation,
                         questionText = q.questionText,
-                        typeQuestion = q.typeQuestion,
-                        alternatives = draftAlts
+                        alternatives = draftAlts,
+                        orderQuestion = q.orderQuestion,
+                        isActive = q.isActive ?: false
                     )
                 }
             }
@@ -223,25 +271,18 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
         // --- SAVE FUNCTION ---
         fun onSaveAll() {
             // Validations
-            if (draftName.isBlank()) {
-                scope.launch { snackbarHostState.showSnackbar("Nombre del ejercicio es obligatorio") }
+            if (draftName.isBlank() && draftDescription.isBlank() && contentDraft.textContent.isBlank() && contentDraft.grammarExplanation.isBlank()
+            ) {
+                exerciseVm.updateMessage("Algunos campos son obligatorios")
                 return
             }
 
             // Check questions validity
-            var questionsValid = true
             questionDrafts.values.forEach { draft ->
-                if (draft.textContent.isBlank() || draft.questionText.isBlank()) {
-                    questionsValid = false
-                }
-                if (draft.typeQuestion == TypeQuestion.ALTERNATIVE && draft.alternatives.size < 2) {
-                    scope.launch { snackbarHostState.showSnackbar("La pregunta de alternativas debe tener minimo dos opciones") }
+                if (draft.alternatives.size < 2) {
+                    questionVm.updateMessage("Cada pregunta debe tener al menos 2 alternativas.")
                     return
                 }
-            }
-            if (!questionsValid) {
-                scope.launch { snackbarHostState.showSnackbar("Campos de texto de pregunta no pueden estar vacíos") }
-                return
             }
 
             // Execute Updates
@@ -253,22 +294,29 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                     isActive = draftActive
                 )
             )
+            exerciseVm.updateContent(
+                exerciseId,
+                UpdateExerciseContentDto(
+                    textContent = contentDraft.textContent,
+                    grammarExplanation = contentDraft.grammarExplanation,
+                    audioUrl = contentDraft.audioUrl
+                )
+            )
+
 
             questionDrafts.values.forEach { draft ->
                 questionVm.updateQuestion(
                     draft.id, UpdateQuestionDto(
-                        textContent = draft.textContent,
-                        grammarExplanation = draft.grammarExplanation,
                         questionText = draft.questionText,
-                        typeQuestion = draft.typeQuestion
-                    )
+                        isActive = draft.isActive
+                        )
                 )
-                
+
                 // Alternatives handling
                 draft.alternatives.values.forEach { alt ->
                     if (alt.id != null) {
                         // Es una alternativa existente -> Actualizar
-                         questionVm.updateAlternativesForQuestion(
+                        questionVm.updateAlternativesForQuestion(
                             alt.id,
                             UpdateAlternativeDto(text = alt.text, isCorrect = alt.isCorrect)
                         )
@@ -276,15 +324,18 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                         // Es una alternativa nueva -> Crear
                         questionVm.createAlternativeForQuestion(
                             questionId = draft.id,
-                            newAlternative = CreateAlternativeDto(text = alt.text, isCorrect = alt.isCorrect)
+                            newAlternative = CreateAlternativeDto(
+                                text = alt.text,
+                                isCorrect = alt.isCorrect
+                            )
                         )
                     }
                 }
-                
+
                 // Lógica para borrar alternativas removidas del draft
                 val originalAlternatives = questionUi.alternatives[draft.id] ?: emptyList()
                 val currentAlternativeIds = draft.alternatives.values.mapNotNull { it.id }.toSet()
-                
+
                 originalAlternatives.forEach { originalAlt ->
                     if (originalAlt.id !in currentAlternativeIds) {
                         questionVm.deleteAlternative(originalAlt.id)
@@ -311,7 +362,9 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                 modifier = Modifier
 
                     .fillMaxSize()
-                    .shadow(1.dp, shape = RoundedCornerShape(12.dp)),
+                    .shadow(1.dp, shape = RoundedCornerShape(12.dp))
+                    .verticalScroll(rememberScrollState()),
+
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = Color.White
@@ -499,7 +552,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                     )
                                 }
 
-                                AnimatedVisibility(visible = isEditing){
+                                AnimatedVisibility(visible = isEditing) {
                                     IconButton(
                                         onClick = { isEditing = false },
                                         modifier = Modifier
@@ -518,7 +571,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                         )
                                     }
                                 }
-                                
+
                                 AnimatedVisibility(visible = isEditing) {
                                     IconButton(
                                         onClick = { /* Lógica de eliminar ejercicio */ },
@@ -544,7 +597,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                         // --- DIVIDER ---
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "Contenido y Preguntas",
+                                "Contenido",
                                 fontFamily = encodeSansFamily,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,
@@ -554,10 +607,69 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                         }
 
                         // --- QUESTION SECTION ---
-                        if (questionUi.selectedQuestions.isEmpty()) {
-                            Text("No hay preguntas cargadas.", color = Color.Gray)
+                        if (exerciseUi.selectedContent == null) {
+                            Text("No hay contenido", color = Color.Gray)
+                            TextButton(
+                                onClick = { isAddingContent = !isAddingContent },
+                                colors = ButtonColors(
+                                    contentColor = Color(0xFF2E7D32),
+                                    containerColor = Color(0xFFB8F4C4),
+                                    disabledContainerColor = Color(0xFFE0E0E0),
+                                    disabledContentColor = Color(0xFF9E9E9E)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("+ Agregar contenido")
+                            }
+                        } else {
+                            exerciseUi.selectedContent?.let {
+                                ContentEditableRegion(
+                                    isEditing = isEditing,
+                                    draft = contentDraft,
+                                    encodeSansFamily = encodeSansFamily,
+                                    jetbrainsMonoFamily = jetbrainsMonoFamily
+                                )
+                            }
+                            // --- DIVIDER ---
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    "Preguntas",
+                                    fontFamily = encodeSansFamily,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.Gray
+                                )
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(start = 8.dp).weight(1f)
+                                )
+                            }
+                            if (questionUi.selectedQuestions.isEmpty()) {
+                                Text("No hay preguntas", color = Color.Gray)
+                            } else {
+                                questionUi.selectedQuestions.forEach { question ->
+                                    val alt = questionUi.alternatives[question.id] ?: emptyList()
+                                    QuestionEditableRegion(
+                                        isEditing = isEditing,
+                                        draft = questionDrafts[question.id] ?: QuestionDraftState(
+                                            id = question.id,
+                                            questionText = question.questionText,
+                                            alternatives = alt.map {
+                                                DraftAlternative(
+                                                    id = it.id,
+                                                    text = it.text,
+                                                    isCorrect = it.isCorrect ?: false
+                                                )
+                                            },
+                                            orderQuestion = question.orderQuestion,
+                                            isActive = question.isActive ?: false
+                                        ),
+                                        jetbrainsMonoFamily = jetbrainsMonoFamily
+                                    )
+                                }
+                            }
                             TextButton(
                                 onClick = { isAddingQuestion = !isAddingQuestion },
+                                enabled = !isAddingQuestion,
                                 colors = ButtonColors(
                                     contentColor = Color(0xFF2E7D32),
                                     containerColor = Color(0xFFB8F4C4),
@@ -568,305 +680,320 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                             ) {
                                 Text("+ Agregar pregunta")
                             }
-                        } else {
-                            questionUi.selectedQuestions.forEach { question ->
-                                val draft = questionDrafts[question.id]
-                                if (draft != null) {
-                                    QuestionEditableRegion(
-                                        draft = draft,
-                                        isEditing = isEditing,
-                                        encodeSansFamily = encodeSansFamily,
-                                        jetbrainsMonoFamily = jetbrainsMonoFamily,
-                                        onAlert = { msg -> scope.launch { snackbarHostState.showSnackbar(msg) } }
+
+                        }
+
+                        AnimatedVisibility(
+                            visible = isAddingContent,
+                            enter = expandVertically(),
+                            exit = shrinkVertically(),
+                        ) {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Text(
+                                        "Nueva pregunta",
+                                        fontFamily = encodeSansFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp
                                     )
-                                }
-                            }
-                        }
 
-                        AddQuestionSection(
-                            isAdding = isAddingQuestion,
-                            onAddingChange = { isAddingQuestion = it },
-                            onAdd = { newQuestion, newAlternatives ->
-                                questionVm.createQuestion(exerciseId, newQuestion) { createdId ->
-                                    // Una vez creada la pregunta, creamos sus alternativas
-                                    newAlternatives.forEach { alt ->
-                                        questionVm.createAlternativeForQuestion(createdId, alt)
-                                    }
-                                }
-                                isAddingQuestion = false
-                            },
-                            encodeSansFamily = encodeSansFamily,
-                            jetbrainsMonoFamily = jetbrainsMonoFamily,
-                            onAlert = { msg -> scope.launch { snackbarHostState.showSnackbar(msg) } }
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
+                                    OutlinedTextField(
+                                        value = contentText,
+                                        onValueChange = { contentText = it },
+                                        label = { Text("Explicación / Contexto") },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true,
+                                        isError = contentText.isBlank()
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    OutlinedTextField(
+                                        value = contentGrammar,
+                                        onValueChange = { contentGrammar = it },
+                                        label = { Text("Gramática") },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true,
+                                        isError = contentGrammar.isBlank()
+                                    )
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AddQuestionSection(
-    isAdding: Boolean,
-    onAddingChange: (Boolean) -> Unit = {},
-    onAdd: (CreateQuestionDto, List<CreateAlternativeDto>) -> Unit,
-    encodeSansFamily: FontFamily,
-    jetbrainsMonoFamily: FontFamily,
-    onAlert: (String) -> Unit
-) {
-    var textContent by remember { mutableStateOf("") }
-    var grammarExplanation by remember { mutableStateOf("") }
-    var typeQuestion by remember { mutableStateOf<TypeQuestion?>(null) }
-    var questionText by remember { mutableStateOf("") }
-    var audioUrl by remember { mutableStateOf("") }
-    var typeSelect by remember { mutableStateOf(false) }
-
-    // Estado para nuevas alternativas
-    var alternatives by remember { mutableStateOf(listOf<CreateAlternativeDto>()) }
-    var newAltText by remember { mutableStateOf("") }
-
-    AnimatedVisibility(
-        visible = isAdding,
-        enter = expandVertically(),
-        exit = shrinkVertically(),
-        modifier = Modifier.verticalScroll(rememberScrollState())
-    ) {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text("Nueva pregunta", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-
-                OutlinedTextField(
-                    value = textContent ?: "",
-                    onValueChange = { textContent = it },
-                    label = { Text("Explicación / Contexto") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    isError = textContent.isBlank()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = grammarExplanation ?: "",
-                    onValueChange = { grammarExplanation = it },
-                    label = { Text("Gramática") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    isError = grammarExplanation.isBlank()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                ExposedDropdownMenuBox(
-                    expanded = typeSelect,
-                    onExpandedChange = { typeSelect = !typeSelect },
-                ) {
-
-                    OutlinedTextField(
-                        value = typeQuestion?.name ?: "",
-                        onValueChange = { },
-                        label = { Text("Tipo de pregunta") },
-                        readOnly = true,
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(
-                                expanded = typeSelect
-                            )
-                        },
-                        modifier = Modifier
-                            .menuAnchor(
-                                MenuAnchorType.PrimaryNotEditable,
-                                enabled = true
-                            )
-                            .fillMaxWidth(),
-                        isError = true,
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = typeSelect,
-                        onDismissRequest = { typeSelect = false },
-                    ) {
-                        TypeQuestion.entries.forEach {
-                            DropdownMenuItem(
-                                text = { Text(it.name) },
-                                onClick = {
-                                    typeQuestion = it
-                                    typeSelect = false
-                                }
-                            )
-                        }
-                    }
-                }
-                
-                // --- SECCION DE ALTERNATIVAS (Solo si es tipo Alternativa) ---
-                AnimatedVisibility(visible = typeQuestion == TypeQuestion.ALTERNATIVE) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color(0xFFF0F4F8), RoundedCornerShape(8.dp))
-                            .padding(8.dp)
-                    ) {
-                        Text("Configuración de Alternativas", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF003AB6))
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Lista de alternativas agregadas
-                        if (alternatives.isEmpty()) {
-                            Text("Agrega al menos 2 alternativas.", fontSize = 12.sp, color = Color.Gray, fontStyle = FontStyle.Italic)
-                        }
-                        
-                        alternatives.forEachIndexed { index, alt ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                RadioButton(
-                                    selected = alt.isCorrect == true,
-                                    onClick = {
-                                        // Marcar esta como correcta y las demas false
-                                        alternatives = alternatives.mapIndexed { i, a ->
-                                            a.copy(isCorrect = i == index)
+                                    OutlinedTextField(
+                                        value = contentUrlAudio,
+                                        onValueChange = { contentUrlAudio = it },
+                                        label = { Text("URL de audio (opcional)") },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textStyle = TextStyle(
+                                            fontFamily = jetbrainsMonoFamily,
+                                            fontSize = 14.sp
+                                        ),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedContainerColor = Color.White,
+                                            unfocusedContainerColor = Color.White
+                                        )
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Button(
+                                            onClick = { isAddingContent = false },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color(0xFFFFD4D4)
+                                            )
+                                        ) {
+                                            Text("Cancelar", color = Color(0xFF8B0000))
                                         }
-                                    },
-                                    colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF2E7D32))
-                                )
-                                Text(
-                                    alt.text, 
-                                    modifier = Modifier.weight(1f),
-                                    fontFamily = jetbrainsMonoFamily,
-                                    fontSize = 13.sp
-                                )
-                                IconButton(onClick = {
-                                    val list = alternatives.toMutableList()
-                                    list.removeAt(index)
-                                    alternatives = list
-                                }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color.Red, modifier = Modifier.size(18.dp))
-                                }
-                            }
-                            HorizontalDivider(color = Color.White)
-                        }
+                                        Button(
+                                            onClick = {
 
-                        Spacer(modifier = Modifier.height(8.dp))
-                        // Input para nueva alternativa
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            OutlinedTextField(
-                                value = newAltText,
-                                onValueChange = { newAltText = it },
-                                placeholder = { Text("Texto de alternativa") },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true,
-                                textStyle = TextStyle(fontSize = 13.sp, fontFamily = jetbrainsMonoFamily),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedContainerColor = Color.White,
-                                    unfocusedContainerColor = Color.White
-                                )
-                            )
-                            IconButton(
-                                onClick = {
-                                    if (newAltText.isNotBlank()) {
-                                        // Si es la primera, marcarla como correcta por defecto (para asegurar que haya una)
-                                        val isCorrect = alternatives.isEmpty()
-                                        alternatives = alternatives + CreateAlternativeDto(newAltText, isCorrect)
-                                        newAltText = ""
+
+                                                exerciseVm.createContent(
+                                                    exerciseId,
+                                                    CreateExerciseContentDto(
+                                                        contentType = ContentType.READING,
+                                                        textContent = contentText,
+                                                        grammarExplanation = contentGrammar,
+                                                        audioUrl = contentUrlAudio
+                                                    )
+                                                )
+
+
+                                                // Reset fields
+                                                contentText = ""
+                                                contentGrammar = ""
+                                                contentUrlAudio = ""
+
+                                                isAddingContent = false
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color(
+                                                    0xFFB8F4C4
+                                                )
+                                            )
+                                        ) {
+                                            Text("Guardar Contenido", color = Color(0xFF2D5E3D))
+                                        }
                                     }
-                                },
-                                enabled = newAltText.isNotBlank()
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = "Agregar", tint = Color(0xFF003AB6))
+
+                                }
                             }
                         }
-                    }
-                }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                        AnimatedVisibility(
+                            visible = isAddingQuestion,
+                            enter = expandVertically(),
+                            exit = shrinkVertically(),
+                        ) {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
 
-                OutlinedTextField(
-                    value = audioUrl ?: "",
-                    onValueChange = { audioUrl = it },
-                    label = { Text("URL de audio (opcional)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = TextStyle(fontFamily = jetbrainsMonoFamily, fontSize = 14.sp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    )
-                )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    OutlinedTextField(
+                                        value = questionText,
+                                        onValueChange = { questionText = it },
+                                        label = { Text("Texto de la pregunta") },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textStyle = TextStyle(
+                                            fontFamily = jetbrainsMonoFamily,
+                                            fontSize = 14.sp
+                                        ),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedContainerColor = Color.White,
+                                            unfocusedContainerColor = Color.White
+                                        ),
+                                        isError = questionText.isBlank()
+                                    )
 
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = questionText ?: "",
-                    onValueChange = { questionText = it },
-                    label = { Text("Texto de la pregunta") },
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = TextStyle(fontFamily = jetbrainsMonoFamily, fontSize = 14.sp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    ),
-                    isError = questionText.isBlank()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Button(
-                        onClick = { onAddingChange(false) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFFD4D4)
-                        )
-                    ) {
-                        Text("Cancelar", color = Color(0xFF8B0000))
-                    }
-                    Button(
-                        onClick = {
+                                    AnimatedVisibility(visible = true) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(
+                                                    Color(0xFFF0F4F8),
+                                                    RoundedCornerShape(8.dp)
+                                                )
+                                                .padding(8.dp)
+                                        ) {
+                                            Text(
+                                                "Configuración de Alternativas",
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = Color(0xFF003AB6)
+                                            )
+                                            Spacer(modifier = Modifier.height(8.dp))
 
-                            // Validación rápida de alternativas
-                            if (typeQuestion == TypeQuestion.ALTERNATIVE) {
-                                if (alternatives.size < 2) {
-                                    // TODO: Mostrar error visual
-                                    return@Button
-                                }
-                                if (alternatives.none { it.isCorrect == true }) {
-                                    return@Button
+                                            // Lista de alternativas agregadas
+                                            if (alternatives.isEmpty()) {
+                                                Text(
+                                                    "Agrega al menos 2 alternativas.",
+                                                    fontSize = 12.sp,
+                                                    color = Color.Gray,
+                                                    fontStyle = FontStyle.Italic
+                                                )
+                                            }
+
+                                            alternatives.forEachIndexed { index, alt ->
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    RadioButton(
+                                                        selected = alt.isCorrect == true,
+                                                        onClick = {
+                                                            // Marcar esta como correcta y las demas false
+                                                            alternatives =
+                                                                alternatives.mapIndexed { i, a ->
+                                                                    a.copy(isCorrect = i == index)
+                                                                }
+                                                        },
+                                                        colors = RadioButtonDefaults.colors(
+                                                            selectedColor = Color(
+                                                                0xFF2E7D32
+                                                            )
+                                                        )
+                                                    )
+                                                    Text(
+                                                        alt.text,
+                                                        modifier = Modifier.weight(1f),
+                                                        fontFamily = jetbrainsMonoFamily,
+                                                        fontSize = 13.sp
+                                                    )
+                                                    IconButton(onClick = {
+                                                        val list = alternatives.toMutableList()
+                                                        list.removeAt(index)
+                                                        alternatives = list
+                                                    }) {
+                                                        Icon(
+                                                            Icons.Default.Delete,
+                                                            contentDescription = "Eliminar",
+                                                            tint = Color.Red,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+                                                }
+                                                HorizontalDivider(color = Color.White)
+                                            }
+
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            // Input para nueva alternativa
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                OutlinedTextField(
+                                                    value = newAltText,
+                                                    onValueChange = { newAltText = it },
+                                                    placeholder = { Text("Texto de alternativa") },
+                                                    modifier = Modifier.weight(1f),
+                                                    singleLine = true,
+                                                    textStyle = TextStyle(
+                                                        fontSize = 13.sp,
+                                                        fontFamily = jetbrainsMonoFamily
+                                                    ),
+                                                    colors = OutlinedTextFieldDefaults.colors(
+                                                        focusedContainerColor = Color.White,
+                                                        unfocusedContainerColor = Color.White
+                                                    )
+                                                )
+                                                IconButton(
+                                                    onClick = {
+                                                        if (newAltText.isNotBlank()) {
+                                                            // Si es la primera, marcarla como correcta por defecto (para asegurar que haya una)
+                                                            val isCorrect = alternatives.isEmpty()
+                                                            alternatives =
+                                                                alternatives + CreateAlternativeDto(
+                                                                    newAltText,
+                                                                    isCorrect
+                                                                )
+                                                            newAltText = ""
+                                                        }
+                                                    },
+                                                    enabled = newAltText.isNotBlank()
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Add,
+                                                        contentDescription = "Agregar",
+                                                        tint = Color.Black
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Button(
+                                            onClick = { isAddingQuestion = false },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color(0xFFFFD4D4)
+                                            )
+                                        ) {
+                                            Text("Cancelar", color = Color(0xFF8B0000))
+                                        }
+                                        Button(
+                                            onClick = {
+
+                                                // Validación rápida de alternativas
+                                                if (alternatives.size < 2) {
+                                                    questionVm.updateMessage("Agrega al menos 2 alternativas.")
+                                                    return@Button
+                                                }
+
+                                                // CAPTURA IMPORTANTE: Copiamos la lista antes de que se limpie más abajo
+                                                val alternativesToCreate = alternatives.toList()
+
+                                                exerciseUi.selectedContent?.let {
+                                                    questionVm.createQuestion(
+                                                        exerciseContent = it.id,
+                                                        CreateQuestionDto(
+                                                            questionText = questionText,
+                                                            orderQuestion = null,
+                                                            isActive = true
+                                                        )
+                                                    ) { questionId ->
+                                                        // Crear alternativas asociadas a esta pregunta usando la lista capturada
+                                                        alternativesToCreate.forEach { alt ->
+                                                            questionVm.createAlternativeForQuestion(
+                                                                questionId = questionId,
+                                                                CreateAlternativeDto(
+                                                                    text = alt.text,
+                                                                    isCorrect = alt.isCorrect
+                                                                        ?: false
+                                                                )
+                                                            )
+                                                        }
+                                                    }
+                                                }
+
+                                                questionText = ""
+                                                alternatives = emptyList() // Reset alternatives
+
+                                                isAddingQuestion = false
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color(
+                                                    0xFFB8F4C4
+                                                )
+                                            )
+                                        ) {
+                                            Text("Guardar Contenido", color = Color(0xFF2D5E3D))
+                                        }
+                                    }
                                 }
                             }
-
-                            onAdd(
-                                CreateQuestionDto(
-                                    textContent = textContent,
-                                    grammarExplanation = grammarExplanation,
-                                    questionText = questionText,
-                                    typeQuestion = typeQuestion ?: TypeQuestion.OPEN,
-                                    audioUrl = audioUrl.ifBlank { null },
-                                    isActive = false,
-                                    typeText = TypeTextExercise.NORMAL,
-                                    orderQuestion = null
-                                ),
-                                alternatives // Pasamos las alternativas
-                            )
-
-                            // Reset fields
-                            textContent = ""
-                            grammarExplanation = ""
-                            questionText = ""
-                            audioUrl = ""
-                            typeQuestion = null
-                            alternatives = emptyList() // Reset alternatives
-
-                            onAddingChange(false)
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(
-                                0xFFB8F4C4
-                            )
-                        )
-                    ) {
-                        Text("Guardar Ejercicio", color = Color(0xFF2D5E3D))
+                        }
                     }
                 }
             }
@@ -876,49 +1003,18 @@ fun AddQuestionSection(
 
 
 @Composable
-fun QuestionEditableRegion(
-    draft: QuestionDraftState,
+fun ContentEditableRegion(
     isEditing: Boolean,
+    draft: ContentDraft,
     encodeSansFamily: FontFamily,
     jetbrainsMonoFamily: FontFamily,
-    onAlert: (String) -> Unit
 ) {
-
-    // Alert State for Type Change
-    var showTypeChangeAlert by remember { mutableStateOf(false) }
-    var pendingTypeChange by remember { mutableStateOf<TypeQuestion?>(null) }
-    var typeMenuExpanded by remember { mutableStateOf(false) }
-    var newAltText by remember { mutableStateOf("") }
-
-    if (showTypeChangeAlert) {
-        AlertDialog(
-            onDismissRequest = { showTypeChangeAlert = false },
-            title = { Text("¿Cambiar tipo de pregunta?") },
-            text = { Text("Si cambias a Pregunta Abierta, se eliminarán las alternativas existentes. ¿Continuar?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        pendingTypeChange?.let {
-                            draft.typeQuestion = it
-                        }
-                        showTypeChangeAlert = false
-                    }
-                ) { Text("Confirmar", color = Color.Red) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showTypeChangeAlert = false }) { Text("Cancelar") }
-            }
-        )
-    }
-
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier
-            .fillMaxWidth()
             .background(Color(0xFFFAFAFA), RoundedCornerShape(8.dp))
             .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(8.dp))
             .padding(16.dp)
-            .verticalScroll( rememberScrollState() )
     ) {
         // --- 1. Text Content ---
         Column {
@@ -980,202 +1076,294 @@ fun QuestionEditableRegion(
 
         HorizontalDivider(color = Color(0xFFEEEEEE))
 
-        // --- 3. Question & Type ---
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        // --- 3. Audio URL ---
+        Column {
             Text(
-                "Pregunta",
+                "Audio URL (Opcional)",
                 fontFamily = encodeSansFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
-                color = Color.Black
+                color = Color.Gray
             )
-
-            // Type Selector
             if (isEditing) {
-                Box {
-                    Button(
-                        onClick = { typeMenuExpanded = true },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFE3F2FD),
-                            contentColor = Color(0xFF1565C0)
+                OutlinedTextField(
+                    value = draft.audioUrl ?: "",
+                    onValueChange = { draft.audioUrl = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(fontFamily = jetbrainsMonoFamily, fontSize = 14.sp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    ),
+                    placeholder = { Text("https://...") }
+                )
+            } else {
+                Text(
+                    draft.audioUrl?.ifBlank { "Sin audio" } ?: "Sin audio",
+                    fontFamily = jetbrainsMonoFamily,
+                    fontSize = 14.sp,
+                    fontStyle = FontStyle.Italic,
+                    color = Color.Gray
+                )
+            }
+        }
+
+        HorizontalDivider(color = Color(0xFFEEEEEE))
+    }
+}
+
+
+@Composable
+fun QuestionEditableRegion(
+    draft: QuestionDraftState,
+    isEditing: Boolean,
+    jetbrainsMonoFamily: FontFamily,
+) {
+    var newAltText by remember { mutableStateOf("") }
+    var statusMenuExpanded by remember { mutableStateOf(false) }
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFFAFAFA), RoundedCornerShape(8.dp))
+            .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(8.dp))
+            .padding(16.dp)
+    ) {
+
+        if (isEditing) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier.weight(1f, fill = false)
+                        .padding(end = 8.dp)
+                ){
+                    OutlinedTextField(
+                        value = draft.questionText,
+                        onValueChange = { draft.questionText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = TextStyle(
+                            fontFamily = jetbrainsMonoFamily,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
                         ),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                        modifier = Modifier.height(32.dp)
-                    ) {
-                        Text(
-                            if (draft.typeQuestion == TypeQuestion.ALTERNATIVE) "Alternativas" else "Abierta",
-                            fontSize = 12.sp
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White
                         )
-                        Icon(Icons.Default.ExpandMore, null, modifier = Modifier.size(16.dp))
-                    }
-                    DropdownMenu(
-                        expanded = typeMenuExpanded,
-                        onDismissRequest = { typeMenuExpanded = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Alternativas") },
-                            onClick = {
-                                typeMenuExpanded = false
-                                if (draft.typeQuestion != TypeQuestion.ALTERNATIVE) {
-                                    draft.typeQuestion = TypeQuestion.ALTERNATIVE
+                    )
+                }
+
+                //modificar badge
+                Box {
+                    val isActive = draft.isActive
+                    val badgeColor =
+                        if (isActive) Color(0xFFB8F4C4) else Color(0xFFFFD4D4)
+                    val textColor =
+                        if (isActive) Color(0xFF2D5E3D) else Color(0xFF8B0000)
+
+                    if (!isEditing) {
+                        Badge(
+                            containerColor = badgeColor,
+                            contentColor = textColor
+                        ) {
+                            Text(
+                                if (isActive) "Activa" else "Borrador",
+                                fontSize = 12.sp
+                            )
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier
+                                .background(
+                                    badgeColor,
+                                    RoundedCornerShape(16.dp)
+                                )
+                                .clickable { statusMenuExpanded = true }
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                if (isActive) "Activa" else "Borrador",
+                                fontSize = 12.sp,
+                                color = textColor
+                            )
+                            Icon(
+                                Icons.Default.ExpandMore,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = textColor
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = statusMenuExpanded,
+                            onDismissRequest = { statusMenuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Publicado") },
+                                onClick = {
+                                    draft.isActive = true
+                                    statusMenuExpanded = false
                                 }
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Abierta") },
-                            onClick = {
-                                typeMenuExpanded = false
-                                // Verificar map en vez de list
-                                if (draft.typeQuestion == TypeQuestion.ALTERNATIVE && draft.alternatives.isNotEmpty()) {
-                                    pendingTypeChange = TypeQuestion.OPEN
-                                    showTypeChangeAlert = true
-                                } else {
-                                    draft.typeQuestion = TypeQuestion.OPEN
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Borrador") },
+                                onClick = {
+                                    draft.isActive = false
+                                    statusMenuExpanded = false
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
-        }
-        
-        if (isEditing) {
-            OutlinedTextField(
-                value = draft.questionText,
-                onValueChange = { draft.questionText = it },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = TextStyle(
-                    fontFamily = jetbrainsMonoFamily,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
-                ),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
-                )
-            )
         } else {
-            Text(
-                draft.questionText,
-                fontFamily = jetbrainsMonoFamily,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier.weight(1f, fill = false)
+                        .padding(end = 8.dp)
+                ){
+                    Text(
+                        draft.questionText,
+                        fontFamily = jetbrainsMonoFamily,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (draft.isActive) Color(0xFF131313) else Color.Gray
+                    )
+                }
+
+                Badge(
+                    modifier = Modifier.padding(4.dp),
+                    containerColor = if (draft.isActive) Color(0xFFB8F4C4) else Color(0xFFFFD4D4),
+                    contentColor = if (draft.isActive) Color(0xFF2D5E3D) else Color(0xFF8B0000)
+                ) {
+                    Text(
+                        if (draft.isActive) "Activa" else "Borrador",
+                        fontSize = 12.sp
+                    )
+                }
+
+            }
         }
 
         // --- 4. Alternatives Area ---
-        if (draft.typeQuestion == TypeQuestion.ALTERNATIVE) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (isEditing) {
-                    // Input para nueva alternativa
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(
-                            value = newAltText,
-                            onValueChange = { newAltText = it },
-                            placeholder = { Text("Texto de alternativa") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            textStyle = TextStyle(fontSize = 13.sp, fontFamily = jetbrainsMonoFamily),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White
-                            )
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (isEditing) {
+                // Input para nueva alternativa
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = newAltText,
+                        onValueChange = { newAltText = it },
+                        placeholder = { Text("Texto de alternativa") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        textStyle = TextStyle(
+                            fontSize = 13.sp,
+                            fontFamily = jetbrainsMonoFamily
+                        ),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White
+                        ),
+                        isError = newAltText.isBlank()
+                    )
+                    IconButton(
+                        onClick = {
+                            if (newAltText.isNotBlank()) {
+                                // Agregar al mapa del draft directamente
+                                val isCorrect = draft.alternatives.isEmpty()
+                                val newDraftAlt = DraftAlternative(
+                                    id = null, // Marca como nuevo
+                                    text = newAltText,
+                                    isCorrect = isCorrect
+                                )
+                                draft.alternatives[newDraftAlt.tempId] = newDraftAlt
+                                newAltText = ""
+                            }
+                        },
+                        enabled = newAltText.isNotBlank()
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Agregar",
+                            tint = Color(0xFF003AB6)
                         )
-                        IconButton(
-                            onClick = {
-                                if (newAltText.isNotBlank()) {
-                                    // Agregar al mapa del draft directamente
-                                    val isCorrect = draft.alternatives.isEmpty()
-                                    val newDraftAlt = DraftAlternative(
-                                        id = null, // Marca como nuevo
-                                        text = newAltText,
-                                        isCorrect = isCorrect
-                                    )
-                                    draft.alternatives[newDraftAlt.tempId] = newDraftAlt
-                                    newAltText = ""
-                                }
-                            },
-                            enabled = newAltText.isNotBlank()
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = "Agregar", tint = Color(0xFF003AB6))
-                        }
                     }
-                    
-                    // Renderizar alternativas del Draft
-                    draft.alternatives.values.forEach { alt ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(
-                                selected = alt.isCorrect,
-                                onClick = {
-                                    // Update visual state in map
-                                    draft.alternatives.values.forEach { it.isCorrect = false }
-                                    alt.isCorrect = true
-                                },
-                                colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF2E7D32))
-                            )
+                }
 
-                            OutlinedTextField(
-                                value = alt.text,
-                                onValueChange = { newText ->
-                                    alt.text = newText
-                                },
-                                modifier = Modifier.weight(1f),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedContainerColor = Color.White,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    unfocusedBorderColor = Color.Transparent
+                // Renderizar alternativas del Draft
+                draft.alternatives.values.forEach { alt ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = alt.isCorrect,
+                            onClick = {
+                                // Update visual state in map
+                                draft.alternatives.values.forEach { it.isCorrect = false }
+                                alt.isCorrect = true
+                            },
+                            colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF2E7D32))
+                        )
+
+                        OutlinedTextField(
+                            value = alt.text,
+                            onValueChange = { newText ->
+                                alt.text = newText
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color.Gray,
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Gray,
+                                cursorColor = Color.Gray,
+                                selectionColors = TextSelectionColors(
+                                    handleColor = Color.Gray,
+                                    backgroundColor = Color(0xFFB8F4C4).copy(alpha = 0.5f)
                                 )
                             )
-                            
-                            // Boton eliminar (opcional, solo visual por ahora)
-                             IconButton(onClick = {
-                                draft.alternatives.remove(alt.tempId)
-                            }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Quitar", tint = Color.Red, modifier = Modifier.size(18.dp))
-                            }
-                        }
-                    }
-                } else {
-                    // Read Mode
-                    draft.alternatives.values.forEach { alt ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        )
+
+                        // Boton eliminar (opcional, solo visual por ahora)
+                        IconButton(onClick = {
+                            draft.alternatives.remove(alt.tempId)
+                        }) {
                             Icon(
-                                imageVector = if (alt.isCorrect) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
-                                contentDescription = null,
-                                tint = if (alt.isCorrect) Color(0xFF2E7D32) else Color.Gray,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = alt.text,
-                                fontFamily = jetbrainsMonoFamily,
-                                fontSize = 14.sp,
-                                color = if (alt.isCorrect) Color(0xFF2E7D32) else Color(0xFF131313)
+                                Icons.Default.DeleteSweep,
+                                contentDescription = "Quitar",
+                                tint = Color.Red,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
                 }
-            }
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .border(1.dp, Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                    .background(Color.White)
-                    .padding(horizontal = 12.dp),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                Text(
-                    "Campo de texto abierto",
-                    color = Color.Gray,
-                    fontFamily = jetbrainsMonoFamily
-                )
+            } else {
+                // Read Mode
+                draft.alternatives.values.forEach { alt ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = if (alt.isCorrect) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                            contentDescription = null,
+                            tint = if (alt.isCorrect && draft.isActive) Color(0xFF2E7D32) else Color.Gray,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = alt.text,
+                            fontFamily = jetbrainsMonoFamily,
+                            fontSize = 14.sp,
+                            color = if (alt.isCorrect && draft.isActive) Color(0xFF2E7D32) else Color(
+                                0xFF131313
+                            )
+                        )
+                    }
+                }
             }
         }
+
     }
 }

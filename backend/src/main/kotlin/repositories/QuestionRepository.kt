@@ -13,7 +13,6 @@ import io.ktor.server.plugins.BadRequestException
 import models.Alternatives
 import models.Questions
 import models.QuestionsCompleted
-import models.Units
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
@@ -28,15 +27,10 @@ class QuestionRepository {
     private fun resultRowToQuestion(row: ResultRow): QuestionDto {
         return QuestionDto(
             id = row[Questions.id].value,
-            textContent = row[Questions.textContent],
-            typeText = row[Questions.typeText],
-            grammarExplanation = row[Questions.grammarExplanation],
-            audioUrl = row[Questions.audioUrl],
-            isActive = row[Questions.isActive],
-            exerciseId = row[Questions.exerciseId],
+            exerciseContentId = row[Questions.exerciseContentId],
             questionText = row[Questions.questionText],
-            typeQuestion = row[Questions.typeQuestion],
             orderQuestion = row[Questions.orderQuestion],
+            isActive = row[Questions.isActive],
             createdAt = row[Questions.createdAt].toString()
         )
     }
@@ -62,15 +56,15 @@ class QuestionRepository {
     fun getAllQuestions(): List<QuestionDto> = transaction {
         Questions.selectAll().orderBy(Questions.createdAt).map(::resultRowToQuestion)
     }
-    fun getQuestionsByExerciseId(exerciseId: Int): List<QuestionDto> = transaction {
-        Questions.selectAll().where { Questions.exerciseId eq exerciseId }.orderBy(Questions.createdAt).map(::resultRowToQuestion)
+    fun getQuestionsByExerciseId(exerciseContentId: Int): List<QuestionDto> = transaction {
+        Questions.selectAll().where { Questions.exerciseContentId eq exerciseContentId }.orderBy(Questions.createdAt).map(::resultRowToQuestion)
     }
 
     fun getQuestionById(id: Int): QuestionDto? = transaction {
         Questions.selectAll().where { Questions.id eq id }.singleOrNull()?.let(::resultRowToQuestion)
     }
 
-    fun createQuestion(exercise: Int,dto: CreateQuestionDto): QuestionDto = try {
+    fun createQuestion(exerciseContent: Int,dto: CreateQuestionDto): QuestionDto = try {
         transaction {
             var order= 0
             if(dto.orderQuestion == null) {
@@ -78,27 +72,18 @@ class QuestionRepository {
                 order = total.toInt()
             }
             val newId = Questions.insert {
-                it[textContent] = dto.textContent
-                it[typeText] = dto.typeText
-                it[grammarExplanation] = dto.grammarExplanation
-                it[audioUrl] = dto.audioUrl
-                it[isActive] = dto.isActive ?: false
-                it[exerciseId] = exercise
+                it[exerciseContentId] = exerciseContent
                 it[questionText] = dto.questionText
-                it[typeQuestion] = dto.typeQuestion
                 it[orderQuestion] = dto.orderQuestion?: order
+                it[isActive] = dto.isActive ?: false
+                it[createdAt] = LocalDateTime.now()
             }[Questions.id]
 
             QuestionDto(
                 id = newId.value,
-                textContent = dto.textContent,
-                typeText = dto.typeText,
-                grammarExplanation = dto.grammarExplanation,
-                audioUrl = dto.audioUrl,
+                exerciseContentId = exerciseContent,
                 isActive = dto.isActive ?: false,
-                exerciseId = exercise,
                 questionText = dto.questionText,
-                typeQuestion = dto.typeQuestion,
                 orderQuestion = dto.orderQuestion ?: order,
                 createdAt = LocalDateTime.now().toString()
             )
@@ -112,15 +97,10 @@ class QuestionRepository {
             getQuestionById(id) ?: throw BadRequestException("La pregunta con ID $id no existe.")
 
             Questions.update({ Questions.id eq id }) { update ->
-                dto.textContent?.let { update[textContent] = it }
-                dto.typeText?.let { update[typeText] = it }
-                dto.grammarExplanation?.let { update[grammarExplanation] = it }
-                dto.audioUrl?.let { update[audioUrl] = it }
-                dto.isActive?.let { update[isActive] = it }
-                dto.exerciseId?.let { update[exerciseId] = it }
+                dto.exerciseContentId?.let { update[exerciseContentId] = it }
                 dto.questionText?.let { update[questionText] = it }
-                dto.typeQuestion?.let { update[typeQuestion] = it }
                 dto.orderQuestion?.let { update[orderQuestion] = it}
+                dto.isActive?.let { update[isActive] = it }
             }
             return@transaction true
         }
@@ -133,7 +113,9 @@ class QuestionRepository {
 
 
     /* Alternatives */
-
+    fun getAllAlternatives(): List<AlternativeDto> = transaction {
+        Alternatives.selectAll().orderBy(Alternatives.createdAt).map(::resultRowToAlternative)
+    }
     fun getAlternativesByQuestionId(questionId: Int): List<AlternativeDto> = transaction {
         Alternatives.selectAll().where { Alternatives.questionId eq questionId }.map(::resultRowToAlternative)
     }

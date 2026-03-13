@@ -28,8 +28,8 @@ fun App() {
 
     MaterialTheme {
         if (initialized) {
-            //Navigator(screen = AdminDashboard("Deivid",Role.ADMIN))
-            Navigator(screen = LoginScreen())
+            Navigator(screen = AdminDashboard(1,"Deivid",Role.ADMIN))
+            //Navigator(screen = LoginScreen())
         } else {
             // Loader o pantalla de espera
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

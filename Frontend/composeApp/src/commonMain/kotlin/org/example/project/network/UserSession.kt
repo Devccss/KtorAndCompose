@@ -10,18 +10,23 @@ import org.example.project.dtos.Role
  * Se usa desde ReusableBottomBar para recuperar datos si la pantalla no los pasa.
  */
 object UserSession {
+    var idUser by mutableStateOf<Int?>(null)
+        private set
+
     var name: String? by mutableStateOf(null)
         private set
 
     var role: Role? by mutableStateOf(null)
         private set
 
-    fun set(name: String?, role: Role?) {
+    fun set(id: Int,name: String?, role: Role?) {
+        this.idUser = id
         this.name = name
         this.role = role
     }
 
     fun clear() {
+        idUser = null
         name = null
         role = null
     }

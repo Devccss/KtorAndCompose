@@ -11,9 +11,12 @@ import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import org.example.project.dtos.CreateExerciseContentDto
 import org.example.project.dtos.CreateExerciseDto
+import org.example.project.dtos.ExerciseContentDto
 import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.FilterExercisesDto
+import org.example.project.dtos.UpdateExerciseContentDto
 import org.example.project.dtos.UpdateExerciseDto
 
 class ExerciseRepo(private val httpClient: HttpClient, private val baseUrl: String) {
@@ -56,4 +59,31 @@ class ExerciseRepo(private val httpClient: HttpClient, private val baseUrl: Stri
 
     suspend fun deleteExercise(id: Int): Boolean =
         httpClient.delete("$baseUrl/api/v1/exercises/$id").body()
+
+
+
+    // ExerciseContent
+
+    suspend fun getAllExerciseContent(): List<ExerciseContentDto> =
+        httpClient.get("$baseUrl/api/v1/exerciseContent").body()
+
+    suspend fun getExerciseContentByExerciseId(exerciseId: Int): ExerciseContentDto? {
+        val response = httpClient.get("$baseUrl/api/v1/exerciseContent/exercise/$exerciseId")
+        return if (response.status == io.ktor.http.HttpStatusCode.NotFound) null else response.body()
+    }
+
+    suspend fun createExerciseContent(exerciseId: Int, content: CreateExerciseContentDto): ExerciseContentDto =
+        httpClient.post("$baseUrl/api/v1/exerciseContent/$exerciseId") {
+            contentType(io.ktor.http.ContentType.Application.Json)
+            setBody(content)
+        }.body()
+
+    suspend fun updateExerciseContent(exerciseId: Int, content: UpdateExerciseContentDto): Boolean =
+        httpClient.put("$baseUrl/api/v1/exerciseContent/exercise/$exerciseId") {
+            contentType(io.ktor.http.ContentType.Application.Json)
+            setBody(content)
+        }.status.isSuccess()
+
+    suspend fun deleteExerciseContent(exerciseId: Int): Boolean =
+        httpClient.delete("$baseUrl/api/v1/exerciseContent/exercise/$exerciseId").body()
 }

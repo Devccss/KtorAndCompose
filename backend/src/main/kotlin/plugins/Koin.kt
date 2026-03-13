@@ -1,4 +1,6 @@
 package com.example.plugins
+import com.example.repositories.ExerciseContentRepository
+import com.example.services.ExerciseContentService
 import com.example.services.QuestionWordService
 import com.example.services.ExerciseOnHoldService
 import com.example.services.ExerciseService
@@ -36,6 +38,7 @@ val repositoryModule = module {
     single { QuestionRepository() }
     single { NotificationsRepository() }
     single { ExerciseRepository() }
+    single { ExerciseContentRepository() }
     single { ExerciseOnHoldRepository() }
     single { QuestionWordsRepository()}
 
@@ -51,6 +54,7 @@ val serviceModule = module {
     single { QuestionService(get()) }
     single { NotificationsService(get()) }
     single { ExerciseService(get()) }
+    single { ExerciseContentService(get()) }
     single { ExerciseOnHoldService(get()) }
     single { QuestionWordService(get()) }
 }

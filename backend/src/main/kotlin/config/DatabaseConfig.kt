@@ -4,6 +4,7 @@ import com.example.dtos.UserDto
 import io.github.cdimascio.dotenv.dotenv
 import models.Alternatives
 import models.ExerciseCompleted
+import models.ExerciseContent
 import models.Units
 import models.Users
 import models.Exercises
@@ -40,9 +41,8 @@ fun configureDatabases() {
 
     transaction {
         SchemaUtils.create(
-            Users, Units, Exercises, Notifications, Words, Questions,
-            Tests, TestExercises, ExercisesOnHold, UnitsCompleted,
-            ExerciseCompleted, TestCompleted, QuestionWords, Alternatives
+            Users, Units, Exercises,ExerciseContent,ExercisesOnHold,ExerciseCompleted, Notifications, Words, Questions,
+            Tests, TestExercises, UnitsCompleted, TestCompleted, QuestionWords, Alternatives
         )
         createAdminUserIfNotExists()
     }

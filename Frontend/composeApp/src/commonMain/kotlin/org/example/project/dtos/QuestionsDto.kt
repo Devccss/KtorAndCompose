@@ -1,47 +1,28 @@
 package org.example.project.dtos
 
 import kotlinx.serialization.Serializable
-
-enum class TypeTextExercise { NORMAL, BOLD, ITALIC, UNDERLINE }
-enum class TypeQuestion { ALTERNATIVE, OPEN }
 @Serializable
 data class QuestionDto(
     val id: Int,
-    val textContent: String,
-    val typeText: TypeTextExercise,
-    val grammarExplanation: String,
-    val audioUrl: String? = null,
-    val isActive: Boolean? = false,
-    val exerciseId: Int,
+    val exerciseContentId: Int,
     val questionText: String,
-    val typeQuestion: TypeQuestion,
     val orderQuestion: Int,
+    val isActive: Boolean? = false,
     val createdAt: String
 )
-
 @Serializable
 data class CreateQuestionDto(
-    val textContent: String,
-    val typeText: TypeTextExercise,
-    val grammarExplanation: String,
-    val audioUrl: String?,
-    val isActive: Boolean? = false,
     val questionText: String,
-    val typeQuestion: TypeQuestion,
     val orderQuestion: Int? = null,
+    val isActive: Boolean? = false,
 )
 
 @Serializable
 data class UpdateQuestionDto(
-    val textContent: String? = null,
-    val typeText: TypeTextExercise? = null,
-    val grammarExplanation: String? = null,
-    val audioUrl: String? = null,
-    val isActive: Boolean? = false,
-    val exerciseId: Int? = null,
+    val exerciseContentId: Int? = null,
     val questionText: String? = null,
-    val typeQuestion: TypeQuestion? = null,
     val orderQuestion: Int? = null,
+    val isActive: Boolean? = null,
 )
 
 @Serializable

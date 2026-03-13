@@ -24,7 +24,6 @@ class TestRepository {
         return TestDto(
             id = row[Tests.id].value,
             unitId = row[Tests.unitId],
-            testType = row[Tests.testType],
             name = row[Tests.name],
             description = row[Tests.description],
             isActive = row[Tests.isActive],
@@ -53,7 +52,6 @@ class TestRepository {
         transaction {
             val newId = Tests.insert {
                 it[unitId] = dto.unitId
-                it[testType] = dto.testType
                 it[name] = dto.name
                 it[description] = dto.description
                 it[isActive] = dto.isActive ?: false
@@ -62,7 +60,6 @@ class TestRepository {
             TestDto(
                 id = newId.value,
                 unitId = dto.unitId,
-                testType = dto.testType,
                 name = dto.name,
                 description = dto.description,
                 isActive = dto.isActive ?: false,
@@ -77,9 +74,9 @@ class TestRepository {
         transaction {
             getTestById(id) ?: throw BadRequestException("El test con ID $id no existe.")
             Tests.update({ Tests.id eq id }) { update ->
-                dto.name?.let { update[Tests.name] = it }
-                dto.description?.let { update[Tests.description] = it }
-                dto.isActive?.let { update[Tests.isActive] = it }
+                dto.name?.let { update[name] = it }
+                dto.description?.let { update[description] = it }
+                dto.isActive?.let { update[isActive] = it }
             }
         }
     }

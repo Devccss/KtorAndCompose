@@ -24,11 +24,11 @@ class QuestionsRepo(private val httpClient: HttpClient, private val baseUrl: Str
     suspend fun getQuestionById(id: Int): QuestionDto? =
         httpClient.get("$baseUrl/api/v1/questions/$id").body()
 
-    suspend fun getQuestionsByExerciseId(exerciseId: Int): List<QuestionDto> =
-        httpClient.get("$baseUrl/api/v1/questions/exercise/$exerciseId").body()
+    suspend fun getQuestionsByExerciseId(contentId: Int): List<QuestionDto> =
+        httpClient.get("$baseUrl/api/v1/questions/exercise/$contentId").body()
 
-     suspend fun createQuestion(exerciseId: Int,question: CreateQuestionDto): QuestionDto =
-        httpClient.post("$baseUrl/api/v1/questions/$exerciseId") {
+     suspend fun createQuestion(contentId: Int,question: CreateQuestionDto): QuestionDto =
+        httpClient.post("$baseUrl/api/v1/questions/$contentId") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(question)
         }.body()
