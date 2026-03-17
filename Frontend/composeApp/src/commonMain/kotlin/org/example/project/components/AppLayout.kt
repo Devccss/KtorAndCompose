@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -97,6 +98,25 @@ fun AppLayout(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Box(
+                        //Tamaño igual al contenido
+                        modifier = Modifier.wrapContentSize()
+                    ){
+                        //Boton de volver
+                        IconButton(
+                            onClick = { navigator?.pop() },
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .size(36.dp)
+                                .padding(end = 12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Volver",
+                                tint = Color(0xFF4A4A4A)
+                            )
+                        }
+                    }
                     Column(modifier = Modifier.weight(1f)) {
                         // Cambio de lógica: Si hay actualScreen úsalo, si no, usa el mensaje de bienvenida
                         (actualScreen ?: if (userName.isNotBlank()) "¡Bienvenido $userName!" else null)?.let {
@@ -117,8 +137,6 @@ fun AppLayout(
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-
-                    Spacer(modifier = Modifier.width(12.dp))
 
                     Box(
                         modifier = Modifier

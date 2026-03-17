@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.example.project.dtos.CreateExerciseContentDto
 import org.example.project.dtos.CreateExerciseDto
-import org.example.project.dtos.DifficultyLevel
 import org.example.project.dtos.ExerciseContentDto
 import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.FilterExercisesDto
@@ -25,7 +24,7 @@ data class ExercisesUiState(
     val selectedExercise: ExerciseDto? = null,
     val selectedContent : ExerciseContentDto? = null,
     val contents : List<ExerciseContentDto> = emptyList(),
-    val exercise: List<ExerciseDto> = emptyList(),
+    val exercises: List<ExerciseDto> = emptyList(),
     var error: String? = null,
     val isLoading: Boolean = false,
 )
@@ -62,10 +61,10 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
             block = { repo.searchExercises(filters)},
             onSuccess = { exercise ->
 
-                _state.value = _state.value.copy(exercise = exercise)
+                _state.value = _state.value.copy(exercises = exercise)
             },
             onError = { error ->
-                _state.value = _state.value.copy(error = "Error al buscar ejercicios: ${error.message}", exercise = emptyList())
+                _state.value = _state.value.copy(error = "Error al buscar ejercicios: ${error.message}", exercises = emptyList())
             }
         )
     }
@@ -75,10 +74,10 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
             block = { repo.getAllExercises()},
             onSuccess = { exercise ->
 
-                _state.value = _state.value.copy(exercise = exercise)
+                _state.value = _state.value.copy(exercises = exercise)
             },
             onError = { error ->
-                _state.value = _state.value.copy(error = "Error al obtener todos los ejercicios: ${error.message}", exercise = emptyList())
+                _state.value = _state.value.copy(error = "Error al obtener todos los ejercicios: ${error.message}", exercises = emptyList())
             }
         )
     }
@@ -101,10 +100,10 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
             block = { repo.getExercisesByUnitId(unitId)},
             onSuccess = { exercise ->
 
-                _state.value = _state.value.copy(exercise = exercise)
+                _state.value = _state.value.copy(exercises = exercise)
             },
             onError = { error ->
-                _state.value = _state.value.copy(error = "Error al obtener ejercicios por unidad: ${error.message}", exercise = emptyList())
+                _state.value = _state.value.copy(error = "Error al obtener ejercicios por unidad: ${error.message}", exercises = emptyList())
             }
         )
     }
@@ -113,8 +112,8 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
         launchCatching(
             block = { repo.createExercise(dto) },
             onSuccess = { newExercise ->
-                val currentList = _state.value.exercise
-                _state.value = _state.value.copy(exercise = currentList + newExercise)
+                val currentList = _state.value.exercises
+                _state.value = _state.value.copy(exercises = currentList + newExercise)
             },
             onError = { error ->
                 _state.value = _state.value.copy(error = "Error al crear ejercicio: ${error.message}")
@@ -162,7 +161,7 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
                 _state.value = _state.value.copy(contents = content)
             },
             onError = { error ->
-                _state.value = _state.value.copy(error = "Error al obtener todos los ejercicios: ${error.message}", exercise = emptyList())
+                _state.value = _state.value.copy(error = "Error al obtener todos los ejercicios: ${error.message}", exercises = emptyList())
             }
         )
     }

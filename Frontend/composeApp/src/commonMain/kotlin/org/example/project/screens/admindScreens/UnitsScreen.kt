@@ -73,7 +73,6 @@ class UnitsScreen : Screen {
             )
         }
 
-        var searchQuery by remember { mutableStateOf("") }
         LaunchedEffect(unitUi.error) {
             unitUi.error?.let {
                 snackbarHostState.showSnackbar(it)
@@ -105,8 +104,6 @@ class UnitsScreen : Screen {
                     navigator = navigator,
                     lessonUnits = lessonUnits,
                     allUnitsDto = unitUi.units, // Pasamos la lista original DTO para poder actualizar
-                    searchQuery = searchQuery,
-                    onSearchQueryChange = { searchQuery = it },
                     onCreateUnit = { dto -> unitVm.createUnit(dto) },
                     onReorderUnits = { updatedList -> unitVm.updateUnitsOrder(updatedList) }, // Callback
                     onError = { error -> unitVm.updateMessage(error.message) },
@@ -124,8 +121,6 @@ fun UnitsSection(
     navigator: Navigator,
     lessonUnits: List<LessonUnit>,
     allUnitsDto: List<UnitDto>, // Lista origen datos reales
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
     onCreateUnit: (CreateUnitDto) -> Unit,
     onReorderUnits: (List<Pair<Int, Int>>) -> Unit,
     onFilter: (FilterUnitsDto) -> Unit, // Callback para filtros
@@ -142,6 +137,7 @@ fun UnitsSection(
     var selectedDifficulty by remember { mutableStateOf(DifficultyLevel.A1) }
 
     // Estados para filtrado
+    var searchQuery by remember { mutableStateOf("") }
     var isFiltering by remember { mutableStateOf(false) }
     var filterDifficulty by remember { mutableStateOf<DifficultyLevel?>(null) }
     var filterDifficultyExpanded by remember { mutableStateOf(false) }
@@ -183,7 +179,7 @@ fun UnitsSection(
             ) {
                 OutlinedTextField(
                     value = searchQuery,
-                    onValueChange = onSearchQueryChange,
+                    onValueChange = { searchQuery = it },
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("Buscar unidades...", fontSize = 14.sp) },
                     leadingIcon = {
@@ -316,7 +312,7 @@ fun UnitsSection(
                             TextButton(onClick = {
                                 filterDifficulty = null
                                 filterActive = null
-                                onSearchQueryChange("")
+                                searchQuery = ""
                                 onFilter(FilterUnitsDto())
                             }) { Text("Limpiar") }
                             Spacer(Modifier.width(8.dp))

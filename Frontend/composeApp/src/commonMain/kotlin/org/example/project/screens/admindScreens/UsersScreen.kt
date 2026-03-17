@@ -26,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
@@ -688,18 +689,19 @@ fun UserCard(
                     Text("Nivel: $levelName", style = MaterialTheme.typography.labelSmall)
                 }
                 Box(
-                    Modifier
+                    modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(
-                            androidx.compose.ui.graphics.Brush.linearGradient(
-                                listOf(Color(0xFF003AB6), Color(0xFF48145B))
-                            ),
-                            shape = MaterialTheme.shapes.medium
-                        ),
+                        .background(Color(0xFFE0E0E0), shape = CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(user.id?.toString() ?: "N", color = Color.White)
+                    user.name.take(1).let {
+                        Text(
+                            it.uppercase(),
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF4A4A4A),
+                        )
+                    }
                 }
 
             }

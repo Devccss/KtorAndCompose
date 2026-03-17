@@ -32,6 +32,13 @@ class TestExerciseRepository {
         TestExercises.selectAll().where { TestExercises.id eq id }.singleOrNull()?.let(::resultRowToTestExercise)
     }
 
+    fun searchByIds(testId: Int? = null, exerciseId: Int? = null): List<TestExerciseDto> = transaction {
+        var query = TestExercises.selectAll()
+        testId?.let { query = query.where { TestExercises.testId eq it } }
+        exerciseId?.let { query = query.where { TestExercises.exerciseId eq it } }
+        query.map(::resultRowToTestExercise)
+    }
+
     fun create(dto: CreateTestExerciseDto): TestExerciseDto = try {
         transaction {
             val newId = TestExercises.insert {
@@ -56,7 +63,10 @@ class TestExerciseRepository {
     }
 
     fun delete(id: Int): Boolean = transaction {
-        getById(id) ?: throw BadRequestException("TestExercise con ID $id no existe.")
-        TestExercises.deleteWhere { TestExercises.id eq id } > 0
+        val testExerciseId = searchByIds(exerciseId = id)
+        testExerciseId.forEach { testExId->
+            TestExercises.deleteWhere { TestExercises.id eq testExId.id }
+        }
+         true
     }
 }

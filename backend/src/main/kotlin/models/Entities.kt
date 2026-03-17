@@ -98,7 +98,7 @@ object Alternatives : IntIdTable() {
 object Tests : IntIdTable() {
     val unitId = integer("unit_id").references(Units.id)
     val name = varchar("name", 100)
-    val description = text("description").nullable()
+    val description = text("description")
     val isActive = bool("is_active").default(false)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }

@@ -6,10 +6,12 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.NavigationBar
@@ -43,6 +45,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Check
 import org.example.project.screens.admindScreens.ExercisesOrUnitScreen
+import org.example.project.screens.admindScreens.TestScreen
 
 data class NavItem(val id: Int, val icon: ImageVector, val label: String)
 
@@ -60,7 +63,8 @@ fun ReusableBottomBar(
         NavItem(0, Icons.Default.Home, "Inicio"),
         NavItem(1, Icons.Default.Group, "Usuarios"),
         NavItem(2, Icons.AutoMirrored.Filled.List, "Unidades"),
-        NavItem(3, Icons.Default.Check, "Ejercicios")
+        NavItem(3, Icons.Default.Check, "Ejercicios"),
+        NavItem(4, Icons.AutoMirrored.Filled.FactCheck, "Tests")
     )
 
     // Inicializar valores desde initial params o desde UserSession si no se pasan.
@@ -87,14 +91,14 @@ fun ReusableBottomBar(
     }
 
     Surface(
-        modifier = modifier,
+        modifier = modifier .padding(0.dp),
         tonalElevation = 4.dp,
         color = Color.White
     ) {
         NavigationBar(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
+                .padding(0.dp)
                 .height(64.dp),
 
             containerColor = Color.White,
@@ -103,36 +107,29 @@ fun ReusableBottomBar(
         ) {
             fixedItems.forEachIndexed { index, item ->
                 val selected = index == selectedIndex
-                val scale by animateFloatAsState(if (selected) 1.15f else 1f)
+                val scale by animateFloatAsState(if (selected) 1.1f else 1f)
 
                 NavigationBarItem(
+                    modifier = Modifier.padding(0.dp),
                     icon = {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
-                            modifier = Modifier
-                                .padding(horizontal = 4.dp)
-                                .scale(scale)
+                            modifier = Modifier.scale(scale)
                         ) {
-                            Icon(item.icon, contentDescription = item.label, tint = if (selected) Color(0xFF003AB6) else Color(0xFF9B9B9B))
-                            AnimatedVisibility(visible = selected, enter = fadeIn(), exit = fadeOut()) {
-                                Box(
-                                    modifier = Modifier
-                                        .padding(top = 4.dp)
-                                        .height(4.dp)
-                                        .width(24.dp)
-                                        .background(Color(0xFF003AB6), shape = CircleShape)
-                                )
-                            }
-                            Text(
-                                text = item.label,
-                                fontSize = 11.sp,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                                color = if (selected) Color(0xFF003AB6) else Color(0xFF9B9B9B),
-                                modifier = Modifier.padding(top = 4.dp)
+                            Icon(
+                                item.icon,
+                                contentDescription = item.label,
+                                tint = if (selected) Color(0xFFFF6B6B) else Color.Gray
                             )
                         }
                     },
+                    label = {
+                        Text(
+                            text = item.label,
+                            color = if (selected) Color(0xFFFF6B6B) else Color.Gray
+                        ) },
+                    alwaysShowLabel = false,
                     selected = selected,
                     onClick = {
                         onSelect?.invoke(index)
@@ -157,9 +154,11 @@ fun ReusableBottomBar(
                             3 -> {
                                 navigator.push(ExercisesOrUnitScreen(null))
                             }
+                            4 -> {
+                                navigator.push(TestScreen())
+                            }
                         }
                     },
-                    alwaysShowLabel = false,
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color(0xFF003AB6),
                         unselectedIconColor = Color(0xFF9B9B9B),

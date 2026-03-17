@@ -1,14 +1,13 @@
 package com.example.dtos
 
 import kotlinx.serialization.Serializable
-import models.ContentType
 
 @Serializable
 data class TestDto(
     val id: Int,
     val unitId: Int,
     val name: String,
-    val description: String? = null,
+    val description: String,
     val isActive: Boolean = false,
     val createdAt: String
 )
@@ -17,9 +16,8 @@ data class TestDto(
 data class CreateTestDto(
     val unitId: Int,
     val name: String,
-    val description: String? = null,
+    val description: String,
     val isActive: Boolean? = false,
-    val createdAt: String
 )
 
 @Serializable

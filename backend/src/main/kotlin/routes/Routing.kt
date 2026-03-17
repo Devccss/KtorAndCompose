@@ -477,6 +477,16 @@ fun Application.configureRouting() {
                     val item = testService.getById(id) ?: throw NotFoundException("Test not found")
                     call.respond(item)
                 }
+                get("/exercises/{testId}") {
+                    val testId = call.parameters["testId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Test ID")
+                    val items = testExerciseService.searchByIds(testId = testId)
+                    val allExercises = exerciseService.getAll()
+                    val exercisesInTest = items.mapNotNull { item ->
+                        allExercises.find { it.id == item.exerciseId }
+                    }
+                    call.respond(exercisesInTest)
+                }
                 post {
                     val dto = call.receive<CreateTestDto>()
                     val created = testService.create(dto)
@@ -497,13 +507,24 @@ fun Application.configureRouting() {
             }
 
             // TestExercises
-            route("/test-exercises") {
+            route("/testExercises") {
                 get { call.respond(testExerciseService.getAll()) }
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
-                    val item = testExerciseService.getById(id)
-                        ?: throw NotFoundException("TestExercise not found")
+                    val item =
+                        testExerciseService.getById(id) ?: throw NotFoundException("TestExercise not found")
+                    call.respond(item)
+                }
+
+                get("/search") {
+                    val testId = call.queryParameters["testId"]?.toIntOrNull()
+                    val exerciseId = call.queryParameters["exerciseId"]?.toIntOrNull()
+
+                    if (testId == null && exerciseId == null) {
+                        throw BadRequestException("Alguno de los ids (testId o exerciseId) debe ser proporcionado")
+                    }
+                    val item = testExerciseService.searchByIds( testId, exerciseId)
                     call.respond(item)
                 }
                 post {
@@ -518,8 +539,8 @@ fun Application.configureRouting() {
                     testExerciseService.update(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
-                delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull()
+                delete("{exerciseId}") {
+                    val id = call.parameters["exerciseId"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
                     call.respond(testExerciseService.delete(id))
                 }

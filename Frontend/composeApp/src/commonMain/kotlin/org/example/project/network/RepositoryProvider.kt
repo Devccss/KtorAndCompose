@@ -3,6 +3,7 @@ package org.example.project.network
 import io.ktor.client.HttpClient
 import org.example.project.repository.ExerciseRepo
 import org.example.project.repository.QuestionsRepo
+import org.example.project.repository.TestRepo
 import org.example.project.repository.UnitRepo
 import org.example.project.repository.UserRepo
 
@@ -35,6 +36,12 @@ object RepositoryProvider {
             "RepositoryProvider.questionRepo not initialized. Call RepositoryProvider.init(httpClient, baseUrl) before using repositories."
         )
 
+    private var _testRepo: TestRepo? = null
+    val testRepo: TestRepo
+        get() = _testRepo ?: throw IllegalStateException(
+            "RepositoryProvider.testRepo not initialized. Call RepositoryProvider.init(httpClient, baseUrl) before using repositories."
+        )
+
 
 
     fun init(httpClient: HttpClient, baseUrl: String) {
@@ -44,6 +51,7 @@ object RepositoryProvider {
         _unitRepo = UnitRepo(httpClient, baseUrl)
         _exerciseRepo = ExerciseRepo(httpClient, baseUrl)
         _questionRepo = QuestionsRepo(httpClient, baseUrl)
+        _testRepo = TestRepo(httpClient, baseUrl)
 
         initialized = true
     }
@@ -55,6 +63,7 @@ object RepositoryProvider {
         _unitRepo = null
         _exerciseRepo = null
         _questionRepo = null
+        _testRepo = null
     }
 
     fun checkInitialized() {

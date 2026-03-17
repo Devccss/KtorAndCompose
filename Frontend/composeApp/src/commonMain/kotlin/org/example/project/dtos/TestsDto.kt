@@ -1,15 +1,13 @@
 package org.example.project.dtos
 
 import kotlinx.serialization.Serializable
-enum class TestType { ALTERNATIVES, TRANSLATION, LISTENING, READING }
 
 @Serializable
 data class TestDto(
     val id: Int,
     val unitId: Int,
-    val testType: TestType,
     val name: String,
-    val description: String? = null,
+    val description: String,
     val isActive: Boolean = false,
     val createdAt: String
 )
@@ -17,11 +15,9 @@ data class TestDto(
 @Serializable
 data class CreateTestDto(
     val unitId: Int,
-    val testType: TestType,
     val name: String,
-    val description: String? = null,
+    val description: String,
     val isActive: Boolean? = false,
-    val createdAt: String
 )
 
 @Serializable

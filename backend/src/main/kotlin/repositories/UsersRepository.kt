@@ -10,6 +10,7 @@ import models.Users
 
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -38,13 +39,13 @@ class UsersRepository {
     }
 
     fun getAll(): List<UserDto> = transaction {
-        Users.selectAll().orderBy(Users.createdAt).map(::resultRowToUser)
+        Users.selectAll().where { Users.role neq Role.ADMIN  }.orderBy(Users.createdAt).map(::resultRowToUser)
     }
     fun getUsersByName(name: String): List<UserDto> = transaction {
-        Users.selectAll().where { Users.name like "%$name%" }.orderBy(Users.createdAt).map(::resultRowToUser)
+        Users.selectAll().where { Users.role neq Role.ADMIN }.andWhere { Users.name like "%$name%" }.orderBy(Users.createdAt).map(::resultRowToUser)
     }
     fun getFilterUsers(filters: FilterUsersDto): List<UserDto> = transaction {
-        var query = Users.selectAll()
+        var query = Users.selectAll().where { Users.role neq Role.ADMIN }
 
         filters.name?.takeIf { it.isNotBlank() }?.let { name -> query = query.andWhere { Users.name like "%$name%" } }
         filters.role?.let { query = query.andWhere { Users.role eq it } }
@@ -93,7 +94,6 @@ class UsersRepository {
     fun updateUser(id: Int, dto: UpdateUserDto) {
         transaction {
             val userToEdit = getById(id) ?: throw BadRequestException("Usuario con ID $id no existe.")
-            if (userToEdit.role == Role.ADMIN) throw BadRequestException("No se puede modificar un usuario con rol ADMIN.")
              Users.update({ Users.id eq id }) { u ->
                 dto.email?.let { u[email] = it }
                 dto.password?.let { newPass ->
