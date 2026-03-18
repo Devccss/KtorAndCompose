@@ -24,6 +24,12 @@ class TestRepo(private val httpClient: HttpClient ,private val baseUrl: String) 
     suspend fun getTestById(id: Int): TestDto? =
         httpClient.get("$baseUrl/api/v1/tests/$id").body()
 
+    suspend fun getTestsByUnitId(unitId: Int): TestDto? =
+        httpClient.get("$baseUrl/api/v1/tests/byUnit/$unitId").body()
+
+    suspend fun getTestByExerciseId(exerciseId: Int): TestDto? =
+        httpClient.get("$baseUrl/api/v1/tests/byExercise/$exerciseId").body()
+
     suspend fun getExercisesByTestId(testId: Int): List<ExerciseDto> =
         httpClient.get("$baseUrl/api/v1/tests/exercises/$testId").body()
 
@@ -40,7 +46,7 @@ class TestRepo(private val httpClient: HttpClient ,private val baseUrl: String) 
         }.status.isSuccess()
 
      suspend fun deleteTest(id: Int): Boolean =
-        httpClient.delete("$baseUrl/api/v1/tests/delete/$id").body()
+        httpClient.delete("$baseUrl/api/v1/tests/$id").body()
 
 
     //Test-Exersice

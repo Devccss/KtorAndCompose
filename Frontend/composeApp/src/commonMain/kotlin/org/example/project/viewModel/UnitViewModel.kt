@@ -69,6 +69,7 @@ class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : V
     fun actualNull() {
         _state.value = _state.value.copy(actualUnit = null)
     }
+
     fun getUnitById(id: Int) {
         launchCatching(
             block = { unitRepo.getUnitById(id) },
@@ -93,7 +94,25 @@ class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : V
         )
     }
 
-    fun searchUnits(filters: FilterUnitsDto){
+    fun getUnitByTestId(testId: Int) {
+        launchCatching(
+            block = { unitRepo.getUnitByTestId(testId) },
+            onSuccess = { unit ->
+
+                _state.value = _state.value.copy(
+                    actualUnit = unit,
+                )
+
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(
+                    error = error.message
+                )
+            }
+        )
+    }
+
+    fun searchUnits(filters: FilterUnitsDto) {
         launchCatching(
             block = { unitRepo.searchUnits(filters) },
             onSuccess = { units ->

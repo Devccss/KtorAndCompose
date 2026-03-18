@@ -32,6 +32,9 @@ class UnitRepo(private val httpClient: HttpClient, private val baseUrl: String) 
     suspend fun getUnitById(id: Int): UnitDto? =
         httpClient.get("$baseUrl/api/v1/units/$id").body()
 
+    suspend fun getUnitByTestId(testId: Int): UnitDto? =
+        httpClient.get("$baseUrl/api/v1/units/byTest/$testId").body()
+
     suspend fun createUnit(unit: CreateUnitDto): UnitDto =
         httpClient.post("$baseUrl/api/v1/units") {
             contentType(io.ktor.http.ContentType.Application.Json)

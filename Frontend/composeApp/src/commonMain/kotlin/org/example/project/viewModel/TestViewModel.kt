@@ -65,6 +65,32 @@ class TestViewModel(private val testRepo:TestRepo ):ViewModel(),ScreenModel {
         )
     }
 
+    fun getTestsByUnitId(unitId: Int) {
+        launchCatching(
+            block = { testRepo.getTestsByUnitId(unitId) },
+            onSuccess = { test ->
+                _state.value = _state.value.copy(currentTest = test)
+            },
+            onError = { error ->
+                _state.value =
+                    _state.value.copy(error = "Error al obtener tests por unitId: ${error.message}", selectedTests = emptyList())
+            }
+        )
+    }
+
+    fun getTestByExerciseId(exerciseId: Int) {
+        launchCatching(
+            block = { testRepo.getTestByExerciseId(exerciseId) },
+            onSuccess = { test ->
+                _state.value = _state.value.copy(currentTest = test)
+            },
+            onError = { error ->
+                _state.value =
+                    _state.value.copy(error = "Error al obtener test por exerciseId: ${error.message}", selectedTests = emptyList())
+            }
+        )
+    }
+
     fun createTest(test: CreateTestDto) {
         launchCatching(
             block = { testRepo.createTest(test) },

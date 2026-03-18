@@ -53,6 +53,10 @@ class UnitRepository {
         Units.selectAll().where { Units.id eq id }.singleOrNull()?.let(::resultRowToUnit)
     }
 
+    fun getUnitByTestId(testId: Int): UnitDto? = transaction {
+        (Units innerJoin models.Tests).selectAll().where { models.Tests.id eq testId }.singleOrNull()?.let(::resultRowToUnit)
+    }
+
     fun getUnitsByDifficulty(difficulty: DifficultyLevel): List<UnitDto> = transaction {
         Units.selectAll().where { Units.difficulty eq difficulty }.map(::resultRowToUnit)
     }

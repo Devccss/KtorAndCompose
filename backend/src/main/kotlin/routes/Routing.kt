@@ -165,6 +165,12 @@ fun Application.configureRouting() {
                         unitService.getUnitById(id) ?: throw NotFoundException("Unit not found")
                     call.respond(item)
                 }
+                get("/byTest/{testId}") {
+                    val testId = call.parameters["testId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Test ID")
+                    val units = unitService.getUnitByTestId(testId)?: throw NotFoundException("No unit found for test ID $testId")
+                    call.respond(units)
+                }
                 get("/search") {
                     val name = call.request.queryParameters["name"]
                     val difficulty =
@@ -487,6 +493,19 @@ fun Application.configureRouting() {
                     }
                     call.respond(exercisesInTest)
                 }
+                get("/byUnit/{unitId}") {
+                    val unitId = call.parameters["unitId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Unit ID")
+                    val tests = testService.getTestsByUnitId(unitId)?: throw NotFoundException("No tests found for unit ID $unitId")
+                    call.respond(tests)
+                }
+                get("/byExercise/{exerciseId}") {
+                    val exerciseId = call.parameters["exerciseId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid Exercise ID")
+                    val items = testExerciseService.searchByIds(exerciseId)
+                    val test = testService.getById( items.first().testId)?: throw NotFoundException("No test found for exercise ID $exerciseId")
+                    call.respond(test)
+                }
                 post {
                     val dto = call.receive<CreateTestDto>()
                     val created = testService.create(dto)
@@ -529,6 +548,11 @@ fun Application.configureRouting() {
                 }
                 post {
                     val dto = call.receive<CreateTestExerciseDto>()
+                    val test = testService.getById(dto.testId)
+                    val exercise = exerciseService.getById(dto.exerciseId)
+                    if (test?.unitId != exercise?.unitId){
+                        throw BadRequestException("El test y el ejercicio deben pertenecer a la misma unidad")
+                    }
                     val created = testExerciseService.create(dto)
                     call.respond(HttpStatusCode.Created, created)
                 }

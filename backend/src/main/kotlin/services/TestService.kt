@@ -11,6 +11,7 @@ import repositories.TestRepository
 class TestService(private val repo: TestRepository) {
     fun getAll(): List<TestDto> = repo.getAllTests()
     fun getById(id: Int): TestDto? = repo.getTestById(id)
+    fun getTestsByUnitId(unitId: Int): TestDto? = repo.getTestsByUnitId(unitId)
     fun create(dto: CreateTestDto): TestDto = repo.createTest(dto)
     fun update(id: Int, dto: UpdateTestDto) = repo.updateTest(id, dto)
     fun delete(id: Int): Boolean = repo.deleteTest(id)

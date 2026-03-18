@@ -23,6 +23,10 @@ class UnitService(private val unitRepository: UnitRepository) {
         return unitRepository.getUnitById(id)
     }
 
+    fun getUnitByTestId(testId: Int): UnitDto? {
+        return unitRepository.getUnitByTestId(testId)
+    }
+
     fun searchUnits(filters: FilterUnitsDto): List<UnitDto> {
         return unitRepository.searchUnits(filters)
     }

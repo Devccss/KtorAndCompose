@@ -512,10 +512,6 @@ class UserDetailsScreen(private val userId: Int) : Screen {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text("Información del Sistema", style = MaterialTheme.typography.labelLarge, color = Color.Gray)
                                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                    Text("ID Usuario:", style = MaterialTheme.typography.bodySmall, fontFamily = jetbrainsMonoFamily)
-                                    Text("#${user?.id}", style = MaterialTheme.typography.bodySmall, fontFamily = jetbrainsMonoFamily, fontWeight = FontWeight.Bold)
-                                }
-                                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                                     Text("Proveedor:", style = MaterialTheme.typography.bodySmall, fontFamily = jetbrainsMonoFamily)
                                     Text(user?.provider ?: "Local", style = MaterialTheme.typography.bodySmall, fontFamily = jetbrainsMonoFamily)
                                 }
