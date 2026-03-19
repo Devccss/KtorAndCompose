@@ -265,6 +265,15 @@ fun Application.configureRouting() {
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
+                    val questions = questionService.getQuestionsByExerciseId(id)
+                    questions.forEach { question ->
+                        val alternatives = questionService.getAlternativeByQuestionId(question.id)
+                        alternatives.forEach { alt ->
+                            questionService.deleteAlternative(alt.id)
+                        }
+                        questionService.deleteQuestion(question.id)
+                    }
+                    exerciseContentService.deleteByExerciseId(id)
                     call.respond(exerciseService.delete(id))
                 }
             }

@@ -1071,8 +1071,11 @@ fun ExerciseCard(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+
                     ) {
                         Text(
+                            modifier = Modifier.weight(1f),
                             text = exercises.name,
                             fontWeight = FontWeight.SemiBold,
                             color = Color(0xFF2D2D2D),

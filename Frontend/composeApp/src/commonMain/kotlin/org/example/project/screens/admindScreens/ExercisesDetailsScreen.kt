@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.LocalNavigator
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
@@ -137,6 +138,8 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
 
     @Composable
     override fun Content() {
+        val navigator = LocalNavigator.current
+
         val exerciseVm = rememberScreenModel {
             ExercisesViewModel(
                 RepositoryProvider.exerciseRepo,
@@ -155,6 +158,9 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
 
         val encodeSansFamily = FontFamily(Font(Res.font.encode_sans_variable))
         val jetbrainsMonoFamily = FontFamily(Font(Res.font.jetbrains_mono_regular))
+
+        var onDelete by remember { mutableStateOf(false) }
+        val confirmChecked = remember { mutableStateOf(false) }
 
         //Content
         var isAddingContent by remember { mutableStateOf(false) }
@@ -309,7 +315,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                     draft.id, UpdateQuestionDto(
                         questionText = draft.questionText,
                         isActive = draft.isActive
-                        )
+                    )
                 )
 
                 // Alternatives handling
@@ -574,7 +580,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
 
                                 AnimatedVisibility(visible = isEditing) {
                                     IconButton(
-                                        onClick = { /* Lógica de eliminar ejercicio */ },
+                                        onClick = {onDelete = true},
                                         modifier = Modifier
                                             .padding(top = 8.dp)
                                             .size(20.dp)
@@ -590,6 +596,61 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
+
+                                    if (onDelete) {
+                                        androidx.compose.material3.AlertDialog(
+                                            onDismissRequest = {
+                                                onDelete = false
+                                                confirmChecked.value = false
+                                            },
+                                            title = { Text("Confirmar eliminación") },
+                                            text = {
+                                                Column {
+                                                    Text("Marca la casilla y acepta para eliminar este ejercicio.")
+                                                    Spacer(modifier = Modifier.height(8.dp))
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        androidx.compose.material3.Checkbox(
+                                                            checked = confirmChecked.value,
+                                                            onCheckedChange = { confirmChecked.value = it },
+                                                            colors = androidx.compose.material3.CheckboxDefaults.colors(
+                                                                checkedColor = Color(0xFF2D5E3D)
+                                                            )
+                                                        )
+                                                        Spacer(modifier = Modifier.width(8.dp))
+                                                        Text("Estoy seguro/a", fontSize = 14.sp)
+                                                    }
+                                                }
+                                            },
+                                            confirmButton = {
+                                                Button(
+                                                    onClick = {
+                                                        if (confirmChecked.value) {
+                                                            exerciseVm.deleteExercise(exerciseId)
+                                                            onDelete = false
+                                                            confirmChecked.value = false
+                                                            navigator?.pop()
+                                                        }
+                                                    },
+                                                    enabled = confirmChecked.value,
+                                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD4D4))
+                                                ) {
+                                                    Text("Eliminar", color = Color(0xFF8B0000))
+                                                }
+                                            },
+                                            dismissButton = {
+                                                TextButton(
+                                                    onClick = {
+                                                        onDelete = false
+                                                        confirmChecked.value = false
+                                                    }
+                                                ) {
+                                                    Text("Cancelar")
+                                                }
+                                            }
+                                        )
+                                    }
+
+
                                 }
                             }
                         }
@@ -1139,7 +1200,7 @@ fun QuestionEditableRegion(
                 Box(
                     modifier = Modifier.weight(1f, fill = false)
                         .padding(end = 8.dp)
-                ){
+                ) {
                     OutlinedTextField(
                         value = draft.questionText,
                         onValueChange = { draft.questionText = it },
@@ -1227,7 +1288,7 @@ fun QuestionEditableRegion(
                 Box(
                     modifier = Modifier.weight(1f, fill = false)
                         .padding(end = 8.dp)
-                ){
+                ) {
                     Text(
                         draft.questionText,
                         fontFamily = jetbrainsMonoFamily,

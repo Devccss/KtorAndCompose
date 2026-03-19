@@ -133,6 +133,19 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
         )
     }
 
+    fun deleteExercise(exerciseId: Int) {
+        launchCatching(
+            block = { repo.deleteExercise(exerciseId) },
+            onSuccess = {
+                val currentList = _state.value.exercises
+                _state.value = _state.value.copy(exercises = currentList.filterNot { it.id == exerciseId })
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al eliminar ejercicio: ${error.message}")
+            }
+        )
+    }
+
     fun reorderExercises(updates: List<Pair<Int, Int>>) {
         launchCatching(
             block = { repo.reorderExercises(updates) },
