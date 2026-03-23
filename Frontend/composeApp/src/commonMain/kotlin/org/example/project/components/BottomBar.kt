@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.Surface
@@ -63,7 +65,7 @@ fun ReusableBottomBar(
         NavItem(0, Icons.Default.Home, "Inicio"),
         NavItem(1, Icons.Default.Group, "Usuarios"),
         NavItem(2, Icons.AutoMirrored.Filled.List, "Unidades"),
-        NavItem(3, Icons.Default.Check, "Ejercicios"),
+        NavItem(3, Icons.AutoMirrored.Filled.Article, "Ejercicios"),
         NavItem(4, Icons.AutoMirrored.Filled.FactCheck, "Tests")
     )
 

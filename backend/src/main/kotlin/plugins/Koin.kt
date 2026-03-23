@@ -1,7 +1,7 @@
 package com.example.plugins
 import com.example.repositories.ExerciseContentRepository
 import com.example.services.ExerciseContentService
-import com.example.services.QuestionWordService
+import com.example.services.ExerciseWordService
 import com.example.services.ExerciseOnHoldService
 import com.example.services.ExerciseService
 import com.example.services.NotificationsService
@@ -56,7 +56,7 @@ val serviceModule = module {
     single { ExerciseService(get()) }
     single { ExerciseContentService(get()) }
     single { ExerciseOnHoldService(get()) }
-    single { QuestionWordService(get()) }
+    single { ExerciseWordService(get()) }
 }
 
 fun Application.configureKoin() {

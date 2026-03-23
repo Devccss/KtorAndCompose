@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
@@ -44,6 +45,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -79,10 +81,13 @@ import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import kotlinx.coroutines.launch
 import org.example.project.components.AppLayout
+import org.example.project.components.CustomTextField
 import org.example.project.dtos.ContentType
 import org.example.project.dtos.CreateAlternativeDto
 import org.example.project.dtos.CreateExerciseContentDto
+import org.example.project.dtos.CreateExerciseWordDto
 import org.example.project.dtos.CreateQuestionDto
+import org.example.project.dtos.CreateWordDto
 import org.example.project.dtos.UpdateAlternativeDto
 import org.example.project.dtos.UpdateExerciseContentDto
 import org.example.project.dtos.UpdateExerciseDto
@@ -91,6 +96,7 @@ import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
 import org.example.project.viewModel.ExercisesViewModel
 import org.example.project.viewModel.QuestionViewModel
+import org.example.project.viewModel.WordViewModel
 import org.jetbrains.compose.resources.Font
 import kotlin.random.Random
 
@@ -117,6 +123,21 @@ class ContentDraft(
     var grammarExplanation by mutableStateOf(grammarExplanation)
     var contentType by mutableStateOf(contentType)
     var audioUrl by mutableStateOf(audioUrl)
+}
+
+class WordDraftState(
+    val id: Int,
+    english: String,
+    spanish: String,
+    phonetic: String? = null,
+    description: String? = null,
+    isActive: Boolean = false,
+) {
+    var english by mutableStateOf(english)
+    var spanish by mutableStateOf(spanish)
+    var phonetic by mutableStateOf(phonetic)
+    var description by mutableStateOf(description)
+    var isActive by mutableStateOf(isActive)
 }
 
 class QuestionDraftState(
@@ -149,8 +170,10 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
         }
         val questionVm =
             rememberScreenModel { QuestionViewModel(RepositoryProvider.questionRepo, exerciseId) }
+        val wordsVm = rememberScreenModel { WordViewModel(RepositoryProvider.wordRepo) }
         val exerciseUi by exerciseVm.state.collectAsState()
         val questionUi by questionVm.state.collectAsState()
+        val wordsUi by wordsVm.state.collectAsState()
 
         var selectedIndex by remember { mutableStateOf(3) }
         val snackbarHostState = remember { SnackbarHostState() }
@@ -164,12 +187,11 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
 
         //Content
         var isAddingContent by remember { mutableStateOf(false) }
-        var isEditingContent by remember { mutableStateOf(false) }
         var contentText by remember { mutableStateOf("") }
         var contentGrammar by remember { mutableStateOf("") }
         var contentUrlAudio by remember { mutableStateOf("") }
         var contentDraft by remember {
-            mutableStateOf<ContentDraft>(
+            mutableStateOf(
                 ContentDraft(
                     id = 0,
                     exerciseId = exerciseId,
@@ -181,6 +203,25 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
             )
         }
 
+        // Words
+        var isAddingWord by remember { mutableStateOf(false) }
+        var newWordEnglish by remember { mutableStateOf("") }
+        var newWordSpanish by remember { mutableStateOf("") }
+        var newPhonetic by remember { mutableStateOf("") }
+        var newWordDescription by remember { mutableStateOf("") }
+        var isActiveWord by remember { mutableStateOf(false) }
+        var wordDraft by remember {
+            mutableStateOf(
+                WordDraftState(
+                    id = 0,
+                    english = "",
+                    spanish = "",
+                    phonetic = "",
+                    description = "",
+                    isActive = false
+                )
+            )
+        }
 
         //Question
         var isAddingQuestion by remember { mutableStateOf(false) }
@@ -209,6 +250,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
         LaunchedEffect(exerciseId) {
             exerciseVm.getExerciseById(exerciseId)
             questionVm.getQuestionsByExerciseId(exerciseId)
+            wordsVm.getWordsByExerciseId(exerciseId)
 
         }
 
@@ -238,7 +280,8 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
         LaunchedEffect(
             questionUi.selectedQuestions,
             questionUi.alternatives,
-            exerciseUi.selectedContent
+            exerciseUi.selectedContent,
+            wordsUi.words
         ) {
             if (!isEditing) {
 
@@ -250,6 +293,17 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                         textContent = contentEx.textContent,
                         grammarExplanation = contentEx.grammarExplanation,
                         audioUrl = contentEx.audioUrl
+                    )
+                }
+
+                wordsUi.words.forEach {word->
+                    wordDraft = WordDraftState(
+                        id = word.id,
+                        english = word.english,
+                        spanish = word.spanish,
+                        phonetic = word.phonetic,
+                        description = word.description,
+                        isActive = word.isActive?: false
                     )
                 }
 
@@ -400,9 +454,8 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                             )
 
                             // Title & Description Column
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(modifier = Modifier.weight(1f, fill = false)) {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     // Name Field
@@ -530,8 +583,8 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
 
                             // Edit / Save Actions
                             Column(
-                                modifier = Modifier.padding(start = 8.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                modifier = Modifier.padding(start = 24.dp, top = 8.dp, end = 4.dp),
+                                verticalArrangement = Arrangement.spacedBy(32.dp)
                             ) {
                                 IconButton(
                                     onClick = {
@@ -562,7 +615,6 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                     IconButton(
                                         onClick = { isEditing = false },
                                         modifier = Modifier
-                                            .padding(top = 8.dp)
                                             .size(20.dp)
                                             .background(
                                                 Color(0xFFFFD4D4),
@@ -580,9 +632,8 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
 
                                 AnimatedVisibility(visible = isEditing) {
                                     IconButton(
-                                        onClick = {onDelete = true},
+                                        onClick = { onDelete = true },
                                         modifier = Modifier
-                                            .padding(top = 8.dp)
                                             .size(20.dp)
                                             .background(
                                                 Color(0xFFFFD4D4),
@@ -598,7 +649,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                     }
 
                                     if (onDelete) {
-                                        androidx.compose.material3.AlertDialog(
+                                        AlertDialog(
                                             onDismissRequest = {
                                                 onDelete = false
                                                 confirmChecked.value = false
@@ -611,7 +662,9 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                                         androidx.compose.material3.Checkbox(
                                                             checked = confirmChecked.value,
-                                                            onCheckedChange = { confirmChecked.value = it },
+                                                            onCheckedChange = {
+                                                                confirmChecked.value = it
+                                                            },
                                                             colors = androidx.compose.material3.CheckboxDefaults.colors(
                                                                 checkedColor = Color(0xFF2D5E3D)
                                                             )
@@ -632,7 +685,9 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                                         }
                                                     },
                                                     enabled = confirmChecked.value,
-                                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD4D4))
+                                                    colors = ButtonDefaults.buttonColors(
+                                                        containerColor = Color(0xFFFFD4D4)
+                                                    )
                                                 ) {
                                                     Text("Eliminar", color = Color(0xFF8B0000))
                                                 }
@@ -667,7 +722,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                             HorizontalDivider(modifier = Modifier.padding(start = 8.dp).weight(1f))
                         }
 
-                        // --- QUESTION SECTION ---
+                        //Content
                         if (exerciseUi.selectedContent == null) {
                             Text("No hay contenido", color = Color.Gray)
                             TextButton(
@@ -691,6 +746,148 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                     jetbrainsMonoFamily = jetbrainsMonoFamily
                                 )
                             }
+                            // --- Vocabulario ---
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    "Vocabulario",
+                                    fontFamily = encodeSansFamily,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.Gray
+                                )
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(start = 8.dp).weight(1f)
+                                )
+                            }
+                            if (wordsUi.words.isEmpty()) {
+                                Text("No hay vocabulario asociado", color = Color.Gray)
+                                Spacer( modifier = Modifier.height(8.dp) )
+                                TextButton(
+                                    onClick = { isAddingWord = !isAddingWord },
+                                    enabled = !isAddingWord,
+                                    colors = ButtonColors(
+                                        contentColor = Color(0xFF2E7D32),
+                                        containerColor = Color(0xFFB8F4C4),
+                                        disabledContainerColor = Color(0xFFE0E0E0),
+                                        disabledContentColor = Color(0xFF9E9E9E)
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("+ Agregar vocabulario")
+                                }
+
+                            } else {
+                                wordsUi.words.forEach { word ->
+                                    WordEditableRegion(
+                                        isEditing = isEditing,
+                                        draft = WordDraftState(
+                                            id = word.id,
+                                            english = word.english,
+                                            spanish = word.spanish,
+                                            phonetic = word.phonetic,
+                                            description = word.description,
+                                            isActive = word.isActive?: false
+                                        ),
+                                        jetbrainsMonoFamily = jetbrainsMonoFamily
+                                    )
+                                }
+                            }
+                            AnimatedVisibility(
+                                visible = isAddingWord,
+                                enter = expandVertically(),
+                                exit = shrinkVertically(),
+                            ) {
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Text(
+                                            "Nueva palabra",
+                                            fontFamily = encodeSansFamily,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp
+                                        )
+
+                                        CustomTextField(
+                                            value = newWordEnglish,
+                                            onValueChange = {newWordEnglish = it},
+                                            label = "Inglés",
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = true,
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        CustomTextField(
+                                            value = newWordSpanish,
+                                            onValueChange = { newWordSpanish = it },
+                                            label = "Español",
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = true,
+
+                                            )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        CustomTextField(
+                                            value = newPhonetic,
+                                            onValueChange = { newPhonetic = it },
+                                            label = "Fonética (opcional)",
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = true,
+
+                                            )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        CustomTextField(
+                                            value = newWordDescription,
+                                            onValueChange = { newWordDescription = it},
+                                            label = "Descripción (opcional)",
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = false,
+                                            maxLines = 4,
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Button(
+                                                onClick = { isAddingWord = false },
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = Color(0xFFFFD4D4)
+                                                )
+                                            ) {
+                                                Text("Cancelar", color = Color(0xFF8B0000))
+                                            }
+                                            Button(
+                                                onClick = {
+                                                    wordsVm.createWord(
+                                                        exerciseId,
+                                                        CreateWordDto(
+                                                            english = newWordEnglish,
+                                                            spanish = newWordSpanish,
+                                                            phonetic = newPhonetic,
+                                                            description = newWordDescription,
+                                                            isActive = isActiveWord
+                                                        )
+                                                    )
+                                                    isAddingWord = false
+                                                },
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = Color(0xFFB8F4C4)
+                                                )
+                                            ) {
+                                                Text(
+                                                    "Guardar Palabra",
+                                                    color = Color(0xFF2D5E3D)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
                             // --- DIVIDER ---
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
@@ -1087,15 +1284,11 @@ fun ContentEditableRegion(
                 color = Color(0xFF003AB6)
             )
             if (isEditing) {
-                OutlinedTextField(
+                CustomTextField(
                     value = draft.textContent,
                     onValueChange = { draft.textContent = it },
                     modifier = Modifier.fillMaxWidth(),
                     textStyle = TextStyle(fontFamily = jetbrainsMonoFamily, fontSize = 14.sp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    )
                 )
             } else {
                 Text(draft.textContent, fontFamily = jetbrainsMonoFamily, fontSize = 14.sp)
@@ -1114,15 +1307,11 @@ fun ContentEditableRegion(
                 color = Color.Gray
             )
             if (isEditing) {
-                OutlinedTextField(
+                CustomTextField(
                     value = draft.grammarExplanation,
                     onValueChange = { draft.grammarExplanation = it },
                     modifier = Modifier.fillMaxWidth(),
                     textStyle = TextStyle(fontFamily = jetbrainsMonoFamily, fontSize = 14.sp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    )
                 )
             } else {
                 Text(
@@ -1147,16 +1336,12 @@ fun ContentEditableRegion(
                 color = Color.Gray
             )
             if (isEditing) {
-                OutlinedTextField(
+                CustomTextField(
                     value = draft.audioUrl ?: "",
                     onValueChange = { draft.audioUrl = it },
                     modifier = Modifier.fillMaxWidth(),
                     textStyle = TextStyle(fontFamily = jetbrainsMonoFamily, fontSize = 14.sp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    ),
-                    placeholder = { Text("https://...") }
+                    placeholderText = "https://..."
                 )
             } else {
                 Text(
@@ -1170,6 +1355,169 @@ fun ContentEditableRegion(
         }
 
         HorizontalDivider(color = Color(0xFFEEEEEE))
+    }
+}
+
+@Composable
+fun WordEditableRegion(
+    draft: WordDraftState,
+    isEditing: Boolean,
+    jetbrainsMonoFamily: FontFamily,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFFAFAFA), RoundedCornerShape(8.dp))
+            .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(8.dp))
+            .padding(16.dp)
+    ) {
+        if (isEditing) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier.weight(1f, fill = false)
+                        .padding(end = 8.dp)
+                ) {
+                    CustomTextField(
+                        value = draft.english,
+                        onValueChange = { draft.english = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = TextStyle(
+                            fontFamily = jetbrainsMonoFamily,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                    )
+                }
+                Box(
+                    modifier = Modifier.weight(1f, fill = false)
+                        .padding(end = 8.dp)
+                ){
+                    CustomTextField(
+                        value = draft.spanish,
+                        onValueChange = { draft.spanish = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = TextStyle(
+                            fontFamily = jetbrainsMonoFamily,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                    )
+                }
+                Box(
+                    modifier = Modifier.weight(1f, fill = false)
+                        .padding(end = 8.dp)
+                ){
+                    CustomTextField(
+                        value = draft.phonetic ?: "",
+                        onValueChange = { draft.phonetic = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = TextStyle(
+                            fontFamily = jetbrainsMonoFamily,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        placeholderText = "Fonética (opcional)"
+                    )
+                }
+                Box(
+                    modifier = Modifier.weight(1f, fill = false)
+                        .padding(end = 8.dp)
+                ){
+                    CustomTextField(
+                        value = draft.description ?: "",
+                        onValueChange = { draft.description = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = TextStyle(
+                            fontFamily = jetbrainsMonoFamily,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        placeholderText = "Descripción (opcional)"
+                    )
+                }
+                Box(
+                    modifier = Modifier.weight(1f, fill = false)
+                        .padding(end = 8.dp)
+                ){
+                    Row(
+                        modifier = Modifier
+                            .background(
+                                if (draft.isActive == true) Color(0xFFB8F4C4) else Color(0xFFFFD4D4),
+                                RoundedCornerShape(16.dp)
+                            )
+                            .clickable { draft.isActive = !(draft.isActive ?: false) }
+                            .padding(horizontal = 8.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            if (draft.isActive == true) "Activa" else "Borrador",
+                            fontSize = 12.sp,
+                            color = if (draft.isActive == true) Color(0xFF2D5E3D) else Color(0xFF8B0000)
+                        )
+                    }
+                }
+
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ){
+                Box(
+                    modifier = Modifier.weight(1f, fill = false)
+                        .padding(end = 8.dp)
+                ) {
+                    Text(
+                        draft.english,
+                        fontFamily = jetbrainsMonoFamily,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (draft.isActive == true) Color(0xFF131313) else Color.Gray
+                    )
+                }
+                Box(
+                    modifier = Modifier.weight(1f, fill = false)
+                        .padding(end = 8.dp)
+                ){
+                    Text(
+                        draft.spanish,
+                        fontFamily = jetbrainsMonoFamily,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (draft.isActive == true) Color(0xFF131313) else Color.Gray
+                    )
+                }
+                Box(
+                    modifier = Modifier.weight(1f, fill = false)
+                        .padding(end = 8.dp)
+                ){
+                    Text(
+                        draft.phonetic ?: "Sin fonética",
+                        fontFamily = jetbrainsMonoFamily,
+                        fontSize = 14.sp,
+                        fontStyle = FontStyle.Italic,
+                        color = Color.Gray
+                    )
+                }
+                Box(
+                    modifier = Modifier.weight(1f, fill = false)
+                        .padding(end = 8.dp)
+                ){
+                    Text(
+                        draft.description ?: "Sin descripción",
+                        fontFamily = jetbrainsMonoFamily,
+                        fontSize = 14.sp,
+                        fontStyle = FontStyle.Italic,
+                        color = Color.Gray
+                    )
+                }
+            }
+        }
+
     }
 }
 
@@ -1201,7 +1549,7 @@ fun QuestionEditableRegion(
                     modifier = Modifier.weight(1f, fill = false)
                         .padding(end = 8.dp)
                 ) {
-                    OutlinedTextField(
+                    CustomTextField(
                         value = draft.questionText,
                         onValueChange = { draft.questionText = it },
                         modifier = Modifier.fillMaxWidth(),
@@ -1210,10 +1558,6 @@ fun QuestionEditableRegion(
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Medium
                         ),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        )
                     )
                 }
 
@@ -1317,21 +1661,12 @@ fun QuestionEditableRegion(
             if (isEditing) {
                 // Input para nueva alternativa
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(
+                    CustomTextField(
                         value = newAltText,
                         onValueChange = { newAltText = it },
-                        placeholder = { Text("Texto de alternativa") },
+                        placeholderText = "Texto de nueva alternativa",
                         modifier = Modifier.weight(1f),
                         singleLine = true,
-                        textStyle = TextStyle(
-                            fontSize = 13.sp,
-                            fontFamily = jetbrainsMonoFamily
-                        ),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        ),
-                        isError = newAltText.isBlank()
                     )
                     IconButton(
                         onClick = {
@@ -1347,7 +1682,8 @@ fun QuestionEditableRegion(
                                 newAltText = ""
                             }
                         },
-                        enabled = newAltText.isNotBlank()
+                        enabled = newAltText.isNotBlank(),
+                        colors = IconButtonDefaults.iconButtonColors(disabledContentColor = Color.Gray)
                     ) {
                         Icon(
                             Icons.Default.Add,
@@ -1370,24 +1706,18 @@ fun QuestionEditableRegion(
                             colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF2E7D32))
                         )
 
-                        OutlinedTextField(
-                            value = alt.text,
-                            onValueChange = { newText ->
-                                alt.text = newText
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color.Gray,
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.Transparent,
-                                unfocusedBorderColor = Color.Gray,
-                                cursorColor = Color.Gray,
-                                selectionColors = TextSelectionColors(
-                                    handleColor = Color.Gray,
-                                    backgroundColor = Color(0xFFB8F4C4).copy(alpha = 0.5f)
-                                )
+                        Box(
+                            modifier = Modifier.weight(1f, fill = false)
+                                .padding(end = 8.dp)
+                        ) {
+                            CustomTextField(
+                                value = alt.text,
+                                onValueChange = { newText ->
+                                    alt.text = newText
+                                },
+                                modifier = Modifier.fillMaxWidth()
                             )
-                        )
+                        }
 
                         // Boton eliminar (opcional, solo visual por ahora)
                         IconButton(onClick = {

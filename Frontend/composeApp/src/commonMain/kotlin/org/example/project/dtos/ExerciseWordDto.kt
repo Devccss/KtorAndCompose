@@ -3,20 +3,21 @@ package org.example.project.dtos
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class QuestionWordDto(
+data class ExerciseWordDto(
     val id: Int,
-    val questionId: Int,
+    val exerciseId : Int,
     val wordId: Int
 )
 
 @Serializable
-data class CreateQuestionWordDto(
-    val questionId: Int,
+data class CreateExerciseWordDto(
+    val exerciseId : Int,
     val wordId: Int
 )
 
 @Serializable
-data class UpdateQuestionWordDto(
-    val questionId: Int? = null,
+data class UpdateExerciseWordDto(
+    val exerciseId : Int? = null,
     val wordId: Int? = null
 )
+

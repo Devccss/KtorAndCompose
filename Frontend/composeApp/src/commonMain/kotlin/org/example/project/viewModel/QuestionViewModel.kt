@@ -76,25 +76,6 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
         )
     }
 
-    fun createAlternativeForQuestion(questionId: Int, newAlternative: CreateAlternativeDto) {
-        launchCatching(
-            block = { repo.createAlternative(questionId, newAlternative) },
-            onSuccess = {alt ->
-                // Actualizar estado local de forma atómica para evitar race conditions
-                _state.update { currentState ->
-                    val currentAlts = currentState.alternatives[questionId] ?: emptyList()
-                    val newAlts = currentAlts + alt
-                    currentState.copy(
-                        alternatives = currentState.alternatives + (questionId to newAlts)
-                    )
-                }
-            },
-            onError = { error ->
-                _state.update { it.copy(error = "Error al crear la alternativa: ${error.message}") }
-            }
-        )
-    }
-
     fun updateQuestion(questionId: Int, updatedQuestion: UpdateQuestionDto) {
         launchCatching(
             block = { repo.updateQuestion(questionId, updatedQuestion) },
@@ -141,7 +122,24 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
             }
         )
     }
-
+    fun createAlternativeForQuestion(questionId: Int, newAlternative: CreateAlternativeDto) {
+        launchCatching(
+            block = { repo.createAlternative(questionId, newAlternative) },
+            onSuccess = {alt ->
+                // Actualizar estado local de forma atómica para evitar race conditions
+                _state.update { currentState ->
+                    val currentAlts = currentState.alternatives[questionId] ?: emptyList()
+                    val newAlts = currentAlts + alt
+                    currentState.copy(
+                        alternatives = currentState.alternatives + (questionId to newAlts)
+                    )
+                }
+            },
+            onError = { error ->
+                _state.update { it.copy(error = "Error al crear la alternativa: ${error.message}") }
+            }
+        )
+    }
 
     fun updateAlternativesForQuestion(alternativeId: Int, alternative: UpdateAlternativeDto) {
         launchCatching(

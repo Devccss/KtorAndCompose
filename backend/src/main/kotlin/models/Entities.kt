@@ -1,7 +1,4 @@
 package models
-import models.Questions.default
-import models.Questions.nullable
-import models.Units.uniqueIndex
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 import org.jetbrains.exposed.v1.javatime.datetime
 import java.time.LocalDateTime
@@ -56,9 +53,18 @@ object Exercises : IntIdTable() {
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }
 
+enum class ContentType { READING, LISTENING }
+object ExerciseContent : IntIdTable() {
+    val exerciseId = integer("exercise_id").references(Exercises.id)
+    val contentType = enumerationByName<ContentType>("content_type", 20).default(ContentType.READING)
+    val textContent = text("text_content")
+    val grammarExplanation = text("grammar_explanation")
+    val audioUrl = varchar("audio_url", 255).nullable()
+    val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
+}
 
-object QuestionWords : IntIdTable() {
-    val questionId = integer(" question_id ").references(Questions.id)
+object ExerciseWords : IntIdTable() {
+    val exerciseId = integer("exercise_id").references(Exercises.id)
     val wordId = integer("word_id").references(Words.id)
 }
 
@@ -68,16 +74,6 @@ object Words : IntIdTable() {
     val phonetic = varchar("phonetic", 100).nullable()
     val description = text("description").nullable()
     val isActive = bool("is_active").default(false)
-    val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
-}
-
-enum class ContentType { READING, LISTENING }
-object ExerciseContent : IntIdTable() {
-    val exerciseId = integer("exercise_id").references(Exercises.id)
-    val contentType = enumerationByName<ContentType>("content_type", 20).default(ContentType.READING)
-    val textContent = text("text_content")
-    val grammarExplanation = text("grammar_explanation")
-    val audioUrl = varchar("audio_url", 255).nullable()
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }
 

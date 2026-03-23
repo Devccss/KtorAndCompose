@@ -1,9 +1,9 @@
 package repositories
-import com.example.dtos.CreateQuestionWordDto
-import com.example.dtos.QuestionWordDto
-import com.example.dtos.UpdateQuestionWordDto
+import com.example.dtos.CreateExerciseWordDto
+import com.example.dtos.ExerciseWordDto
+import com.example.dtos.UpdateExerciseWordDto
 import io.ktor.server.plugins.BadRequestException
-import models.QuestionWords
+import models.ExerciseWords
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.and
@@ -15,55 +15,58 @@ import org.jetbrains.exposed.v1.jdbc.update
 
 class QuestionWordsRepository {
 
-    private fun resultRowToContentWord(row: ResultRow): QuestionWordDto {
-        return QuestionWordDto(
-            id = row[QuestionWords.id].value,
-            questionId = row[QuestionWords.questionId],
-            wordId = row[QuestionWords.wordId]
+    private fun resultRowToContentWord(row: ResultRow): ExerciseWordDto {
+        return ExerciseWordDto(
+            id = row[ExerciseWords.id].value,
+            exerciseId = row[ExerciseWords.exerciseId],
+            wordId = row[ExerciseWords.wordId]
         )
     }
 
-    fun getAll(): List<QuestionWordDto> = transaction {
-        QuestionWords.selectAll().map(::resultRowToContentWord)
+    fun getAll(): List<ExerciseWordDto> = transaction {
+        ExerciseWords.selectAll().map(::resultRowToContentWord)
     }
 
-    fun getById(id: Int): QuestionWordDto? = transaction {
-        QuestionWords.selectAll().where { QuestionWords.id eq id }.singleOrNull()?.let(::resultRowToContentWord)
+    fun getById(id: Int): ExerciseWordDto? = transaction {
+        ExerciseWords.selectAll().where { ExerciseWords.id eq id }.singleOrNull()?.let(::resultRowToContentWord)
     }
 
-    fun create(dto: CreateQuestionWordDto): QuestionWordDto = try {
+    fun getByExerciseId(exerciseId: Int): List<ExerciseWordDto> = transaction {
+        ExerciseWords.selectAll().where { ExerciseWords.exerciseId eq exerciseId }.map(::resultRowToContentWord)
+    }
+
+    fun create(dto: CreateExerciseWordDto): ExerciseWordDto = try {
 
         transaction {
-            val questionWord = QuestionWords.selectAll().where{
-                (QuestionWords.questionId eq dto.questionId) and
-                        (QuestionWords.wordId eq dto.wordId)
+            val questionWord = ExerciseWords.selectAll().where{
+                (ExerciseWords.exerciseId eq dto.exerciseId) and
+                        (ExerciseWords.wordId eq dto.wordId)
             }
             if (!questionWord.empty()) {
                 throw BadRequestException("La relación entre la pregunta y la palabra ya existe.")
             }
-            val newId = QuestionWords.insert {
-                it[questionId] = dto.questionId
+            val newId = ExerciseWords.insert {
+                it[exerciseId] = dto.exerciseId
                 it[wordId] = dto.wordId
-            }[QuestionWords.id]
+            }[ExerciseWords.id]
 
-            QuestionWordDto(id = newId.value, questionId = dto.questionId, wordId = dto.wordId)
+            ExerciseWordDto(id = newId.value, exerciseId = dto.exerciseId, wordId = dto.wordId)
         }
     } catch (e: Exception) {
         throw BadRequestException("Error al crear QuestionWord: ${e.message}")
     }
 
-    fun update(id: Int, dto: UpdateQuestionWordDto) {
-        transaction {
-            getById(id) ?: throw BadRequestException("QuestionWord con ID $id no existe.")
-            QuestionWords.update({ QuestionWords.id eq id }) { u ->
-                dto.questionId?.let { u[QuestionWords.questionId] = it }
-                dto.wordId?.let { u[QuestionWords.wordId] = it }
-            }
+    fun update(id: Int, dto: UpdateExerciseWordDto): Boolean = transaction {
+        getById(id) ?: throw BadRequestException("QuestionWord con ID $id no existe.")
+        val updatedRows = ExerciseWords.update({ ExerciseWords.id eq id }) { u ->
+            dto.exerciseId?.let { u[exerciseId] = it }
+            dto.wordId?.let { u[wordId] = it }
         }
+        updatedRows > 0
     }
 
     fun delete(id: Int): Boolean = transaction {
         getById(id) ?: throw BadRequestException("ContentWord con ID $id no existe.")
-        QuestionWords.deleteWhere { QuestionWords.id eq id } > 0
+        ExerciseWords.deleteWhere { ExerciseWords.id eq id } > 0
     }
 }

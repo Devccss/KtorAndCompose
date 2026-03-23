@@ -11,7 +11,7 @@ import models.Users
 import models.Exercises
 import models.ExercisesOnHold
 import models.Notifications
-import models.QuestionWords
+import models.ExerciseWords
 import models.Questions
 import models.Role
 import models.TestCompleted
@@ -54,7 +54,7 @@ fun configureDatabases() {
             TestExercises,
             UnitsCompleted,
             TestCompleted,
-            QuestionWords,
+            ExerciseWords,
             Alternatives
         )
         createAdminUserIfNotExists()

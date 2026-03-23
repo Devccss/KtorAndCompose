@@ -9,8 +9,8 @@ data class WordDto(
     val spanish: String,
     val phonetic: String? = null,
     val description: String? = null,
-    val isActive: Boolean = false,
-    val createdAt: String
+    val isActive: Boolean? = false,
+    val createdAt: String? = null
 )
 
 @Serializable
@@ -20,7 +20,6 @@ data class CreateWordDto(
     val phonetic: String? = null,
     val description: String? = null,
     val isActive: Boolean? = false,
-    val createdAt: String
 )
 
 @Serializable
@@ -31,3 +30,4 @@ data class UpdateWordDto(
     val description: String? = null,
     val isActive: Boolean? = null
 )
+

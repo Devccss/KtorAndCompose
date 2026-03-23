@@ -6,6 +6,7 @@ import org.example.project.repository.QuestionsRepo
 import org.example.project.repository.TestRepo
 import org.example.project.repository.UnitRepo
 import org.example.project.repository.UserRepo
+import org.example.project.repository.WordRepository
 
 
 object RepositoryProvider {
@@ -42,6 +43,11 @@ object RepositoryProvider {
             "RepositoryProvider.testRepo not initialized. Call RepositoryProvider.init(httpClient, baseUrl) before using repositories."
         )
 
+    private var _wordRepo: WordRepository? = null
+    val wordRepo: WordRepository
+        get() = _wordRepo ?: throw IllegalStateException(
+            "RepositoryProvider.wordRepo not initialized. Call RepositoryProvider.init(httpClient, baseUrl) before using repositories."
+        )
 
 
     fun init(httpClient: HttpClient, baseUrl: String) {
@@ -52,6 +58,7 @@ object RepositoryProvider {
         _exerciseRepo = ExerciseRepo(httpClient, baseUrl)
         _questionRepo = QuestionsRepo(httpClient, baseUrl)
         _testRepo = TestRepo(httpClient, baseUrl)
+        _wordRepo = WordRepository(httpClient, baseUrl)
 
         initialized = true
     }
@@ -64,6 +71,7 @@ object RepositoryProvider {
         _exerciseRepo = null
         _questionRepo = null
         _testRepo = null
+        _wordRepo = null
     }
 
     fun checkInitialized() {
