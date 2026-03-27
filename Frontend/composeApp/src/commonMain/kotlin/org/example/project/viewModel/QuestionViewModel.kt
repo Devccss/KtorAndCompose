@@ -104,6 +104,23 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
         )
     }
 
+    fun deleteQuestion(questionId: Int) {
+        launchCatching(
+            block = { repo.deleteQuestion(questionId) },
+            onSuccess = {
+                _state.update { currentState ->
+                    currentState.copy(
+                        selectedQuestions = currentState.selectedQuestions.filterNot { it.id == questionId },
+                        alternatives = currentState.alternatives - questionId
+                    )
+                }
+            },
+            onError = { error ->
+                _state.update { it.copy(error = "Error al eliminar la pregunta: ${error.message}") }
+            }
+        )
+    }
+
 
     //Alternatives
     fun getAlternativesByQuestionId(questionId: Int) {

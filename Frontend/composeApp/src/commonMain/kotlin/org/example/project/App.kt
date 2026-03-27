@@ -13,23 +13,26 @@ import org.example.project.network.RepositoryProvider
 import org.example.project.network.createHttpClient
 import org.example.project.screens.LoginScreen
 import org.example.project.screens.admindScreens.AdminDashboard
+import org.example.project.screens.studentScreens.StudentWelcomeScreen
 
 
 @Composable
 fun App() {
     val httpClient = remember { createHttpClient() }
-    val baseUrl = remember { getBaseUrl() }
+
     var initialized by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
+        val baseUrl = getBaseUrl()
         RepositoryProvider.init(httpClient, baseUrl)
         initialized = true
     }
 
     MaterialTheme {
         if (initialized) {
-            Navigator(screen = AdminDashboard(1,"Deivid",Role.ADMIN))
+            //Navigator(screen = AdminDashboard(1,"Deivid",Role.ADMIN))
             //Navigator(screen = LoginScreen())
+            Navigator(screen = StudentWelcomeScreen( "Deivid"))
         } else {
             // Loader o pantalla de espera
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

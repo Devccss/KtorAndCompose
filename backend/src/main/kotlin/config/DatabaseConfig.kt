@@ -156,16 +156,13 @@ fun createAdminUserIfNotExists() {
 
 fun createExercises() {
     transaction {
-        // Limpieza segura para desarrollo: Si hay ejercicios pero parece inconsistente (ej. faltan preguntas), regenerar.
-        // O si simplemente quieres refrescar los datos, descomenta las líneas delete.
+
         if (Exercises.selectAll().count() > 0L) {
-            // return@transaction // Comenta esto si quieres forzar la recreación
+            return@transaction
         }
-
-        // Descomenta para forzar regeneración limpia de ejercicios
-
         Alternatives.deleteAll()
         Questions.deleteAll()
+        ExerciseWords.deleteAll()
         ExerciseContent.deleteAll()
         Exercises.deleteAll()
 

@@ -3,8 +3,10 @@ package org.example.project.repository
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.*
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import org.example.project.dtos.CreateExerciseWordDto
 import org.example.project.dtos.WordDto
 import org.example.project.dtos.CreateWordDto
@@ -30,34 +32,41 @@ class WordRepository(private val httpClient: HttpClient, private val baseUrl: St
         httpClient.put("$baseUrl/api/v1/words/$id") {
             contentType(ContentType.Application.Json)
             setBody(word)
-        }.body()
+        }.status.isSuccess()
 
-    suspend fun deleteWord(id: Int): Boolean {
-        val response = httpClient.delete("$baseUrl/api/v1/words/$id") {
-            contentType(ContentType.Application.Json)
-        }
-        return response.status.value == 204
-    }
+    suspend fun deleteWord(id: Int): Boolean =
+        httpClient.delete("$baseUrl/api/v1/words/$id").status.isSuccess()
+
 
 
     //ExerciseWord
     suspend fun getExerciseWordsByExerciseId(exerciseId: Int): List<ExerciseWordDto> =
         httpClient.get("$baseUrl/api/v1/exerciseWords/exercise/$exerciseId").body()
 
-    suspend fun createExerciseWord(dto:CreateExerciseWordDto): ExerciseWordDto =
-        httpClient.post("$baseUrl/api/v1/exerciseWords") {
+    suspend fun createExerciseWord(dto: CreateExerciseWordDto): ExerciseWordDto {
+        val response = httpClient.post("$baseUrl/api/v1/exerciseWords") {
             contentType(ContentType.Application.Json)
             setBody(dto)
-        }.body()
+        }
+
+        if (response.status.isSuccess()) {
+            return response.body()
+        }
+
+        // Si el backend manda texto/JSON con el error, lo recuperas aquí
+        val backendMessage = response.bodyAsText().ifBlank { "Error ${response.status.value}" }
+        throw Exception(backendMessage)
+    }
+
 
     suspend fun updateExerciseWord(idExerciseWord: Int,dto: UpdateExerciseWordDto): Boolean =
         httpClient.put("$baseUrl/api/v1/exerciseWords/$idExerciseWord") {
             contentType(ContentType.Application.Json)
             setBody(dto)
-        }.body()
+        }.status.isSuccess()
 
     suspend fun deleteExerciseWord(id: Int): Boolean {
-        val response = httpClient.delete("$baseUrl/api/v1/exerciseWords$id") {
+        val response = httpClient.delete("$baseUrl/api/v1/exerciseWords/$id") {
             contentType(ContentType.Application.Json)
         }
         return response.status.value == 204

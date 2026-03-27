@@ -8,7 +8,7 @@ import org.example.project.env.Env
  */
 private var envLoaded = false
 
-fun getBaseUrl(): String {
+suspend fun getBaseUrl(): String {
     if (!envLoaded) {
         Env.loadEnvFile() // intenta cargar ".env" en el working directory (silencioso si no existe)
         envLoaded = true

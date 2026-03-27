@@ -1,6 +1,7 @@
 package org.example.project.screens.admindScreens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
@@ -92,6 +94,7 @@ import org.example.project.dtos.UpdateAlternativeDto
 import org.example.project.dtos.UpdateExerciseContentDto
 import org.example.project.dtos.UpdateExerciseDto
 import org.example.project.dtos.UpdateQuestionDto
+import org.example.project.dtos.UpdateWordDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
 import org.example.project.viewModel.ExercisesViewModel
@@ -182,7 +185,8 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
         val encodeSansFamily = FontFamily(Font(Res.font.encode_sans_variable))
         val jetbrainsMonoFamily = FontFamily(Font(Res.font.jetbrains_mono_regular))
 
-        var onDelete by remember { mutableStateOf(false) }
+        var onDeleteExercise by remember { mutableStateOf(false) }
+        var onDeleteContent by remember { mutableStateOf(false) }
         val confirmChecked = remember { mutableStateOf(false) }
 
         //Content
@@ -210,22 +214,15 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
         var newPhonetic by remember { mutableStateOf("") }
         var newWordDescription by remember { mutableStateOf("") }
         var isActiveWord by remember { mutableStateOf(false) }
-        var wordDraft by remember {
-            mutableStateOf(
-                WordDraftState(
-                    id = 0,
-                    english = "",
-                    spanish = "",
-                    phonetic = "",
-                    description = "",
-                    isActive = false
-                )
-            )
-        }
+        val wordDrafts = remember { mutableStateMapOf<Int, WordDraftState>() }
+        val expandedWordCards = remember { mutableStateMapOf<Int, Boolean>() }
 
         //Question
         var isAddingQuestion by remember { mutableStateOf(false) }
-        var isEditing by remember { mutableStateOf(false) }
+        var isEditingExercise by remember { mutableStateOf(false) }
+        var isEditingContent by remember { mutableStateOf(false) }
+        var isEditingWords by remember { mutableStateOf(false) }
+        var isEditingQuestions by remember { mutableStateOf(false) }
         var questionText by remember { mutableStateOf("") }
 
         // Estado para nuevas alternativas
@@ -237,7 +234,6 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
         var draftDescription by remember { mutableStateOf("") }
         var draftActive by remember { mutableStateOf(false) }
 
-        // ---Exercise Content Draft---
 
 
         // --- QUESTION DRAFTS ---
@@ -246,6 +242,13 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
 
         // Estados para dropdowns de exercise
         var statusMenuExpanded by remember { mutableStateOf(false) }
+
+        fun startSectionEdit(section: String) {
+            isEditingExercise = section == "exercise"
+            isEditingContent = section == "content"
+            isEditingWords = section == "words"
+            isEditingQuestions = section == "questions"
+        }
 
         LaunchedEffect(exerciseId) {
             exerciseVm.getExerciseById(exerciseId)
@@ -266,6 +269,10 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
             questionUi.error?.let { snackbarHostState.showSnackbar(it) }
             println("Question UI Error: ${questionUi.error}") // Debug log
         }
+        LaunchedEffect(wordsUi.error){
+            wordsUi.error?.let { snackbarHostState.showSnackbar(it) }
+            println("Exercise UI Error: ${wordsUi.error}")
+        }
 
         // --- SYNC DATA TO DRAFTS ---
         LaunchedEffect(exerciseUi.selectedExercise) {
@@ -283,8 +290,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
             exerciseUi.selectedContent,
             wordsUi.words
         ) {
-            if (!isEditing) {
-
+            if (!isEditingContent) {
                 exerciseUi.selectedContent?.let { contentEx ->
                     contentDraft = ContentDraft(
                         id = contentEx.id,
@@ -295,18 +301,30 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                         audioUrl = contentEx.audioUrl
                     )
                 }
+            }
 
-                wordsUi.words.forEach {word->
-                    wordDraft = WordDraftState(
+            if (!isEditingWords) {
+                wordDrafts.clear()
+                wordsUi.words.forEach { word ->
+                    wordDrafts[word.id] = WordDraftState(
                         id = word.id,
                         english = word.english,
                         spanish = word.spanish,
                         phonetic = word.phonetic,
                         description = word.description,
-                        isActive = word.isActive?: false
+                        isActive = word.isActive ?: false
                     )
                 }
 
+                // Limpia estados de expansión para palabras eliminadas
+                val currentIds = wordsUi.words.map { it.id }.toSet()
+                expandedWordCards.keys.toList().forEach { id ->
+                    if (id !in currentIds) expandedWordCards.remove(id)
+                }
+            }
+
+            if (!isEditingQuestions) {
+                questionDrafts.clear()
                 questionUi.selectedQuestions.forEach { q ->
                     val domainAlts = questionUi.alternatives[q.id] ?: emptyList()
                     val draftAlts = domainAlts.map {
@@ -328,24 +346,11 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
             }
         }
 
-        // --- SAVE FUNCTION ---
-        fun onSaveAll() {
-            // Validations
-            if (draftName.isBlank() && draftDescription.isBlank() && contentDraft.textContent.isBlank() && contentDraft.grammarExplanation.isBlank()
-            ) {
-                exerciseVm.updateMessage("Algunos campos son obligatorios")
+        fun onSaveExercise() {
+            if (draftName.isBlank()) {
+                exerciseVm.updateMessage("El nombre del ejercicio es obligatorio")
                 return
             }
-
-            // Check questions validity
-            questionDrafts.values.forEach { draft ->
-                if (draft.alternatives.size < 2) {
-                    questionVm.updateMessage("Cada pregunta debe tener al menos 2 alternativas.")
-                    return
-                }
-            }
-
-            // Execute Updates
             exerciseVm.updateExercise(
                 exerciseId,
                 UpdateExerciseDto(
@@ -354,6 +359,15 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                     isActive = draftActive
                 )
             )
+            isEditingExercise = false
+            scope.launch { snackbarHostState.showSnackbar("Ejercicio actualizado.") }
+        }
+
+        fun onSaveContent() {
+            if (contentDraft.textContent.isBlank() || contentDraft.grammarExplanation.isBlank()) {
+                exerciseVm.updateMessage("Contenido y gramática son obligatorios")
+                return
+            }
             exerciseVm.updateContent(
                 exerciseId,
                 UpdateExerciseContentDto(
@@ -362,26 +376,55 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                     audioUrl = contentDraft.audioUrl
                 )
             )
+            isEditingContent = false
+            scope.launch { snackbarHostState.showSnackbar("Contenido actualizado.") }
+        }
 
+        fun onSaveWords() {
+            if (wordDrafts.isEmpty()) {
+                wordsVm.updateMessage("No hay vocabulario para actualizar")
+                return
+            }
+            wordDrafts.values.forEach { wordDraft ->
+                wordsVm.updateWord(
+                    wordDraft.id,
+                    UpdateWordDto(
+                        english = wordDraft.english,
+                        spanish = wordDraft.spanish,
+                        phonetic = wordDraft.phonetic,
+                        description = wordDraft.description,
+                        isActive = wordDraft.isActive
+                    )
+                )
+            }
+            isEditingWords = false
+            scope.launch { snackbarHostState.showSnackbar("Vocabulario actualizado.") }
+        }
+
+        fun onSaveQuestions() {
+            questionDrafts.values.forEach { draft ->
+                if (draft.alternatives.size < 2) {
+                    questionVm.updateMessage("Cada pregunta debe tener al menos 2 alternativas.")
+                    return
+                }
+            }
 
             questionDrafts.values.forEach { draft ->
                 questionVm.updateQuestion(
-                    draft.id, UpdateQuestionDto(
+                    draft.id,
+                    UpdateQuestionDto(
                         questionText = draft.questionText,
                         isActive = draft.isActive
                     )
                 )
 
-                // Alternatives handling
                 draft.alternatives.values.forEach { alt ->
                     if (alt.id != null) {
-                        // Es una alternativa existente -> Actualizar
                         questionVm.updateAlternativesForQuestion(
                             alt.id,
                             UpdateAlternativeDto(text = alt.text, isCorrect = alt.isCorrect)
                         )
                     } else {
-                        // Es una alternativa nueva -> Crear
                         questionVm.createAlternativeForQuestion(
                             questionId = draft.id,
                             newAlternative = CreateAlternativeDto(
@@ -392,20 +435,17 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                     }
                 }
 
-                // Lógica para borrar alternativas removidas del draft
                 val originalAlternatives = questionUi.alternatives[draft.id] ?: emptyList()
                 val currentAlternativeIds = draft.alternatives.values.mapNotNull { it.id }.toSet()
-
                 originalAlternatives.forEach { originalAlt ->
                     if (originalAlt.id !in currentAlternativeIds) {
                         questionVm.deleteAlternative(originalAlt.id)
                     }
                 }
             }
-            isEditing = false
-            scope.launch { snackbarHostState.showSnackbar("Cambios guardados exitosamente.") }
-            // IMPORTANTE: No recargar aquí para mantener los datos editados visibles
-            // exerciseVm.getExerciseById(exerciseId) 
+
+            isEditingQuestions = false
+            scope.launch { snackbarHostState.showSnackbar("Preguntas actualizadas.") }
         }
 
 
@@ -466,7 +506,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                         BasicTextField(
                                             value = draftName,
                                             onValueChange = { draftName = it },
-                                            readOnly = !isEditing,
+                                            readOnly = !isEditingExercise,
                                             textStyle = MaterialTheme.typography.headlineSmall.copy(
                                                 fontFamily = encodeSansFamily,
                                                 fontWeight = FontWeight.Bold,
@@ -474,12 +514,12 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                                 color = Color(0xFF131313)
                                             ),
                                             decorationBox = { innerTextField ->
-                                                if (isEditing && draftName.isEmpty()) {
+                                                if (isEditingExercise && draftName.isEmpty()) {
                                                     Text("Nombre del ejercicio", color = Color.Gray)
                                                 }
                                                 innerTextField()
                                             },
-                                            modifier = if (isEditing) Modifier.background(
+                                            modifier = if (isEditingExercise) Modifier.background(
                                                 Color(0xFFF5F5F5),
                                                 RoundedCornerShape(4.dp)
                                             ).padding(4.dp) else Modifier
@@ -494,7 +534,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                         val textColor =
                                             if (isActive) Color(0xFF2D5E3D) else Color(0xFF8B0000)
 
-                                        if (!isEditing) {
+                                        if (!isEditingExercise) {
                                             Badge(
                                                 containerColor = badgeColor,
                                                 contentColor = textColor
@@ -556,7 +596,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                 BasicTextField(
                                     value = draftDescription,
                                     onValueChange = { draftDescription = it },
-                                    readOnly = !isEditing,
+                                    readOnly = !isEditingExercise,
                                     textStyle = MaterialTheme.typography.bodyMedium.copy(
                                         fontFamily = jetbrainsMonoFamily,
                                         fontSize = 14.sp,
@@ -564,7 +604,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                         lineHeight = 20.sp
                                     ),
                                     decorationBox = { inner ->
-                                        if (isEditing && draftDescription.isEmpty()) {
+                                        if (isEditingExercise && draftDescription.isEmpty()) {
                                             Text(
                                                 "Añadir descripción...",
                                                 color = Color.Gray,
@@ -573,7 +613,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                         }
                                         inner()
                                     },
-                                    modifier = if (isEditing) Modifier
+                                    modifier = if (isEditingExercise) Modifier
                                         .fillMaxWidth()
                                         .background(Color(0xFFF5F5F5), RoundedCornerShape(4.dp))
                                         .padding(6.dp)
@@ -588,32 +628,32 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                             ) {
                                 IconButton(
                                     onClick = {
-                                        if (isEditing) {
-                                            onSaveAll()
+                                        if (isEditingExercise) {
+                                            onSaveExercise()
                                         } else {
-                                            isEditing = true
+                                            startSectionEdit("exercise")
                                         }
                                     },
                                     modifier = Modifier
                                         .size(20.dp)
                                         .background(
-                                            if (isEditing) Color(0xFFB8F4C4) else Color(0xFFF5F5F5),
+                                            if (isEditingExercise) Color(0xFFB8F4C4) else Color(0xFFF5F5F5),
                                             RoundedCornerShape(20.dp)
                                         )
                                 ) {
                                     Icon(
-                                        imageVector = if (isEditing) Icons.Default.Check else Icons.Default.Edit,
+                                        imageVector = if (isEditingExercise) Icons.Default.Check else Icons.Default.Edit,
                                         contentDescription = "Editar",
-                                        tint = if (isEditing) Color(0xFF2D5E3D) else Color(
+                                        tint = if (isEditingExercise) Color(0xFF2D5E3D) else Color(
                                             0xFF003AB6
                                         ),
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
 
-                                AnimatedVisibility(visible = isEditing) {
+                                AnimatedVisibility(visible = isEditingExercise) {
                                     IconButton(
-                                        onClick = { isEditing = false },
+                                        onClick = { isEditingExercise = false },
                                         modifier = Modifier
                                             .size(20.dp)
                                             .background(
@@ -630,9 +670,9 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                     }
                                 }
 
-                                AnimatedVisibility(visible = isEditing) {
+                                AnimatedVisibility(visible = isEditingExercise) {
                                     IconButton(
-                                        onClick = { onDelete = true },
+                                        onClick = { onDeleteExercise = true },
                                         modifier = Modifier
                                             .size(20.dp)
                                             .background(
@@ -648,10 +688,10 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                         )
                                     }
 
-                                    if (onDelete) {
+                                    if (onDeleteExercise) {
                                         AlertDialog(
                                             onDismissRequest = {
-                                                onDelete = false
+                                                onDeleteExercise = false
                                                 confirmChecked.value = false
                                             },
                                             title = { Text("Confirmar eliminación") },
@@ -679,7 +719,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                                     onClick = {
                                                         if (confirmChecked.value) {
                                                             exerciseVm.deleteExercise(exerciseId)
-                                                            onDelete = false
+                                                            onDeleteExercise = false
                                                             confirmChecked.value = false
                                                             navigator?.pop()
                                                         }
@@ -695,7 +735,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                             dismissButton = {
                                                 TextButton(
                                                     onClick = {
-                                                        onDelete = false
+                                                        onDeleteExercise = false
                                                         confirmChecked.value = false
                                                     }
                                                 ) {
@@ -711,7 +751,10 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                         }
 
                         // --- DIVIDER ---
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(
                                 "Contenido",
                                 fontFamily = encodeSansFamily,
@@ -720,6 +763,15 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                 color = Color.Gray
                             )
                             HorizontalDivider(modifier = Modifier.padding(start = 8.dp).weight(1f))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            SectionActionButtons(
+                                isEditing = isEditingContent,
+                                onEditOrSave = {
+                                    if (isEditingContent) onSaveContent() else startSectionEdit("content")
+                                },
+                                onCancel = { isEditingContent = false },
+                                onDelete = if (exerciseUi.selectedContent != null) ({ onDeleteContent = true }) else null
+                            )
                         }
 
                         //Content
@@ -740,14 +792,39 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                         } else {
                             exerciseUi.selectedContent?.let {
                                 ContentEditableRegion(
-                                    isEditing = isEditing,
+                                    isEditing = isEditingContent,
                                     draft = contentDraft,
                                     encodeSansFamily = encodeSansFamily,
                                     jetbrainsMonoFamily = jetbrainsMonoFamily
                                 )
                             }
+                            if (onDeleteContent) {
+                                AlertDialog(
+                                    onDismissRequest = { onDeleteContent = false },
+                                    title = { Text("Eliminar contenido") },
+                                    text = { Text("Esta acción eliminará el contenido del ejercicio.") },
+                                    confirmButton = {
+                                        Button(
+                                            onClick = {
+                                                exerciseVm.deleteContent(exerciseId)
+                                                onDeleteContent = false
+                                                isEditingContent = false
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD4D4))
+                                        ) {
+                                            Text("Eliminar", color = Color(0xFF8B0000))
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { onDeleteContent = false }) { Text("Cancelar") }
+                                    }
+                                )
+                            }
                             // --- Vocabulario ---
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
                                     "Vocabulario",
                                     fontFamily = encodeSansFamily,
@@ -758,39 +835,27 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                 HorizontalDivider(
                                     modifier = Modifier.padding(start = 8.dp).weight(1f)
                                 )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                SectionActionButtons(
+                                    isEditing = isEditingWords,
+                                    onEditOrSave = {
+                                        if (isEditingWords) onSaveWords() else startSectionEdit("words")
+                                    },
+                                    onCancel = { isEditingWords = false }
+                                )
                             }
-                            if (wordsUi.words.isEmpty()) {
-                                Text("No hay vocabulario asociado", color = Color.Gray)
-                                Spacer( modifier = Modifier.height(8.dp) )
-                                TextButton(
-                                    onClick = { isAddingWord = !isAddingWord },
-                                    enabled = !isAddingWord,
-                                    colors = ButtonColors(
-                                        contentColor = Color(0xFF2E7D32),
-                                        containerColor = Color(0xFFB8F4C4),
-                                        disabledContainerColor = Color(0xFFE0E0E0),
-                                        disabledContentColor = Color(0xFF9E9E9E)
-                                    ),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text("+ Agregar vocabulario")
-                                }
-
-                            } else {
-                                wordsUi.words.forEach { word ->
-                                    WordEditableRegion(
-                                        isEditing = isEditing,
-                                        draft = WordDraftState(
-                                            id = word.id,
-                                            english = word.english,
-                                            spanish = word.spanish,
-                                            phonetic = word.phonetic,
-                                            description = word.description,
-                                            isActive = word.isActive?: false
-                                        ),
-                                        jetbrainsMonoFamily = jetbrainsMonoFamily
-                                    )
-                                }
+                            TextButton(
+                                onClick = { isAddingWord = !isAddingWord },
+                                enabled = !isAddingWord,
+                                colors = ButtonColors(
+                                    contentColor = Color(0xFF2E7D32),
+                                    containerColor = Color(0xFFB8F4C4),
+                                    disabledContainerColor = Color(0xFFE0E0E0),
+                                    disabledContentColor = Color(0xFF9E9E9E)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("+ Agregar vocabulario")
                             }
                             AnimatedVisibility(
                                 visible = isAddingWord,
@@ -804,7 +869,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                 ) {
                                     Column(
                                         modifier = Modifier.padding(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
                                         Text(
                                             "Nueva palabra",
@@ -812,6 +877,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 16.sp
                                         )
+
 
                                         CustomTextField(
                                             value = newWordEnglish,
@@ -862,6 +928,11 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                             }
                                             Button(
                                                 onClick = {
+                                                    if (newWordEnglish.isBlank() || newWordSpanish.isBlank()) {
+                                                        wordsVm.updateMessage("Ingles y español son obligatorios")
+                                                        return@Button
+                                                    }
+
                                                     wordsVm.createWord(
                                                         exerciseId,
                                                         CreateWordDto(
@@ -872,6 +943,15 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                                             isActive = isActiveWord
                                                         )
                                                     )
+
+                                                    // Mantiene el panel abierto para cargar varias palabras seguidas
+                                                    newWordEnglish = ""
+                                                    newWordSpanish = ""
+                                                    newPhonetic = ""
+                                                    newWordDescription = ""
+                                                    isActiveWord = false
+
+                                                    //cerrar
                                                     isAddingWord = false
                                                 },
                                                 colors = ButtonDefaults.buttonColors(
@@ -887,9 +967,47 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                     }
                                 }
                             }
+                            if (wordsUi.words.isEmpty()) {
+                                Text("No hay vocabulario asociado", color = Color.Gray)
+                                Spacer( modifier = Modifier.height(8.dp) )
+
+
+                            } else {
+
+                                wordsUi.words.forEach { word ->
+                                    val wordDraft = wordDrafts.getOrPut(word.id) {
+                                        WordDraftState(
+                                            id = word.id,
+                                            english = word.english,
+                                            spanish = word.spanish,
+                                            phonetic = word.phonetic,
+                                            description = word.description,
+                                            isActive = word.isActive ?: false
+                                        )
+                                    }
+                                    WordEditableRegion(
+                                        isEditing = isEditingWords,
+                                        isExpanded = expandedWordCards[word.id] ?: false,
+                                        onToggleExpanded = {
+                                            expandedWordCards[word.id] = !(expandedWordCards[word.id] ?: false)
+                                        },
+                                        draft = wordDraft,
+                                        jetbrainsMonoFamily = jetbrainsMonoFamily,
+                                        onDelete = {
+                                            wordsVm.deleteWord(word.id)
+                                            wordDrafts.remove(word.id)
+                                            expandedWordCards.remove(word.id)
+                                        }
+                                    )
+                                }
+                            }
+
 
                             // --- DIVIDER ---
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
                                     "Preguntas",
                                     fontFamily = encodeSansFamily,
@@ -900,6 +1018,14 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                 HorizontalDivider(
                                     modifier = Modifier.padding(start = 8.dp).weight(1f)
                                 )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                SectionActionButtons(
+                                    isEditing = isEditingQuestions,
+                                    onEditOrSave = {
+                                        if (isEditingQuestions) onSaveQuestions() else startSectionEdit("questions")
+                                    },
+                                    onCancel = { isEditingQuestions = false }
+                                )
                             }
                             if (questionUi.selectedQuestions.isEmpty()) {
                                 Text("No hay preguntas", color = Color.Gray)
@@ -907,7 +1033,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                 questionUi.selectedQuestions.forEach { question ->
                                     val alt = questionUi.alternatives[question.id] ?: emptyList()
                                     QuestionEditableRegion(
-                                        isEditing = isEditing,
+                                        isEditing = isEditingQuestions,
                                         draft = questionDrafts[question.id] ?: QuestionDraftState(
                                             id = question.id,
                                             questionText = question.questionText,
@@ -921,7 +1047,11 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                             orderQuestion = question.orderQuestion,
                                             isActive = question.isActive ?: false
                                         ),
-                                        jetbrainsMonoFamily = jetbrainsMonoFamily
+                                        jetbrainsMonoFamily = jetbrainsMonoFamily,
+                                        onDeleteQuestion = {
+                                            questionVm.deleteQuestion(question.id)
+                                            questionDrafts.remove(question.id)
+                                        }
                                     )
                                 }
                             }
@@ -1362,159 +1492,141 @@ fun ContentEditableRegion(
 fun WordEditableRegion(
     draft: WordDraftState,
     isEditing: Boolean,
+    isExpanded: Boolean,
+    onToggleExpanded: () -> Unit,
     jetbrainsMonoFamily: FontFamily,
+    onDelete: (() -> Unit)? = null,
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFFAFAFA), RoundedCornerShape(8.dp))
-            .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(8.dp))
-            .padding(16.dp)
+    val showDetails = isExpanded
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFA))
     ) {
-        if (isEditing) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .animateContentSize()
+                .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(8.dp))
+                .padding(16.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Box(
                     modifier = Modifier.weight(1f, fill = false)
-                        .padding(end = 8.dp)
-                ) {
-                    CustomTextField(
-                        value = draft.english,
-                        onValueChange = { draft.english = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        textStyle = TextStyle(
-                            fontFamily = jetbrainsMonoFamily,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
-                        ),
-                    )
-                }
-                Box(
-                    modifier = Modifier.weight(1f, fill = false)
-                        .padding(end = 8.dp)
                 ){
-                    CustomTextField(
-                        value = draft.spanish,
-                        onValueChange = { draft.spanish = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        textStyle = TextStyle(
-                            fontFamily = jetbrainsMonoFamily,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
-                        ),
-                    )
-                }
-                Box(
-                    modifier = Modifier.weight(1f, fill = false)
-                        .padding(end = 8.dp)
-                ){
-                    CustomTextField(
-                        value = draft.phonetic ?: "",
-                        onValueChange = { draft.phonetic = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        textStyle = TextStyle(
-                            fontFamily = jetbrainsMonoFamily,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
-                        ),
-                        placeholderText = "Fonética (opcional)"
-                    )
-                }
-                Box(
-                    modifier = Modifier.weight(1f, fill = false)
-                        .padding(end = 8.dp)
-                ){
-                    CustomTextField(
-                        value = draft.description ?: "",
-                        onValueChange = { draft.description = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        textStyle = TextStyle(
-                            fontFamily = jetbrainsMonoFamily,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
-                        ),
-                        placeholderText = "Descripción (opcional)"
-                    )
-                }
-                Box(
-                    modifier = Modifier.weight(1f, fill = false)
-                        .padding(end = 8.dp)
-                ){
-                    Row(
-                        modifier = Modifier
-                            .background(
-                                if (draft.isActive == true) Color(0xFFB8F4C4) else Color(0xFFFFD4D4),
-                                RoundedCornerShape(16.dp)
-                            )
-                            .clickable { draft.isActive = !(draft.isActive ?: false) }
-                            .padding(horizontal = 8.dp, vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    if(isEditing){
+                        CustomTextField(
+                            value = draft.english,
+                            label = "Inglés",
+                            onValueChange = { draft.english = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            textStyle = TextStyle(
+                                fontFamily = jetbrainsMonoFamily,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            placeholderText = "Ingles"
+                        )
+                    }else{
                         Text(
-                            if (draft.isActive == true) "Activa" else "Borrador",
-                            fontSize = 12.sp,
-                            color = if (draft.isActive == true) Color(0xFF2D5E3D) else Color(0xFF8B0000)
+                            text = "Ingles: ${draft.english.ifBlank { "-" }}",
+                            fontFamily = jetbrainsMonoFamily,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = if (draft.isActive) Color(0xFF131313) else Color(0xFF003AB6)
                         )
                     }
                 }
-
-            }
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ){
-                Box(
-                    modifier = Modifier.weight(1f, fill = false)
-                        .padding(end = 8.dp)
+                Spacer(modifier = Modifier.width(4.dp))
+                Row(
+                    modifier = Modifier
+                        .background(
+                            if (draft.isActive) Color(0xFFB8F4C4) else Color(0xFFFFD4D4),
+                            RoundedCornerShape(16.dp)
+                        )
+                        .clickable(enabled = isEditing) { draft.isActive = !draft.isActive }
+                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+
                     Text(
-                        draft.english,
+                        if (draft.isActive) "Activa" else "Borrador",
+                        fontSize = 12.sp,
+                        color = if (draft.isActive) Color(0xFF2D5E3D) else Color(0xFF8B0000)
+                    )
+                }
+
+                IconButton(onClick = onToggleExpanded) {
+                    Icon(
+                        imageVector = if (showDetails) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = if (showDetails) "Contraer" else "Expandir",
+                        tint = Color(0xFF003AB6),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                if (isEditing && onDelete != null) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Eliminar palabra",
+                            tint = Color(0xFF8B0000),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+
+            if (showDetails && isEditing) {
+                CustomTextField(
+                    value = draft.spanish,
+                    label = "Español",
+                    onValueChange = { draft.spanish = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(
                         fontFamily = jetbrainsMonoFamily,
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (draft.isActive == true) Color(0xFF131313) else Color.Gray
-                    )
-                }
-                Box(
-                    modifier = Modifier.weight(1f, fill = false)
-                        .padding(end = 8.dp)
-                ){
-                    Text(
-                        draft.spanish,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    placeholderText = "Español"
+                )
+                CustomTextField(
+                    value = draft.phonetic ?: "",
+                    label = "Fonética (opcional)",
+                    onValueChange = { draft.phonetic = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(
                         fontFamily = jetbrainsMonoFamily,
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (draft.isActive == true) Color(0xFF131313) else Color.Gray
-                    )
-                }
-                Box(
-                    modifier = Modifier.weight(1f, fill = false)
-                        .padding(end = 8.dp)
-                ){
-                    Text(
-                        draft.phonetic ?: "Sin fonética",
+                        fontWeight = FontWeight.Medium
+                    ),
+                    placeholderText = "Fonética (opcional)"
+                )
+                CustomTextField(
+                    value = draft.description ?: "",
+                    label = "Descripción (opcional)",
+                    onValueChange = { draft.description = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(
                         fontFamily = jetbrainsMonoFamily,
-                        fontSize = 14.sp,
-                        fontStyle = FontStyle.Italic,
-                        color = Color.Gray
-                    )
-                }
-                Box(
-                    modifier = Modifier.weight(1f, fill = false)
-                        .padding(end = 8.dp)
-                ){
-                    Text(
-                        draft.description ?: "Sin descripción",
-                        fontFamily = jetbrainsMonoFamily,
-                        fontSize = 14.sp,
-                        fontStyle = FontStyle.Italic,
-                        color = Color.Gray
-                    )
-                }
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    placeholderText = "Descripción (opcional)"
+                )
+            } else if (showDetails) {
+                Text(
+                    text = "Español: ${draft.spanish.ifBlank { "-" }} | Ingles: ${draft.english.ifBlank { "-" }} | Fonetica: ${draft.phonetic?.ifBlank { "Sin fonetica" } ?: "Sin fonetica"} | Descripcion: ${draft.description?.ifBlank { "Sin descripcion" } ?: "Sin descripcion"}",
+                    fontFamily = jetbrainsMonoFamily,
+                    fontSize = 14.sp,
+                    color = if (draft.isActive) Color(0xFF131313) else Color.Gray
+                )
             }
         }
 
@@ -1527,6 +1639,7 @@ fun QuestionEditableRegion(
     draft: QuestionDraftState,
     isEditing: Boolean,
     jetbrainsMonoFamily: FontFamily,
+    onDeleteQuestion: (() -> Unit)? = null,
 ) {
     var newAltText by remember { mutableStateOf("") }
     var statusMenuExpanded by remember { mutableStateOf(false) }
@@ -1621,6 +1734,18 @@ fun QuestionEditableRegion(
                                 }
                             )
                         }
+                    }
+                }
+
+                if (onDeleteQuestion != null) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(onClick = onDeleteQuestion) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Eliminar pregunta",
+                            tint = Color(0xFF8B0000),
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
@@ -1758,3 +1883,43 @@ fun QuestionEditableRegion(
 
     }
 }
+
+@Composable
+fun SectionActionButtons(
+    isEditing: Boolean,
+    onEditOrSave: () -> Unit,
+    onCancel: () -> Unit,
+    onDelete: (() -> Unit)? = null,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onEditOrSave, modifier = Modifier.size(22.dp)) {
+            Icon(
+                imageVector = if (isEditing) Icons.Default.Check else Icons.Default.Edit,
+                contentDescription = if (isEditing) "Guardar" else "Editar",
+                tint = if (isEditing) Color(0xFF2D5E3D) else Color(0xFF003AB6),
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        AnimatedVisibility(visible = isEditing) {
+            IconButton(onClick = onCancel, modifier = Modifier.size(22.dp)) {
+                Icon(
+                    Icons.Default.Cancel,
+                    contentDescription = "Cancelar",
+                    tint = Color(0xFF8B0000),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+        if (onDelete != null) {
+            IconButton(onClick = onDelete, modifier = Modifier.size(22.dp)) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Eliminar",
+                    tint = Color(0xFF8B0000),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}
+

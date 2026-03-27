@@ -1,3 +1,5 @@
+package com.example.routes
+
 import com.example.dtos.*
 import com.example.services.*
 import io.ktor.http.HttpStatusCode
@@ -407,8 +409,8 @@ fun Application.configureRouting() {
                     val id = call.parameters["id"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
                     val dto = call.receive<UpdateWordDto>()
-                    wordService.update(id, dto)
-                    call.respond(HttpStatusCode.OK)
+                    val success= wordService.update(id, dto)
+                    call.respond(success)
                 }
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
@@ -536,6 +538,11 @@ fun Application.configureRouting() {
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
+                    val testExercise = testExerciseService.searchByIds(testId = id)
+                    testExercise.forEach { item ->
+                        testExerciseService.delete(item.id)
+                    }
+
                     call.respond(testService.delete(id))
                 }
             }

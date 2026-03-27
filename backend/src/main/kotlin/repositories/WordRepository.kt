@@ -70,7 +70,7 @@ class WordRepository {
                 dto.phonetic?.let { u[phonetic] = it }
                 dto.description?.let { u[description] = it }
                 dto.isActive?.let { u[isActive] = it }
-            }
+            }.takeIf { it > 0 } ?: false
         }
     }
 

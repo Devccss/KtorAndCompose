@@ -16,7 +16,7 @@ import io.ktor.server.application.install
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
-import repositories.QuestionWordsRepository
+import repositories.ExerciseWordsRepository
 import repositories.ExerciseOnHoldRepository
 import repositories.ExerciseRepository
 import repositories.NotificationsRepository
@@ -40,7 +40,7 @@ val repositoryModule = module {
     single { ExerciseRepository() }
     single { ExerciseContentRepository() }
     single { ExerciseOnHoldRepository() }
-    single { QuestionWordsRepository()}
+    single { ExerciseWordsRepository()}
 
 }
 

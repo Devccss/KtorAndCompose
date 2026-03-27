@@ -6,7 +6,7 @@ import com.example.config.configureSerialization
 import config.configureDatabases
 import configureHTTP
 import com.example.plugins.configureKoin
-import configureRouting
+import com.example.routes.configureRouting
 import io.ktor.server.application.Application
 
 

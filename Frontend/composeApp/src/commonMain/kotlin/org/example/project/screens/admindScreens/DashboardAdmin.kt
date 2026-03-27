@@ -9,7 +9,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,10 +27,12 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_bold
+import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import org.example.project.components.AppLayout
 import org.example.project.dtos.Role
 import org.example.project.dtos.UserDto
 import org.example.project.network.RepositoryProvider
+import org.example.project.viewModel.ExercisesViewModel
 import org.example.project.viewModel.UnitViewModel
 import org.example.project.viewModel.UserViewModel
 import org.jetbrains.compose.resources.Font
@@ -58,12 +59,25 @@ class AdminDashboard(private val id: Int? = null ,private val adminName: String,
         // Obtener ViewModels para mostrar datos reales
         val unitVm = rememberScreenModel { UnitViewModel(RepositoryProvider.unitRepo) }
         val userVm = rememberScreenModel { UserViewModel(RepositoryProvider.userRepo, RepositoryProvider.unitRepo) }
+        val exerciseVm = rememberScreenModel { ExercisesViewModel(RepositoryProvider.exerciseRepo) }
 
         val unitUi by unitVm.state.collectAsState()
         val userUi by userVm.state.collectAsState()
+        val exerciseUi by exerciseVm.state.collectAsState()
 
         // estado para navegación inferior
-        var selectedIndex by remember { mutableStateOf(0) } // 0: dashboard, 1: users, 2: levels
+        var selectedIndex by remember { mutableStateOf(0) }
+
+        var totalUnits by remember { mutableStateOf(0) }
+        var totalUsers by remember { mutableStateOf(0) }
+        var totalExercises by remember { mutableStateOf(0) }
+
+        LaunchedEffect(unitUi.units, userUi.users, exerciseUi.exercises) {
+            totalUnits = unitUi.units.size
+            totalUsers = userUi.users.size
+            totalExercises = exerciseUi.exercises.size
+        }
+
 
         // Usar AppLayout que provee la card principal (bienvenida) y la bottom bar fija
         AppLayout(
@@ -86,24 +100,13 @@ class AdminDashboard(private val id: Int? = null ,private val adminName: String,
                 return@AppLayout
             }
 
-            val lessonUnits = unitUi.units.map { u ->
-                LessonUnit(
-                    id = u.id ?: 0,
-                    title = u.name,
-                    description = u.description ?: "",
-                    status = if (u.isActive) UnitStatus.PUBLISHED else UnitStatus.DRAFT,
-                    emoji = "📚"
-                )
-            }
 
             // Llamamos al contenido del dashboard, pasando padding desde el layout
             AdminDashboardContent(
                 adminName = adminName,
-                lessonUnits = lessonUnits,
-                onViewUnit = { id -> navigator.push(UnitDetailsPlaceholder(id)) },
-                totalUnits = unitUi.units.size,
-                totalUsers = userUi.users.size,
-                recentUsers = userUi.users.take(5) // mostrar algunos usuarios recientes
+                totalUnits = totalUnits,
+                totalUsers = totalUsers,
+                totalExercises = totalExercises,
             )
         }
     }
@@ -113,11 +116,9 @@ class AdminDashboard(private val id: Int? = null ,private val adminName: String,
 fun AdminDashboardContent(
     modifier: Modifier = Modifier,
     adminName: String,
-    lessonUnits: List<LessonUnit>,
-    onViewUnit: (Int) -> Unit, // cambiado: recibir callback por id
     totalUnits: Int,
     totalUsers: Int,
-    recentUsers: List<UserDto>
+    totalExercises: Int
 ) {
     val weeklyData = listOf(
         WeeklyStats("Lunes", 420, 340),
@@ -187,7 +188,17 @@ fun AdminDashboardContent(
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ){
+                    Text(
+                        "Análisis" ,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily(Font(Res.font.encode_sans_bold, weight = FontWeight.Bold)),
+                    )
+                }
                 var selectedSectionTabs by remember { mutableStateOf(0) } // 0: Análisis, 1: Unidades, 2: Usuarios
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -196,18 +207,11 @@ fun AdminDashboardContent(
 
                     TextButton(onClick = { selectedSectionTabs = 0 }) {
                         Text(
-                            "Análisis",
+                            "General",
                             color = if (selectedSectionTabs == 0) Color(0xFFFF6B6B) else Color.Gray,
                             fontWeight = if (selectedSectionTabs == 0) FontWeight.Bold else FontWeight.Normal,
-                            fontFamily = FontFamily(Font(Res.font.encode_sans_bold, weight = FontWeight.Bold))
-                        )
-                    }
-                    TextButton(onClick = { selectedSectionTabs = 1 }) {
-                        Text(
-                            "Unidades",
-                            color = if (selectedSectionTabs == 1) Color(0xFFFF6B6B) else Color.Gray,
-                            fontWeight = if (selectedSectionTabs == 1) FontWeight.Bold else FontWeight.Normal,
-                            fontFamily = FontFamily(Font(Res.font.encode_sans_bold, weight = FontWeight.Bold))
+                            fontFamily = FontFamily(Font(Res.font.jetbrains_mono_regular)),
+                            fontSize = 14.sp
                         )
                     }
                     TextButton(onClick = { selectedSectionTabs = 2 }) {
@@ -215,7 +219,26 @@ fun AdminDashboardContent(
                             "Usuarios",
                             color = if (selectedSectionTabs == 2) Color(0xFFFF6B6B) else Color.Gray,
                             fontWeight = if (selectedSectionTabs == 2) FontWeight.Bold else FontWeight.Normal,
-                            fontFamily = FontFamily(Font(Res.font.encode_sans_bold, weight = FontWeight.Bold))
+                            fontFamily = FontFamily(Font(Res.font.jetbrains_mono_regular)),
+                            fontSize = 14.sp
+                        )
+                    }
+                    TextButton(onClick = { selectedSectionTabs = 1 }) {
+                        Text(
+                            "Unidades",
+                            color = if (selectedSectionTabs == 1) Color(0xFFFF6B6B) else Color.Gray,
+                            fontWeight = if (selectedSectionTabs == 1) FontWeight.Bold else FontWeight.Normal,
+                            fontFamily = FontFamily(Font(Res.font.jetbrains_mono_regular)),
+                            fontSize = 14.sp
+                        )
+                    }
+                    TextButton(onClick = { selectedSectionTabs = 3 }) {
+                        Text(
+                            "Ejercicios",
+                            color = if (selectedSectionTabs == 3) Color(0xFFFF6B6B) else Color.Gray,
+                            fontWeight = if (selectedSectionTabs == 3) FontWeight.Bold else FontWeight.Normal,
+                            fontFamily = FontFamily(Font(Res.font.jetbrains_mono_regular)),
+                            fontSize = 14.sp
                         )
                     }
                 }
@@ -224,8 +247,9 @@ fun AdminDashboardContent(
 
                 when (selectedSectionTabs) {
                     0 -> AnalysisSection()
-                    1 -> UnitsPreviewSection(lessonUnits = lessonUnits, onViewUnit = onViewUnit) // vista compacta (máx 10)
-                    2 -> UsersSection(recentUsers)
+                    1 -> UnitPreviewSection(totalUnits)
+                    2 -> UsersSection(totalUsers)
+                    3 -> ExerciseSection(totalExercises)
                 }
             }
         }
@@ -245,68 +269,20 @@ fun AnalysisSection() {
 }
 
 @Composable
-fun UnitsPreviewSection(lessonUnits: List<LessonUnit>, onViewUnit: (Int) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Unidades recientes", fontWeight = FontWeight.SemiBold, color = Color(0xFF2D2D2D))
-        Spacer(modifier = Modifier.height(8.dp))
-        val preview = lessonUnits.take(10)
-        if (preview.isEmpty()) {
-            Text("No hay unidades disponibles.", color = Color.Gray)
-        } else {
-            preview.forEach { unit ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(unit.title, fontWeight = FontWeight.SemiBold)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(unit.description, color = Color.Gray, maxLines = 2)
-                        }
-                        IconButton(onClick = { onViewUnit(unit.id) }) {
-                            Icon(Icons.Default.List, contentDescription = "Ver detalle")
-                        }
-                    }
-                }
-            }
-        }
+fun UnitPreviewSection(units: Int) {
+    Column {
+        StatRow("Unidades totales", "$units")
+
     }
+}
+@Composable
+fun UsersSection(users: Int) {
+    StatRow("Alumnos totales", "$users")
 }
 
 @Composable
-fun UsersSection(users: List<UserDto>) {
-    Column {
-        Text("Usuarios registrados: ${users.size}", color = Color(0xFF2D2D2D), fontWeight = FontWeight.SemiBold)
-        Spacer(modifier = Modifier.height(8.dp))
-        if (users.isEmpty()) {
-            Text("No hay usuarios disponibles.", color = Color.Gray)
-        } else {
-            users.forEach { u ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
-                ) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(u.name, fontWeight = FontWeight.SemiBold)
-                            Text(u.email ?: "", color = Color.Gray, fontSize = 12.sp)
-                        }
-                        u.role?.let { Text(it.name, color = Color.Gray) }
-                    }
-                }
-            }
-        }
-    }
+fun ExerciseSection(exercises: Int) {
+    StatRow("Alumnos totales", "$exercises")
 }
 
 @Composable

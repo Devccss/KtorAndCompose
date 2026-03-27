@@ -2,9 +2,9 @@ package com.example.services
 import com.example.dtos.CreateExerciseWordDto
 import com.example.dtos.ExerciseWordDto
 import com.example.dtos.UpdateExerciseWordDto
-import repositories.QuestionWordsRepository
+import repositories.ExerciseWordsRepository
 
-class ExerciseWordService(private val repo: QuestionWordsRepository) {
+class ExerciseWordService(private val repo: ExerciseWordsRepository) {
     fun getAll(): List<ExerciseWordDto> = repo.getAll()
     fun getById(id: Int): ExerciseWordDto? = repo.getById(id)
     fun getByExerciseId(exerciseId: Int): List<ExerciseWordDto> = repo.getByExerciseId(exerciseId)

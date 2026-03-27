@@ -221,6 +221,18 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
         )
     }
 
+    fun deleteContent(exerciseId: Int) {
+        launchCatching(
+            block = { repo.deleteExerciseContent(exerciseId) },
+            onSuccess = {
+                _state.value = _state.value.copy(selectedContent = null)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al eliminar contenido: ${error.message}")
+            }
+        )
+    }
+
     private fun <T> launchCatching(
         block: suspend () -> T,
         onSuccess: (T) -> Unit,

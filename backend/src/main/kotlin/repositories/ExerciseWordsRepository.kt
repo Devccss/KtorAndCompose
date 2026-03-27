@@ -13,7 +13,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 
-class QuestionWordsRepository {
+class ExerciseWordsRepository {
 
     private fun resultRowToContentWord(row: ResultRow): ExerciseWordDto {
         return ExerciseWordDto(
@@ -57,7 +57,7 @@ class QuestionWordsRepository {
     }
 
     fun update(id: Int, dto: UpdateExerciseWordDto): Boolean = transaction {
-        getById(id) ?: throw BadRequestException("QuestionWord con ID $id no existe.")
+        getById(id) ?: throw BadRequestException("ExercieWord con ID $id no existe.")
         val updatedRows = ExerciseWords.update({ ExerciseWords.id eq id }) { u ->
             dto.exerciseId?.let { u[exerciseId] = it }
             dto.wordId?.let { u[wordId] = it }
@@ -66,7 +66,7 @@ class QuestionWordsRepository {
     }
 
     fun delete(id: Int): Boolean = transaction {
-        getById(id) ?: throw BadRequestException("ContentWord con ID $id no existe.")
+        getById(id) ?: throw BadRequestException("ExerciseWord con ID $id no existe.")
         ExerciseWords.deleteWhere { ExerciseWords.id eq id } > 0
     }
 }
