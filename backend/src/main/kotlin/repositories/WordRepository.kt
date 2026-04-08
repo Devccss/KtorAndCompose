@@ -61,18 +61,18 @@ class WordRepository {
         throw BadRequestException("Error al crear palabra: ${e.message}")
     }
 
-    fun update(id: Int, dto: UpdateWordDto) {
-        transaction {
-            getById(id) ?: throw BadRequestException("Word con ID $id no existe.")
-            Words.update({ Words.id eq id }) { u ->
-                dto.english?.let { u[english] = it }
-                dto.spanish?.let { u[spanish] = it }
-                dto.phonetic?.let { u[phonetic] = it }
-                dto.description?.let { u[description] = it }
-                dto.isActive?.let { u[isActive] = it }
-            }.takeIf { it > 0 } ?: false
+    fun update(id: Int, dto: UpdateWordDto): Boolean = transaction {
+        getById(id) ?: throw BadRequestException("Word con ID $id no existe.")
+        val updateCount = Words.update({ Words.id eq id }) { u ->
+            dto.english?.let { u[english] = it }
+            dto.spanish?.let { u[spanish] = it }
+            dto.phonetic?.let { u[phonetic] = it }
+            dto.description?.let { u[description] = it }
+            dto.isActive?.let { u[isActive] = it }
         }
+        updateCount > 0
     }
+
 
     fun delete(id: Int): Boolean = transaction {
         getById(id) ?: throw BadRequestException("Word con ID $id no existe.")

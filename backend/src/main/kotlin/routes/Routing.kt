@@ -54,6 +54,7 @@ fun Application.configureRouting() {
     val testExerciseService = get<TestExerciseService>()
     val exerciseOnHoldService = get<ExerciseOnHoldService>()
     val notificationsService = get<NotificationsService>()
+    val welcomeTestService = get<WelcomeTestService>()
 
     routing {
 
@@ -493,7 +494,13 @@ fun Application.configureRouting() {
 
             // Tests
             route("/tests") {
-                get { call.respond(testService.getAll()) }
+                get {
+
+                    val tests = testService.getAll().filter { test ->
+                        welcomeTestService.getByTestId(test.id) == null
+                    }
+                    call.respond(tests)
+                }
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
@@ -524,6 +531,22 @@ fun Application.configureRouting() {
                     call.respond(test)
                 }
                 post {
+                    val dto = call.receive<CreateTestDto>()
+
+                    val existeTestNoWelcomeEnUnidad = testService.getAll().any { test ->
+                        test.unitId == dto.unitId && welcomeTestService.getByTestId(test.id) == null
+                    }
+
+                    if (existeTestNoWelcomeEnUnidad) {
+                        val unit = unitService.getUnitById(dto.unitId)
+                        throw BadRequestException("Ya existe un test para la unidad: ${unit?.name}")
+                    }
+
+                    val created = testService.create(dto)
+                    call.respond(HttpStatusCode.Created, created)
+                }
+
+                post("/welcome") {
                     val dto = call.receive<CreateTestDto>()
                     val created = testService.create(dto)
                     call.respond(HttpStatusCode.Created, created)
@@ -589,6 +612,46 @@ fun Application.configureRouting() {
                     val id = call.parameters["exerciseId"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
                     call.respond(testExerciseService.delete(id))
+                }
+            }
+
+            route("/welcomeTest"){
+                get {
+                    val allWelcomeTests = welcomeTestService.getAll()
+                    call.respond(allWelcomeTests)
+                }
+                get("/tests") {
+                    val allWelcomeTests = welcomeTestService.getAll()
+                    val tests = allWelcomeTests.mapNotNull {welcome ->
+                        testService.getById(welcome.testId)
+                    }
+                    call.respond(tests)
+                }
+                get("{TestId}") {
+                    val id = call.parameters["TestId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val item = welcomeTestService.getByTestId(id) ?: throw NotFoundException("WelcomeTest not found")
+
+                    call.respond(testService.getById(item.testId) ?: throw NotFoundException("Test not found for WelcomeTest with testId $id"))
+                }
+                post {
+                    val dto = call.receive<CreateWelcomeTestDto>()
+                    val created = welcomeTestService.createWelcomeTest(dto)
+                    testService.getById(created.testId)?.let {
+                        call.respond(HttpStatusCode.Created, it)
+                    } ?: throw NotFoundException("Test not found for created WelcomeTest with testId ${created.testId}")
+                }
+                put("{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val dto = call.receive<UpdateWelcomeTestDto>()
+                    val update = welcomeTestService.updateWelcomeTest(id, dto)
+                    call.respond(update)
+                }
+                delete("{TestId}") {
+                    val id = call.parameters["TestId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    call.respond(welcomeTestService.deleteByTestId(id))
                 }
             }
 

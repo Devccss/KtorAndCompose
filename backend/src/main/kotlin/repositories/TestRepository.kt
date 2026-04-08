@@ -55,11 +55,7 @@ class TestRepository {
 
     fun createTest(dto: CreateTestDto): TestDto = try {
         transaction {
-            val exist = Tests.selectAll().where { Tests.unitId eq dto.unitId }.singleOrNull()
 
-            if (exist != null) {
-                throw BadRequestException("Ya existe un test para la unidad con ID ${dto.unitId}.")
-            }
             val newId = Tests.insert {
                 it[unitId] = dto.unitId
                 it[name] = dto.name

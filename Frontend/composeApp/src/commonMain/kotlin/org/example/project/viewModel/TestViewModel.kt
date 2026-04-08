@@ -9,23 +9,32 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.example.project.dtos.CreateTestDto
 import org.example.project.dtos.CreateTestExerciseDto
+import org.example.project.dtos.CreateWelcomeTestDto
 import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.TestDto
 import org.example.project.dtos.TestExerciseDto
 import org.example.project.dtos.UpdateTestDto
 import org.example.project.dtos.UpdateTestExerciseDto
+import org.example.project.dtos.UpdateWelcomeTestDto
+import org.example.project.dtos.WelcomeTestDto
 import org.example.project.repository.TestRepo
+import org.example.project.repository.WelcomeTestRepo
 
 data class TestUIState(
     val selectedTests: List<TestDto> = emptyList(),
     val allTests: List<TestDto> = emptyList(),
     val currentTest: TestDto? = null,
     val testExercises: List<ExerciseDto> = emptyList(),
+    val welcomeTests: List<WelcomeTestDto> = emptyList(),
+    val currentWelcomeTest : TestDto? = null,
     var error: String? = null,
     val isLoading: Boolean = false,
 )
 
-class TestViewModel(private val testRepo:TestRepo ):ViewModel(),ScreenModel {
+class TestViewModel(
+    private val testRepo:TestRepo,
+    private val welcomeTestRepo: WelcomeTestRepo
+):ViewModel(),ScreenModel {
     private val _state = MutableStateFlow(
         TestUIState(
             selectedTests = emptyList(),
@@ -44,10 +53,14 @@ class TestViewModel(private val testRepo:TestRepo ):ViewModel(),ScreenModel {
         launchCatching(
             block = { testRepo.getAllTests() },
             onSuccess = { tests ->
-                _state.value = _state.value.copy(selectedTests = tests)
+                _state.value = _state.value.copy(allTests = tests)
             },
             onError = { error ->
-                _state.value = _state.value.copy(error = "Error al obtener todos los tests: ${error.message}", allTests = emptyList())
+                _state.value = _state.value.copy(
+                    error = "Error al obtener todos los tests: ${error.message}",
+                    selectedTests = emptyList(),
+                    allTests = emptyList()
+                )
             }
         )
     }
@@ -95,12 +108,12 @@ class TestViewModel(private val testRepo:TestRepo ):ViewModel(),ScreenModel {
         launchCatching(
             block = { testRepo.createTest(test) },
             onSuccess = { newTest ->
-                _state.value = _state.value.copy(selectedTests = _state.value.selectedTests + newTest)
+                _state.value = _state.value.copy(allTests = _state.value.allTests + newTest)
                 getAllTests()
             },
             onError = { error ->
                 _state.value =
-                    _state.value.copy(error = "Error al crear test: ${error.message}", currentTest = null)
+                    _state.value.copy(error = "${error.message}", currentTest = null)
             }
         )
     }
@@ -205,6 +218,180 @@ class TestViewModel(private val testRepo:TestRepo ):ViewModel(),ScreenModel {
                     _state.value.copy(error = "Error al eliminar test-exercise: ${error.message}")
             }
         )
+    }
+
+    //WelcomeTest
+    fun getAllWelcomeTests() {
+        launchCatching(
+            block = { welcomeTestRepo.getAllWelcomeTests() },
+            onSuccess = { welcomeTests ->
+                _state.value = _state.value.copy(welcomeTests = welcomeTests)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al obtener los welcome tests: ${error.message}", welcomeTests = emptyList())
+            }
+        )
+    }
+
+    fun getAllTestsFromWelcomeTests() {
+        launchCatching(
+            block = { welcomeTestRepo.getAllTestsFromWelcomeTests() },
+            onSuccess = { tests ->
+                _state.value = _state.value.copy(selectedTests = tests)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al obtener los tests de welcome tests: ${error.message}", selectedTests = emptyList())
+            }
+        )
+    }
+
+    fun getWelcomeTestByTestId(testId: Int) {
+        launchCatching(
+            block = { welcomeTestRepo.getWelcomeTestById(testId) },
+            onSuccess = { welcomeTest ->
+                _state.value = _state.value.copy(currentWelcomeTest = welcomeTest )
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al obtener el welcome test por testId: ${error.message}", welcomeTests = emptyList())
+            }
+        )
+    }
+
+    fun createWelcomeTest(dto: CreateWelcomeTestDto) {
+        launchCatching(
+            block = { welcomeTestRepo.createWelcomeTest(dto) },
+            onSuccess = {
+                getAllWelcomeTests()
+                getAllTests()
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al crear el welcome test: ${error.message}")
+            }
+        )
+    }
+
+    fun updateWelcomeTest(testId: Int, dto: UpdateWelcomeTestDto) {
+        launchCatching(
+            block = { welcomeTestRepo.updateWelcomeTest(testId, dto) },
+            onSuccess = { success ->
+                if (success) {
+                    getAllWelcomeTests()
+                } else {
+                    _state.value = _state.value.copy(error = "Error al actualizar el welcome test: No se pudo actualizar")
+                }
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al actualizar el welcome test: ${error.message}")
+            }
+        )
+    }
+    fun deleteWelcomeTest(testId: Int) {
+        launchCatching(
+            block = {
+                val relationDeleted = welcomeTestRepo.deleteWelcomeTest(testId)
+                if (!relationDeleted) return@launchCatching false
+
+                testRepo.deleteTest(testId)
+             },
+             onSuccess = { success ->
+                 if (success) {
+                     getAllWelcomeTests()
+                     getAllTests()
+                     getAllTestsFromWelcomeTests()
+                 } else {
+                    _state.value = _state.value.copy(error = "Error al eliminar el welcome test y su test asociado")
+                 }
+             },
+             onError = { error ->
+                _state.value = _state.value.copy(error = "Error al eliminar el welcome test y su test asociado: ${error.message}")
+             }
+         )
+     }
+
+    fun setWelcomeTest(testId: Int) {
+        launchCatching(
+            block = {
+                val relations = welcomeTestRepo.getAllWelcomeTests()
+                if (relations.none { it.testId == testId }) {
+                    welcomeTestRepo.createWelcomeTest(CreateWelcomeTestDto(testId = testId, isActive = false))
+                }
+                true
+            },
+            onSuccess = {
+                getAllWelcomeTests()
+                getAllTests()
+                getAllTestsFromWelcomeTests()
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al asociar welcome test: ${error.message}")
+            }
+        )
+    }
+
+    fun activateWelcomeTest(testId: Int) {
+        launchCatching(
+            block = {
+                val relations = welcomeTestRepo.getAllWelcomeTests()
+                if (relations.none { it.testId == testId }) {
+                    welcomeTestRepo.createWelcomeTest(CreateWelcomeTestDto(testId = testId, isActive = false))
+                }
+                setSingleActiveWelcomeTest(testId)
+                true
+            },
+            onSuccess = {
+                getAllWelcomeTests()
+                getAllTestsFromWelcomeTests()
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al activar welcome test: ${error.message}")
+            }
+        )
+    }
+
+    fun createAndSetWelcomeTest(
+        dto: CreateTestDto,
+        exerciseIds: List<Int>
+    ) {
+        launchCatching(
+            block = {
+                val createdTest = welcomeTestRepo.createTestForWelcomeTest(dto)
+                exerciseIds.distinct().forEach { exerciseId ->
+                    testRepo.createTestExercise(
+                        CreateTestExerciseDto(
+                            testId = createdTest.id,
+                            exerciseId = exerciseId
+                        )
+                    )
+                }
+
+                welcomeTestRepo.createWelcomeTest(
+                    CreateWelcomeTestDto(testId = createdTest.id, isActive = false)
+                )
+                createdTest
+            },
+            onSuccess = { createdTest ->
+                _state.value = _state.value.copy(selectedTests = _state.value.selectedTests + createdTest)
+                getAllWelcomeTests()
+                getAllTests()
+                getAllTestsFromWelcomeTests()
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al crear y asociar welcome test: ${error.message}")
+            }
+        )
+    }
+
+    private suspend fun setSingleActiveWelcomeTest(activeTestId: Int) {
+        val relations = welcomeTestRepo.getAllWelcomeTests()
+        relations.forEach { relation ->
+            val shouldBeActive = relation.testId == activeTestId
+            if (relation.isActive != shouldBeActive) {
+                welcomeTestRepo.updateWelcomeTest(
+                    relation.testId,
+                    UpdateWelcomeTestDto(isActive = shouldBeActive)
+                )
+            }
+        }
     }
 
     private fun <T> launchCatching(

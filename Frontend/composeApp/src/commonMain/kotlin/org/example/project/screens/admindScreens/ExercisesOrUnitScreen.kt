@@ -106,7 +106,12 @@ class ExercisesOrUnitScreen(private val unitId: Int? = null) : Screen {
         val unitUi by unitVm.state.collectAsState()
         val exerciseUi by exerciseVm.state.collectAsState()
 
-        val testVm = rememberScreenModel { TestViewModel(RepositoryProvider.testRepo) }
+        val testVm = rememberScreenModel {
+            TestViewModel(
+                RepositoryProvider.testRepo,
+                RepositoryProvider.welcomeTestRepo
+            )
+        }
         val testUi by testVm.state.collectAsState()
 
         var selectedIndex by remember { mutableStateOf(2) }

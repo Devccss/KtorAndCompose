@@ -18,6 +18,7 @@ import models.TestCompleted
 import models.TestExercises
 import models.Tests
 import models.UnitsCompleted
+import models.WelcomeTests
 import models.Words
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
@@ -55,7 +56,8 @@ fun configureDatabases() {
             UnitsCompleted,
             TestCompleted,
             ExerciseWords,
-            Alternatives
+            Alternatives,
+            WelcomeTests
         )
         createAdminUserIfNotExists()
     }

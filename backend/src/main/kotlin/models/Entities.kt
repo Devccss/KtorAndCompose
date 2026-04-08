@@ -104,6 +104,12 @@ object TestExercises : IntIdTable() {
     val exerciseId = integer("exercise_id").references(Exercises.id)
 }
 
+object WelcomeTests : IntIdTable() {
+    val testId = integer("test_id").references(Tests.id)
+    val isActive = bool("is_active").default(false)
+    val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
+}
+
 object ExercisesOnHold : IntIdTable() {
     val exerciseId = integer("exercise_id").references(Exercises.id)
     val userId = integer("user_id").references(Users.id)

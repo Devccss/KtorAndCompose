@@ -1,5 +1,6 @@
 package com.example.plugins
 import com.example.repositories.ExerciseContentRepository
+import com.example.repositories.WelcomeTestRepo
 import com.example.services.ExerciseContentService
 import com.example.services.ExerciseWordService
 import com.example.services.ExerciseOnHoldService
@@ -10,6 +11,7 @@ import com.example.services.TestExerciseService
 import com.example.services.TestService
 import com.example.services.UnitService
 import com.example.services.UserService
+import com.example.services.WelcomeTestService
 import com.example.services.WordService
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -41,6 +43,7 @@ val repositoryModule = module {
     single { ExerciseContentRepository() }
     single { ExerciseOnHoldRepository() }
     single { ExerciseWordsRepository()}
+    single { WelcomeTestRepo() }
 
 }
 
@@ -57,6 +60,7 @@ val serviceModule = module {
     single { ExerciseContentService(get()) }
     single { ExerciseOnHoldService(get()) }
     single { ExerciseWordService(get()) }
+    single { WelcomeTestService(get()) }
 }
 
 fun Application.configureKoin() {
