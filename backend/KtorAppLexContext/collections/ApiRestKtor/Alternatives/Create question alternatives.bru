@@ -1,0 +1,24 @@
+meta {
+  name: Create question alternatives
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{BackendKtor}}/alternatives/4
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "questionId": 1,
+    "text":"Manzana",
+    "isCorrect": true
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

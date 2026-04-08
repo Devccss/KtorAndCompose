@@ -1,0 +1,16 @@
+meta {
+  name: Delete User
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{BackendKtor}}/users/2
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

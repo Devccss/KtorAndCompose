@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "BackendLexContextApi",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

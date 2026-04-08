@@ -1,0 +1,16 @@
+meta {
+  name: User by Email
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{BackendKtor}}/users/email/admin@2026
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

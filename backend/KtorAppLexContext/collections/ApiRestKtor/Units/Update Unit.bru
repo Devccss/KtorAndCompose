@@ -1,0 +1,24 @@
+meta {
+  name: Update Unit
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{BackendKtor}}/units/2
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "difficulty": "A2",
+    "name": "Unidad de a2",
+    "description": "Descripción de la unidad"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,29 @@
+meta {
+  name: Create Question
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{BackendKtor}}/questions
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "textContent": "Contenido de ejemplo de la pregunta",
+    "typeText": "NORMAL",
+    "grammarExplanation": "Explicación gramatical breve",
+    "audioUrl": null,
+    "isActive": true,
+    "exerciseId": 1,
+    "questionText": "¿Cómo se traduce 'apple'?",
+    "typeQuestion": "ALTERNATIVE"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

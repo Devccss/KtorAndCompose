@@ -1,0 +1,16 @@
+meta {
+  name: Delete notification
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{BackendKtor}}/notifications/2
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

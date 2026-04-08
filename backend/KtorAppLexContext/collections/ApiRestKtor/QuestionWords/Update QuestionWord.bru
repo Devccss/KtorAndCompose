@@ -1,0 +1,23 @@
+meta {
+  name: Update QuestionWord
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{BackendKtor}}/question-words/1
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "questionId": 1,
+    "wordId": 3
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

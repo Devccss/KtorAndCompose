@@ -1,0 +1,23 @@
+meta {
+  name: Create QuestionWord
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{BackendKtor}}/question-words
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "questionId": 1,
+    "wordId": 1
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

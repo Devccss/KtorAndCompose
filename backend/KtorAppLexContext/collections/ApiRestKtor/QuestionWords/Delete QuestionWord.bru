@@ -1,0 +1,23 @@
+meta {
+  name: Delete QuestionWord
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{BackendKtor}}/question-words/2
+  body: none
+  auth: inherit
+}
+
+body:json {
+  {
+    "questionId": 1,
+    "wordId": 3
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

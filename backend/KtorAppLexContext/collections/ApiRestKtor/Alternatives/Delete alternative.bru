@@ -1,0 +1,24 @@
+meta {
+  name: Delete alternative
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{BackendKtor}}/alternatives/3
+  body: none
+  auth: inherit
+}
+
+body:json {
+  {
+    "questionId": 1,
+    "text":"Pera",
+    "isCorrect": false
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

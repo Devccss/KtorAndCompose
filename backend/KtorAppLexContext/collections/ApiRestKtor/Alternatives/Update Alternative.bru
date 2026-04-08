@@ -1,0 +1,23 @@
+meta {
+  name: Update Alternative
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{BackendKtor}}/alternatives/3
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "text":"Manzana",
+    "isCorrect": true
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

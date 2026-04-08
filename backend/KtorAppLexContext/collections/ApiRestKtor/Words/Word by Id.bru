@@ -1,0 +1,16 @@
+meta {
+  name: Word by Id
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{BackendKtor}}/words/1
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

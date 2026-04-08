@@ -1,0 +1,23 @@
+meta {
+  name: Update User
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{BackendKtor}}/users/2
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "email": "actualizado@email.com",
+    "name": "Nombre Actualizado 2"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

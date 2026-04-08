@@ -1,0 +1,26 @@
+meta {
+  name: Create Notification
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{BackendKtor}}/notifications
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "userId": 1,
+    "title": "Nueva notificación 2",
+    "notificationType": "INFO",
+    "message": "aaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "createdAt": "2026-01-26T12:00:00"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

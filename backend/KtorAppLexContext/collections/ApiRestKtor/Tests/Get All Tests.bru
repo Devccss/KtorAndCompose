@@ -1,0 +1,16 @@
+meta {
+  name: Get All Tests
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{BackendKtor}}/tests
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

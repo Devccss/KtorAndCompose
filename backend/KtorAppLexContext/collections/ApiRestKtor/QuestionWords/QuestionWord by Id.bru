@@ -1,0 +1,16 @@
+meta {
+  name: QuestionWord by Id
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{BackendKtor}}/question-words/7
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

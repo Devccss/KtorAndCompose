@@ -1,0 +1,12 @@
+opencollection: 1.0.0
+info:
+  name: "ApiTestsLexContext"
+  type: workspace
+
+collections:
+  - name: "ApiRestKtor"
+    path: "collections\\ApiRestKtor"
+
+specs:
+
+docs: ''

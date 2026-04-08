@@ -1,0 +1,26 @@
+meta {
+  name: Create Test
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{BackendKtor}}/tests
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "unitId": 1,
+    "testType": "ALTERNATIVES",
+    "name": "Test de ejemplo 2",
+    "description": "Descripción breve del test 2",
+    "createdAt": "2026-01-27T12:00:00"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
