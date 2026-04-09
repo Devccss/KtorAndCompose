@@ -7,12 +7,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.example.project.dtos.CreateTestCompletedDto
 import org.example.project.dtos.CreateTestDto
 import org.example.project.dtos.CreateTestExerciseDto
 import org.example.project.dtos.CreateWelcomeTestDto
 import org.example.project.dtos.ExerciseDto
+import org.example.project.dtos.TestCompletedDto
 import org.example.project.dtos.TestDto
 import org.example.project.dtos.TestExerciseDto
+import org.example.project.dtos.UpdateTestCompletedDto
 import org.example.project.dtos.UpdateTestDto
 import org.example.project.dtos.UpdateTestExerciseDto
 import org.example.project.dtos.UpdateWelcomeTestDto
@@ -27,6 +30,9 @@ data class TestUIState(
     val testExercises: List<ExerciseDto> = emptyList(),
     val welcomeTests: List<WelcomeTestDto> = emptyList(),
     val currentWelcomeTest : TestDto? = null,
+    val testsCompleted: List<TestCompletedDto> = emptyList(),
+    val currentTestCompleted: TestCompletedDto? = null,
+
     var error: String? = null,
     val isLoading: Boolean = false,
 )
@@ -392,6 +398,86 @@ class TestViewModel(
                 )
             }
         }
+    }
+
+    //TestCompleted
+    fun getAllTestCompleted() {
+        launchCatching(
+            block = { testRepo.getAllTestCompleted() },
+            onSuccess = { testCompletedList ->
+                _state.value = _state.value.copy(testsCompleted = testCompletedList)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al obtener los tests completados: ${error.message}")
+            }
+        )
+    }
+
+    fun getTestCompletedById(id: Int) {
+        launchCatching(
+            block = { testRepo.getTestCompletedById(id) },
+            onSuccess = { testCompleted ->
+                _state.value = _state.value.copy(currentTestCompleted = testCompleted)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al obtener el test completado por ID: ${error.message}")
+            }
+        )
+    }
+
+    fun getTestsCompletedByUser(userId: Int) {
+        launchCatching(
+            block = { testRepo.getTestsCompletedByUser(userId) },
+            onSuccess = { testsCompleted ->
+                _state.value = _state.value.copy(testsCompleted = testsCompleted)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al obtener los tests completados por usuario: ${error.message}")
+            }
+        )
+    }
+
+    fun createTestCompleted(dto: CreateTestCompletedDto) {
+        launchCatching(
+            block = { testRepo.createTestCompleted(dto) },
+            onSuccess = { newTestCompleted ->
+                _state.value = _state.value.copy(testsCompleted = _state.value.testsCompleted + newTestCompleted)
+                getAllTestCompleted()
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al crear el test completado: ${error.message}")
+            }
+        )
+    }
+
+    fun updateTestCompleted(id: Int, dto: UpdateTestCompletedDto) {
+        launchCatching(
+            block = { testRepo.updateTestCompleted(id, dto) },
+            onSuccess = {
+                getTestCompletedById(id)
+                getAllTestCompleted()
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al actualizar el test completado: ${error.message}")
+            }
+        )
+    }
+
+    fun deleteTestCompleted(id: Int) {
+        launchCatching(
+            block = { testRepo.deleteTestCompleted(id) },
+            onSuccess = { success ->
+                if (success) {
+                    _state.value = _state.value.copy(currentTestCompleted = null)
+                    getAllTestCompleted()
+                } else {
+                    _state.value = _state.value.copy(error = "Error al eliminar el test completado: Respuesta no exitosa")
+                }
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al eliminar el test completado: ${error.message}")
+            }
+        )
     }
 
     private fun <T> launchCatching(

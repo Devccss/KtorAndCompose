@@ -23,9 +23,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,6 +41,7 @@ import org.example.project.dtos.Role
 import org.example.project.network.UserSession
 import org.example.project.network.UserSession.role
 import org.example.project.screens.LoginScreen
+import org.example.project.screens.studentScreens.StudentLearnScreen
 import org.example.project.screens.studentScreens.StudentWelcomeScreen
 import org.jetbrains.compose.resources.Font
 
@@ -60,8 +59,8 @@ fun StudentAppLayout(
     val sessionRole = role
     val userName = remember(initialUserName, sessionName) { initialUserName ?: sessionName ?: "Estudiante" }
     val userRole = remember(role, sessionRole) { role ?: sessionRole ?: Role.STUDENT }
+    val userId = UserSession.idUser
 
-    val snackbarHost = rememberUpdatedState(snackbarHostState)
     Scaffold(
         modifier = Modifier.navigationBarsPadding(),
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -70,8 +69,8 @@ fun StudentAppLayout(
                 selectedIndex = selectedIndex,
                 onNavigate = { index ->
                     when (index) {
-                        0 -> navigator.replaceAll(StudentWelcomeScreen(userName))
-                        1 -> {}
+                        0 -> navigator.replaceAll(StudentWelcomeScreen(userId,userName))
+                        1 -> navigator.replaceAll(StudentLearnScreen(userId, userName))
                         2 -> {
                             UserSession.clear()
                             navigator.replaceAll(LoginScreen())

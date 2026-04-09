@@ -80,7 +80,7 @@ fun ReusableBottomBar(
 
     if (!initialUserName.isNullOrBlank() || role != null) {
         remember(initialUserName, role) {
-            UserSession.set(sessionId?: -1,initialUserName ?: sessionName, role ?: sessionRole)
+            UserSession.set(sessionId?: -1,initialUserName ?: sessionName, role ?: sessionRole, actualUnit = null)
         }
     }
 

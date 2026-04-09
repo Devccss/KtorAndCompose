@@ -51,7 +51,9 @@ fun AppLayout(
 
     LaunchedEffect(initialUserName, role) {
         if (!initialUserName.isNullOrBlank() || role != null) {
-            UserSession.set(sessionId?: id ?: -1 ,initialUserName ?: sessionName, role ?: sessionRole)
+            UserSession.set(
+                sessionId ?: id ?: -1, initialUserName ?: sessionName, role ?: sessionRole, actualUnit = null
+            )
         }
     }
 
@@ -79,7 +81,6 @@ fun AppLayout(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFFFF8F0))
                 .padding(paddingValues)
         ) {
 

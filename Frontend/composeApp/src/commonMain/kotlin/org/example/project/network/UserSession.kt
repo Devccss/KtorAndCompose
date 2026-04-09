@@ -19,15 +19,20 @@ object UserSession {
     var role: Role? by mutableStateOf(null)
         private set
 
-    fun set(id: Int,name: String?, role: Role?) {
+    var actualUnit: Int? by mutableStateOf(null)
+        private set
+
+    fun set(id: Int,name: String?, role: Role?, actualUnit: Int?) {
         this.idUser = id
         this.name = name
         this.role = role
+        this.actualUnit = actualUnit
     }
 
     fun clear() {
         idUser = null
         name = null
         role = null
+        actualUnit = null
     }
 }

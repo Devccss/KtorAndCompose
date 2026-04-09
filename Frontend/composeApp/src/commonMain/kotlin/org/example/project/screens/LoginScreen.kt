@@ -263,7 +263,12 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
                         LaunchedEffect(uiState.currentUser) {
                             if (uiState.currentUser?.role == Role.STUDENT && uiState.currentUser?.id != null) {
                                 //Estudiante
-                                UserSession.set(uiState.currentUser?.id?: -1 ,uiState.currentUser?.name, uiState.currentUser?.role)
+                                UserSession.set(
+                                    uiState.currentUser?.id?: -1,
+                                    uiState.currentUser?.name,
+                                    uiState.currentUser?.role,
+                                    actualUnit = uiState.currentUser?.currentUnitId
+                                )
                                 navigator.push(StudentWelcomeScreen(
                                     studentName = uiState.currentUser?.name ?: "Estudiante"
                                 ))

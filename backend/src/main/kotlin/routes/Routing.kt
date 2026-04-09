@@ -594,8 +594,9 @@ fun Application.configureRouting() {
                 post {
                     val dto = call.receive<CreateTestExerciseDto>()
                     val test = testService.getById(dto.testId)
+                    val isWelcome = welcomeTestService.getByTestId(dto.testId) != null
                     val exercise = exerciseService.getById(dto.exerciseId)
-                    if (test?.unitId != exercise?.unitId){
+                    if (test?.unitId != exercise?.unitId && !isWelcome) {
                         throw BadRequestException("El test y el ejercicio deben pertenecer a la misma unidad")
                     }
                     val created = testExerciseService.create(dto)
@@ -714,7 +715,7 @@ fun Application.configureRouting() {
             }
 
             // ExercisesCompleted
-            route("/exercises-completed") {
+            route("/exercisesCompleted") {
                 get { call.respond(exerciseService.getAllExerciseCompleted()) }
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
@@ -722,6 +723,12 @@ fun Application.configureRouting() {
                     val item = exerciseService.getExerciseCompletedById(id)
                         ?: throw NotFoundException("ExerciseCompleted not found")
                     call.respond(item)
+                }
+                get("user/{userId}") {
+                    val userId = call.parameters["userId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid User ID")
+                    val items = exerciseService.getExerciseCompletedByUser(userId)
+                    call.respond(items)
                 }
                 post {
                     val dto = call.receive<CreateExerciseCompletedDto>()
@@ -743,7 +750,7 @@ fun Application.configureRouting() {
             }
 
             // TestsCompleted
-            route("/tests-completed") {
+            route("/testsCompleted") {
                 get { call.respond(testService.getAllTestCompleted()) }
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
@@ -751,6 +758,12 @@ fun Application.configureRouting() {
                     val item = testService.getTestCompletedById(id)
                         ?: throw NotFoundException("TestCompleted not found")
                     call.respond(item)
+                }
+                get("user/{userId}") {
+                    val userId = call.parameters["userId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid User ID")
+                    val items = testService.getTestsCompletedByUser(userId)
+                    call.respond(items)
                 }
                 post {
                     val dto = call.receive<CreateTestCompletedDto>()

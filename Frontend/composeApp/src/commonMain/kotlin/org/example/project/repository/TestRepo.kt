@@ -13,11 +13,14 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.example.project.dtos.CreateTestCompletedDto
 import org.example.project.dtos.CreateTestDto
 import org.example.project.dtos.CreateTestExerciseDto
 import org.example.project.dtos.ExerciseDto
+import org.example.project.dtos.TestCompletedDto
 import org.example.project.dtos.TestDto
 import org.example.project.dtos.TestExerciseDto
+import org.example.project.dtos.UpdateTestCompletedDto
 import org.example.project.dtos.UpdateTestDto
 import org.example.project.dtos.UpdateTestExerciseDto
 
@@ -115,4 +118,37 @@ class TestRepo(private val httpClient: HttpClient ,private val baseUrl: String) 
 
     suspend fun deleteTestExercise(exerciseId: Int): Boolean =
         parseOrThrow(httpClient.delete("$baseUrl/api/v1/testExercises/$exerciseId"))
+
+
+
+    //CompleteTest
+    suspend fun getAllTestCompleted(): List<TestCompletedDto> =
+        parseOrThrow(httpClient.get("$baseUrl/api/v1/testsCompleted"))
+
+
+    suspend fun getTestCompletedById(id: Int): TestCompletedDto? =
+        parseOrThrow(httpClient.get("$baseUrl/api/v1/testsCompleted/$id"))
+
+    suspend fun getTestsCompletedByUser(userId: Int): List<TestCompletedDto> =
+        parseOrThrow(httpClient.get("$baseUrl/api/v1/testsCompleted/user/$userId"))
+
+
+    suspend fun createTestCompleted(dto: CreateTestCompletedDto): TestCompletedDto =
+        parseOrThrow(
+            httpClient.post("$baseUrl/api/v1/testsCompleted") {
+                contentType(io.ktor.http.ContentType.Application.Json)
+                setBody(dto)
+            }
+        )
+
+    suspend fun updateTestCompleted(id: Int, dto: UpdateTestCompletedDto): Boolean =
+        ensureSuccessOrThrow(
+            httpClient.put("$baseUrl/api/v1/testsCompleted/$id") {
+                contentType(io.ktor.http.ContentType.Application.Json)
+                setBody(dto)
+            }
+        )
+
+    suspend fun deleteTestCompleted(id: Int): Boolean =
+        parseOrThrow(httpClient.delete("$baseUrl/api/v1/testsCompleted/$id"))
 }

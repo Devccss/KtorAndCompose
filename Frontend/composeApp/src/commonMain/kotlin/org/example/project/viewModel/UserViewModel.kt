@@ -257,6 +257,25 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
         )
     }
 
+    fun updateUserCurrentUnit(userId: Int, unitId: Int) {
+        launchCatching(
+            block = {
+                val user = repo.getUserById(userId)
+                    ?: throw IllegalStateException("No se encontro el usuario con ID $userId")
+                repo.updateUser(
+                    userId,
+                    user.copy(currentUnitId = unitId)
+                )
+            },
+            onSuccess = { updated ->
+                _state.value = _state.value.copy(currentUser = updated)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al actualizar unidad actual: ${error.message}")
+            }
+        )
+    }
+
     fun deleteUser(id: Int) {
         launchCatching(
             block = { repo.deleteUser(id) },

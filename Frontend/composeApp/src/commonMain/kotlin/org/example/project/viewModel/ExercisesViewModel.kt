@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.example.project.dtos.CreateExerciseContentDto
 import org.example.project.dtos.CreateExerciseDto
+import org.example.project.dtos.CreateExerciseCompletedDto
+import org.example.project.dtos.ExerciseCompletedDto
 import org.example.project.dtos.ExerciseContentDto
 import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.FilterExercisesDto
@@ -24,6 +26,7 @@ data class ExercisesUiState(
     val selectedExercise: ExerciseDto? = null,
     val selectedContent : ExerciseContentDto? = null,
     val contents : List<ExerciseContentDto> = emptyList(),
+    val completedExercises: List<ExerciseCompletedDto> = emptyList(),
     val exercises: List<ExerciseDto> = emptyList(),
     var error: String? = null,
     val isLoading: Boolean = false,
@@ -229,6 +232,38 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
             },
             onError = { error ->
                 _state.value = _state.value.copy(error = "Error al eliminar contenido: ${error.message}")
+            }
+        )
+    }
+
+    // ExercisesCompleted
+    fun getExercisesCompletedByUserId(userId: Int) {
+        launchCatching(
+            block = { repo.getExercisesCompletedByUserId(userId) },
+            onSuccess = { completed ->
+                _state.value = _state.value.copy(completedExercises = completed)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(
+                    error = "Error al obtener ejercicios completados del usuario: ${error.message}",
+                    completedExercises = emptyList()
+                )
+            }
+        )
+    }
+
+    fun createExerciseCompleted(dto: CreateExerciseCompletedDto) {
+        launchCatching(
+            block = { repo.createExerciseCompleted(dto) },
+            onSuccess = { completed ->
+                _state.value = _state.value.copy(
+                    completedExercises = _state.value.completedExercises + completed
+                )
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(
+                    error = "Error al crear ejercicio completado: ${error.message}"
+                )
             }
         )
     }
