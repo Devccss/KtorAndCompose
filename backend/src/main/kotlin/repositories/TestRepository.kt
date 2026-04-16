@@ -11,6 +11,7 @@ import models.Tests
 import models.TestCompleted
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -36,6 +37,7 @@ class TestRepository {
             id = row[TestCompleted.id].value,
             userId = row[TestCompleted.userId],
             testId = row[TestCompleted.testId],
+            score = row[TestCompleted.score],
             completedAt = row[TestCompleted.completionDate].toString()
         )
     }
@@ -92,6 +94,17 @@ class TestRepository {
         Tests.deleteWhere { Tests.id eq id } > 0
     }
 
+    fun filterTests(name: String?, unitId: Int?, isActive: Boolean?): List<TestDto> = transaction {
+        var query = Tests.selectAll()
+
+        name?.let { query = query.where { Tests.name like "%$it%" } }
+        unitId?.let { query = query.andWhere { Tests.unitId eq it } }
+        isActive?.let { query = query.andWhere { Tests.isActive eq it } }
+
+        query.orderBy(Tests.createdAt).map(::resultRowToTest)
+    }
+
+
     /* TestCompleted operations */
 
     fun getTestCompletedById(id: Int): TestCompletedDto? = transaction {
@@ -113,6 +126,7 @@ class TestRepository {
             val newId = TestCompleted.insert {
                 it[userId] = dto.userId
                 it[testId] = dto.testId
+                it[score] = dto.score
                 it[completionDate] = LocalDateTime.now()
             }[TestCompleted.id]
 
@@ -120,6 +134,7 @@ class TestRepository {
                 id = newId.value,
                 userId = dto.userId,
                 testId = dto.testId,
+                score = dto.score,
                 completedAt = LocalDateTime.now().toString()
             )
         }
@@ -129,17 +144,20 @@ class TestRepository {
 
     fun updateTestCompleted(id: Int, dto: UpdateTestCompletedDto) {
         transaction {
-            getTestCompletedById(id) ?: throw BadRequestException("El test completado con ID $id no existe.")
+            getTestCompletedById(id)
+                ?: throw BadRequestException("El test completado con ID $id no existe.")
             TestCompleted.update({ TestCompleted.id eq id }) { update ->
                 dto.userId?.let { update[userId] = it }
                 dto.testId?.let { update[testId] = it }
+                dto.score?.let { update[score] = it }
                 update[completionDate] = LocalDateTime.now()
             }
         }
     }
 
     fun deleteTestCompleted(id: Int): Boolean = transaction {
-        getTestCompletedById(id) ?: throw BadRequestException("El test completado con ID $id no existe.")
+        getTestCompletedById(id)
+            ?: throw BadRequestException("El test completado con ID $id no existe.")
         TestCompleted.deleteWhere { TestCompleted.id eq id } > 0
     }
 }

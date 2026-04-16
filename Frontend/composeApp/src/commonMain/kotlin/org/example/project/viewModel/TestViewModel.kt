@@ -14,12 +14,12 @@ import org.example.project.dtos.CreateWelcomeTestDto
 import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.TestCompletedDto
 import org.example.project.dtos.TestDto
-import org.example.project.dtos.TestExerciseDto
 import org.example.project.dtos.UpdateTestCompletedDto
 import org.example.project.dtos.UpdateTestDto
 import org.example.project.dtos.UpdateTestExerciseDto
 import org.example.project.dtos.UpdateWelcomeTestDto
 import org.example.project.dtos.WelcomeTestDto
+import org.example.project.network.UserSession
 import org.example.project.repository.TestRepo
 import org.example.project.repository.WelcomeTestRepo
 
@@ -27,6 +27,7 @@ data class TestUIState(
     val selectedTests: List<TestDto> = emptyList(),
     val allTests: List<TestDto> = emptyList(),
     val currentTest: TestDto? = null,
+    val searchTest: List<TestDto> = emptyList(),
     val testExercises: List<ExerciseDto> = emptyList(),
     val welcomeTests: List<WelcomeTestDto> = emptyList(),
     val currentWelcomeTest : TestDto? = null,
@@ -53,6 +54,34 @@ class TestViewModel(
 
     fun updateMessage(message: String?){
         _state.value = _state.value.copy(error = message)
+    }
+
+    fun getLastAttemptForTest(testId: Int): TestCompletedDto? =
+        _state.value.testsCompleted
+            .filter { it.testId == testId }
+            .maxByOrNull { it.id }
+
+    fun hasPassedTest(testId: Int): Boolean = getLastAttemptForTest(testId)?.score == 100
+
+    fun requiresReview(unitId: Int, completedUnitsCount: Int): Boolean =
+        UserSession.requiresUnitReview(unitId, completedUnitsCount)
+
+    fun markTestRequiresReview(unitId: Int, completedUnitsCount: Int) {
+        UserSession.markUnitRequiresReview(unitId, completedUnitsCount)
+    }
+
+    fun clearTestReviewRequirement(unitId: Int) {
+        UserSession.clearUnitReviewRequirement(unitId)
+    }
+
+    fun remainingReviewExercises(unitId: Int, totalExercisesInUnit: Int): Int {
+        val required = UserSession.requiredReviewExercises(totalExercisesInUnit)
+        val done = UserSession.reviewedExercisesCount(unitId)
+        return (required - done).coerceAtLeast(0)
+    }
+
+    fun registerReviewedExercise(unitId: Int, exerciseId: Int) {
+        UserSession.registerReviewedExercise(unitId, exerciseId)
     }
 
     fun getAllTests(){
@@ -88,6 +117,7 @@ class TestViewModel(
         launchCatching(
             block = { testRepo.getTestsByUnitId(unitId) },
             onSuccess = { test ->
+                println("Test obtenido por unitId $unitId: $test")
                 _state.value = _state.value.copy(currentTest = test)
             },
             onError = { error ->
@@ -162,6 +192,19 @@ class TestViewModel(
         )
     }
 
+        fun searchTests(name: String?, unitId: Int?, isActive: Boolean?) {
+            launchCatching(
+                block = { testRepo.searchTests(name, unitId, isActive) },
+                onSuccess = { tests ->
+                    _state.value = _state.value.copy(searchTest = tests)
+                },
+                onError = { error ->
+                    _state.value =
+                        _state.value.copy(error = "Error al buscar tests: ${error.message}", searchTest = emptyList())
+                }
+            )
+        }
+
 
     //TesExercise
 
@@ -196,7 +239,7 @@ class TestViewModel(
         launchCatching(
             block = { testRepo.updateTestExercise(id, dto) },
             onSuccess = { success ->
-                if (success) { } else {
+                if (!success) {
                     _state.value =
                         _state.value.copy(error = "Error al actualizar test-exercise: Respuesta no exitosa")
                 }
@@ -441,8 +484,10 @@ class TestViewModel(
         launchCatching(
             block = { testRepo.createTestCompleted(dto) },
             onSuccess = { newTestCompleted ->
-                _state.value = _state.value.copy(testsCompleted = _state.value.testsCompleted + newTestCompleted)
-                getAllTestCompleted()
+                _state.value = _state.value.copy(
+                    testsCompleted = _state.value.testsCompleted + newTestCompleted,
+                    currentTestCompleted = newTestCompleted
+                )
             },
             onError = { error ->
                 _state.value = _state.value.copy(error = "Error al crear el test completado: ${error.message}")

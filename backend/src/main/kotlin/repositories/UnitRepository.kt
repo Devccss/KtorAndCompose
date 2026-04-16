@@ -54,7 +54,8 @@ class UnitRepository {
     }
 
     fun getUnitByTestId(testId: Int): UnitDto? = transaction {
-        (Units innerJoin models.Tests).selectAll().where { models.Tests.id eq testId }.singleOrNull()?.let(::resultRowToUnit)
+        (Units innerJoin models.Tests).selectAll().where { models.Tests.id eq testId }
+            .singleOrNull()?.let(::resultRowToUnit)
     }
 
     fun getUnitsByDifficulty(difficulty: DifficultyLevel): List<UnitDto> = transaction {
@@ -150,27 +151,27 @@ class UnitRepository {
         Units.deleteWhere { Units.id eq id } > 0
     }
 
-    fun createUnitsCompleted(dto: CreateUnitCompletedDto): UnitCompletedDto = try {
-        transaction {
-            val newId = UnitsCompleted.insert {
-                it[userId] = dto.userId
-                it[unitId] = dto.unitId
-                it[completionDate] = LocalDateTime.now()
-            }[UnitsCompleted.id]
 
-            UnitCompletedDto(
-                id = newId.value,
-                userId = dto.userId,
-                unitId = dto.unitId,
-                completedAt = LocalDateTime.now().toString()
-            )
-        }
-    } catch (e: Exception) {
-        throw BadRequestException("Error al crear la unidad completada: ${e.message}")
+    //Completed Units
+    fun createUnitsCompleted(dto: CreateUnitCompletedDto): UnitCompletedDto = transaction {
+        val newId = UnitsCompleted.insert {
+            it[userId] = dto.userId
+            it[unitId] = dto.unitId
+            it[completionDate] = LocalDateTime.now()
+        }[UnitsCompleted.id]
+
+        UnitCompletedDto(
+            id = newId.value,
+            userId = dto.userId,
+            unitId = dto.unitId,
+            completedAt = LocalDateTime.now().toString()
+        )
     }
 
-    fun getUnitsCompletedByUser(userId: Int): List<UnitCompletedDto> = transaction {
-        UnitsCompleted.selectAll().map(::resultRowToUnitCompleted)
+
+    fun getUnitsCompletedByUser(userId: Int): List<UnitDto> = transaction {
+        (UnitsCompleted innerJoin Units).selectAll().where { UnitsCompleted.userId eq userId }
+            .map(::resultRowToUnit)
     }
 
     fun editUnitsCompleted(id: Int, dto: UpdateUnitCompletedDto) {
@@ -186,13 +187,13 @@ class UnitRepository {
     }
 
 
-    fun getUnitsCompletedById(id: Int): UnitCompletedDto? = transaction {
-        UnitsCompleted.selectAll().where { UnitsCompleted.id eq id }.singleOrNull()
-            ?.let(::resultRowToUnitCompleted)
+    fun getUnitsCompletedById(id: Int): UnitDto? = transaction {
+        (UnitsCompleted innerJoin Units).selectAll().where { UnitsCompleted.id eq id }
+            .singleOrNull()?.let(::resultRowToUnit)
     }
 
-    fun getAllUnitsCompleted(): List<UnitCompletedDto> = transaction {
-        UnitsCompleted.selectAll().map(::resultRowToUnitCompleted)
+    fun getAllUnitsCompleted(): List<UnitDto> = transaction {
+        (UnitsCompleted innerJoin Units).selectAll().map(::resultRowToUnit)
     }
 
     fun deleteUnitsCompleted(id: Int): Boolean = transaction {

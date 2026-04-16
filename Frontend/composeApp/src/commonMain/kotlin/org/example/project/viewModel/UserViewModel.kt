@@ -14,6 +14,7 @@ import org.example.project.dtos.FilterUsersDto
 import org.example.project.dtos.LoginDto
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UserDto
+import org.example.project.network.UserSession
 import org.example.project.repository.UnitRepo
 import org.example.project.repository.UserRepo
 
@@ -28,7 +29,8 @@ data class UsersUiState(
 
     )
 
-class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) : ViewModel(), ScreenModel {
+class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) : ViewModel(),
+    ScreenModel {
     private val _state = MutableStateFlow(
         UsersUiState(
             isLoading = true,
@@ -44,7 +46,7 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
 
     init {
         launchCatching(
-            block = { unitRepo.getAllUnits()},
+            block = { unitRepo.getAllUnits() },
             onSuccess = { unit ->
 
                 _state.value = _state.value.copy(unit = unit)
@@ -57,15 +59,15 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
     }
 
 
-     private fun getAllLevels() {
+    private fun getAllLevels() {
         launchCatching(
             block = { unitRepo.getAllUnits() },
             onSuccess = { unit ->
-                if(unit.isNotEmpty()){
+                if (unit.isNotEmpty()) {
                     _state.value = _state.value.copy(
                         unit = unit,
                     )
-                }else{
+                } else {
 
                     _state.value = _state.value.copy(
                         error = "No se encontraron unidades",
@@ -77,12 +79,12 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
                 _state.value = _state.value.copy(
                     error = error.message,
 
-                )
+                    )
             }
         )
     }
 
-     private fun loadUsers() {
+    private fun loadUsers() {
         launchCatching(
             block = { repo.getAllUsers() },
             onSuccess = { users ->
@@ -94,7 +96,7 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
                 _state.value = _state.value.copy(
                     error = error.message,
 
-                )
+                    )
             }
         )
     }
@@ -104,11 +106,11 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
             block = { repo.getFilterUsers(filters) },
             onSuccess = { users ->
                 if (users != null) {
-                    if(users.isNotEmpty()){
+                    if (users.isNotEmpty()) {
                         _state.value = _state.value.copy(
                             users = users,
                         )
-                    }else{
+                    } else {
 
                         _state.value = _state.value.copy(
                             error = "No se encontraron usuarios con esos filtros",
@@ -121,7 +123,7 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
                 _state.value = _state.value.copy(
                     error = error.message,
 
-                )
+                    )
             }
         )
     }
@@ -148,19 +150,19 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
                     _state.value = _state.value.copy(
                         error = "User not found",
 
-                    )
+                        )
                 }
             },
             onError = { error ->
                 _state.value = _state.value.copy(
                     error = error.message,
 
-                )
+                    )
             }
         )
     }
 
-     fun getUserByEmail(email: String) {
+    fun getUserByEmail(email: String) {
         launchCatching(
             block = { repo.getUserByEmail(email) },
             onSuccess = { user ->
@@ -181,14 +183,14 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
                     _state.value = _state.value.copy(
                         error = "User not found",
 
-                    )
+                        )
                 }
             },
             onError = { error ->
                 _state.value = _state.value.copy(
                     error = error.message,
 
-                )
+                    )
             }
         )
     }
@@ -212,13 +214,13 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
                     users = _state.value.users.plus(added),
                     registerUser = newUser,
 
-                )
+                    )
             },
             onError = { error ->
                 _state.value = _state.value.copy(
                     error = error.message,
 
-                )
+                    )
             }
         )
     }
@@ -248,8 +250,9 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
     fun updateUser(id: Int, updatedUser: UserDto) {
         launchCatching(
             block = { repo.updateUser(id, updatedUser) },
-            onSuccess = { updated ->
-                getUserByEmail(updated.email)
+            onSuccess = {
+                UserSession.idUser?.let { getUserById(it) }
+                    ?: throw IllegalStateException("No se encontro el usuario con ID ${UserSession.idUser}")
             },
             onError = { error ->
                 _state.value = _state.value.copy(error = error.message)
@@ -267,11 +270,12 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
                     user.copy(currentUnitId = unitId)
                 )
             },
-            onSuccess = { updated ->
-                _state.value = _state.value.copy(currentUser = updated)
+            onSuccess = {
+                getUserById(userId)
             },
             onError = { error ->
-                _state.value = _state.value.copy(error = "Error al actualizar unidad actual: ${error.message}")
+                _state.value =
+                    _state.value.copy(error = "Error al actualizar unidad actual: ${error.message}")
             }
         )
     }

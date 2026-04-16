@@ -32,6 +32,7 @@ data class TestCompletedDto(
     val id: Int,
     val userId: Int,
     val testId: Int,
+    val score: Int,
     val completedAt: String
 )
 
@@ -39,12 +40,13 @@ data class TestCompletedDto(
 data class CreateTestCompletedDto(
     val userId: Int,
     val testId: Int,
-    val completedAt: String
+    val score: Int,
 )
 
 @Serializable
 data class UpdateTestCompletedDto(
     val userId: Int? = null,
     val testId: Int? = null,
+    val score: Int? = null,
     val completedAt: String? = null
 )

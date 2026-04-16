@@ -1,18 +1,15 @@
 package org.example.project.repository
 
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
-import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.bodyAsText
+import io.ktor.client.request.url
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import io.ktor.http.isSuccess
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import org.example.project.dtos.CreateTestCompletedDto
 import org.example.project.dtos.CreateTestDto
 import org.example.project.dtos.CreateTestExerciseDto
@@ -24,131 +21,102 @@ import org.example.project.dtos.UpdateTestCompletedDto
 import org.example.project.dtos.UpdateTestDto
 import org.example.project.dtos.UpdateTestExerciseDto
 
-@Serializable
-private data class ApiErrorDto(
-    val message: String? = null,
-    val error: String? = null
-)
-
 class TestRepo(private val httpClient: HttpClient ,private val baseUrl: String) {
-    private val json = Json { ignoreUnknownKeys = true }
-
-    private suspend inline fun <reified T> parseOrThrow(response: HttpResponse): T {
-        if (response.status.isSuccess()) return response.body()
-        throw Exception(parseError(response))
-    }
-
-    private suspend fun ensureSuccessOrThrow(response: HttpResponse): Boolean {
-        if (response.status.isSuccess()) return true
-        throw Exception(parseError(response))
-    }
-
-    private suspend fun parseError(response: HttpResponse): String {
-        val raw = response.bodyAsText().trim()
-        val parsed = runCatching {
-            json.decodeFromString(ApiErrorDto.serializer(), raw)
-        }.getOrNull()
-
-        val detail = when {
-            !parsed?.message.isNullOrBlank() -> parsed.message
-            !parsed?.error.isNullOrBlank() -> parsed.error
-            raw.isNotBlank() -> raw.removePrefix("{").removeSuffix("}").trim().ifBlank {
-                "Error HTTP ${response.status.value}"
-            }
-            else -> "Error HTTP ${response.status.value}"
-        }
-
-        return "error: $detail"
-    }
 
     suspend fun getAllTests(): List<TestDto> =
-        parseOrThrow(httpClient.get("$baseUrl/api/v1/tests"))
+        httpClient.get("$baseUrl/api/v1/tests").parseOrThrow()
 
     suspend fun getTestById(id: Int): TestDto? =
-        parseOrThrow(httpClient.get("$baseUrl/api/v1/tests/$id"))
+        httpClient.get("$baseUrl/api/v1/tests/$id").let { response ->
+            if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
+        }
 
     suspend fun getTestsByUnitId(unitId: Int): TestDto? =
-        parseOrThrow(httpClient.get("$baseUrl/api/v1/tests/byUnit/$unitId"))
+        httpClient.get("$baseUrl/api/v1/tests/byUnit/$unitId").let { response ->
+            if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
+        }
 
     suspend fun getTestByExerciseId(exerciseId: Int): TestDto? =
-        parseOrThrow(httpClient.get("$baseUrl/api/v1/tests/byExercise/$exerciseId"))
+        httpClient.get("$baseUrl/api/v1/tests/byExercise/$exerciseId").let { response ->
+            if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
+        }
 
     suspend fun getExercisesByTestId(testId: Int): List<ExerciseDto> =
-        parseOrThrow(httpClient.get("$baseUrl/api/v1/tests/exercises/$testId"))
+        httpClient.get("$baseUrl/api/v1/tests/exercises/$testId").parseOrThrow()
 
     suspend fun createTest(test: CreateTestDto): TestDto =
-        parseOrThrow(
-            httpClient.post("$baseUrl/api/v1/tests") {
-                contentType(io.ktor.http.ContentType.Application.Json)
-                setBody(test)
-            }
-        )
+        httpClient.post("$baseUrl/api/v1/tests") {
+            contentType(io.ktor.http.ContentType.Application.Json)
+            setBody(test)
+        }.parseOrThrow()
 
     suspend fun updateTest(id: Int, test: UpdateTestDto): Boolean =
-        ensureSuccessOrThrow(
-            httpClient.put("$baseUrl/api/v1/tests/$id") {
-                contentType(io.ktor.http.ContentType.Application.Json)
-                setBody(test)
-            }
-        )
+        httpClient.put("$baseUrl/api/v1/tests/$id") {
+            contentType(io.ktor.http.ContentType.Application.Json)
+            setBody(test)
+        }.ensureSuccessOrThrow()
 
     suspend fun deleteTest(id: Int): Boolean =
-        parseOrThrow(httpClient.delete("$baseUrl/api/v1/tests/$id"))
+        httpClient.delete("$baseUrl/api/v1/tests/$id").ensureSuccessOrThrow()
+
+    suspend fun searchTests(name: String?, unitId: Int?, isActive: Boolean?): List<TestDto> {
+        return httpClient.get {
+            url("$baseUrl/api/v1/tests/search")
+            name?.let { parameter("name", it) }
+            unitId?.let { parameter("unitId", it) }
+            isActive?.let { parameter("isActive", it) }
+        }.parseOrThrow()
+    }
+
 
     //Test-Exersice
     suspend fun getAllTestExercises(): List<TestExerciseDto> =
-        parseOrThrow(httpClient.get("$baseUrl/api/v1/testExercises"))
+        httpClient.get("$baseUrl/api/v1/testExercises").parseOrThrow()
 
     suspend fun createTestExercise(dto: CreateTestExerciseDto): TestExerciseDto =
-        parseOrThrow(
-            httpClient.post("$baseUrl/api/v1/testExercises") {
-                contentType(io.ktor.http.ContentType.Application.Json)
-                setBody(dto)
-            }
-        )
+        httpClient.post("$baseUrl/api/v1/testExercises") {
+            contentType(io.ktor.http.ContentType.Application.Json)
+            setBody(dto)
+        }.parseOrThrow()
 
 
     suspend fun updateTestExercise(id: Int, dto: UpdateTestExerciseDto): Boolean =
-        ensureSuccessOrThrow(
-            httpClient.put("$baseUrl/api/v1/testExercises/$id") {
-                contentType(io.ktor.http.ContentType.Application.Json)
-                setBody(dto)
-            }
-        )
+        httpClient.put("$baseUrl/api/v1/testExercises/$id") {
+            contentType(io.ktor.http.ContentType.Application.Json)
+            setBody(dto)
+        }.ensureSuccessOrThrow()
 
     suspend fun deleteTestExercise(exerciseId: Int): Boolean =
-        parseOrThrow(httpClient.delete("$baseUrl/api/v1/testExercises/$exerciseId"))
+        httpClient.delete("$baseUrl/api/v1/testExercises/$exerciseId").ensureSuccessOrThrow()
 
 
 
     //CompleteTest
     suspend fun getAllTestCompleted(): List<TestCompletedDto> =
-        parseOrThrow(httpClient.get("$baseUrl/api/v1/testsCompleted"))
+        httpClient.get("$baseUrl/api/v1/testsCompleted").parseOrThrow()
 
 
     suspend fun getTestCompletedById(id: Int): TestCompletedDto? =
-        parseOrThrow(httpClient.get("$baseUrl/api/v1/testsCompleted/$id"))
+        httpClient.get("$baseUrl/api/v1/testsCompleted/$id").let { response ->
+            if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
+        }
 
     suspend fun getTestsCompletedByUser(userId: Int): List<TestCompletedDto> =
-        parseOrThrow(httpClient.get("$baseUrl/api/v1/testsCompleted/user/$userId"))
+        httpClient.get("$baseUrl/api/v1/testsCompleted/user/$userId").parseOrThrow()
 
 
     suspend fun createTestCompleted(dto: CreateTestCompletedDto): TestCompletedDto =
-        parseOrThrow(
-            httpClient.post("$baseUrl/api/v1/testsCompleted") {
-                contentType(io.ktor.http.ContentType.Application.Json)
-                setBody(dto)
-            }
-        )
+        httpClient.post("$baseUrl/api/v1/testsCompleted") {
+            contentType(io.ktor.http.ContentType.Application.Json)
+            setBody(dto)
+        }.parseOrThrow()
 
     suspend fun updateTestCompleted(id: Int, dto: UpdateTestCompletedDto): Boolean =
-        ensureSuccessOrThrow(
-            httpClient.put("$baseUrl/api/v1/testsCompleted/$id") {
-                contentType(io.ktor.http.ContentType.Application.Json)
-                setBody(dto)
-            }
-        )
+        httpClient.put("$baseUrl/api/v1/testsCompleted/$id") {
+            contentType(io.ktor.http.ContentType.Application.Json)
+            setBody(dto)
+        }.ensureSuccessOrThrow()
 
     suspend fun deleteTestCompleted(id: Int): Boolean =
-        parseOrThrow(httpClient.delete("$baseUrl/api/v1/testsCompleted/$id"))
+        httpClient.delete("$baseUrl/api/v1/testsCompleted/$id").ensureSuccessOrThrow()
 }

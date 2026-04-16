@@ -93,7 +93,7 @@ class UsersRepository {
 
     fun updateUser(id: Int, dto: UpdateUserDto) {
         transaction {
-            val userToEdit = getById(id) ?: throw BadRequestException("Usuario con ID $id no existe.")
+            getById(id) ?: throw BadRequestException("Usuario con ID $id no existe.")
              Users.update({ Users.id eq id }) { u ->
                 dto.email?.let { u[email] = it }
                 dto.password?.let { newPass ->

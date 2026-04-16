@@ -41,8 +41,7 @@ data class ExerciseCompletedDto(
 @Serializable
 data class CreateExerciseCompletedDto(
     val userId: Int,
-    val exerciseId: Int,
-    val completedAt: String
+    val exerciseId: Int
 )
 
 @Serializable

@@ -28,10 +28,18 @@ data class UpdateTestDto(
 )
 
 @Serializable
+data class FilterTestsDto(
+    val name: String? = null,
+    val unitId: Int? = null,
+    val isActive: Boolean? = null
+)
+
+@Serializable
 data class TestCompletedDto(
     val id: Int,
     val userId: Int,
     val testId: Int,
+    val score: Int,
     val completedAt: String
 )
 
@@ -39,12 +47,12 @@ data class TestCompletedDto(
 data class CreateTestCompletedDto(
     val userId: Int,
     val testId: Int,
-    val completedAt: String
+    val score: Int,
 )
 
 @Serializable
 data class UpdateTestCompletedDto(
     val userId: Int? = null,
     val testId: Int? = null,
-    val completedAt: String? = null
+    val score: Int? = null
 )

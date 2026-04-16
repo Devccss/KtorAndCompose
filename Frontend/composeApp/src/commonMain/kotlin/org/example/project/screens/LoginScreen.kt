@@ -269,9 +269,7 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
                                     uiState.currentUser?.role,
                                     actualUnit = uiState.currentUser?.currentUnitId
                                 )
-                                navigator.push(StudentWelcomeScreen(
-                                    studentName = uiState.currentUser?.name ?: "Estudiante"
-                                ))
+                                navigator.push(StudentWelcomeScreen())
                             }
                             else if (uiState.currentUser?.role == Role.ADMIN && uiState.currentUser?.id != null) {
                                 navigator.push(AdminDashboard(

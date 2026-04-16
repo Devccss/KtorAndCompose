@@ -1,4 +1,4 @@
-package com.example.services
+package services
 
 import com.example.dtos.CreateUnitCompletedDto
 import com.example.dtos.CreateUnitDto
@@ -46,23 +46,23 @@ class UnitService(private val unitRepository: UnitRepository) {
         return unitRepository.deleteUnit(id)
     }
 
-    fun getUnitsCompletedByUser(userId: Int): List<UnitCompletedDto> {
+    fun getUnitsCompletedByUser(userId: Int): List<UnitDto> {
         return unitRepository.getUnitsCompletedByUser(userId)
     }
 
 
-    fun createUnitCompleted(dto: CreateUnitCompletedDto) =
+    fun createUnitCompleted(dto: CreateUnitCompletedDto): UnitCompletedDto =
         unitRepository.createUnitsCompleted(dto)
 
     fun editUnitsCompleted (completedId: Int, dto: UpdateUnitCompletedDto) =
         unitRepository.editUnitsCompleted(completedId, dto)
 
-    fun getAllUnitsCompletedByUser(userId: Int): List<UnitCompletedDto> =
+    fun getAllUnitsCompletedByUser(userId: Int): List<UnitDto> =
         unitRepository.getUnitsCompletedByUser(userId)
-    fun getUnitCompletedById(completedId: Int): UnitCompletedDto? =
+    fun getUnitCompletedById(completedId: Int): UnitDto? =
         unitRepository.getUnitsCompletedById(completedId)
 
-    fun getAllUnitsCompleted(): List<UnitCompletedDto> =
+    fun getAllUnitsCompleted(): List<UnitDto> =
         unitRepository.getAllUnitsCompleted()
 
     fun deleteUnitsCompleted(completedId: Int) =

@@ -43,8 +43,7 @@ data class FilterUnitsDto(
 @Serializable
 data class CreateUnitCompletedDto(
     val userId: Int,
-    val unitId: Int,
-    val completedAt: String
+    val unitId: Int
 )
 
 @Serializable

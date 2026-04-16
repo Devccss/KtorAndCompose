@@ -17,10 +17,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.TaskAlt
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -38,14 +41,19 @@ import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 import org.example.project.components.StudentAppLayout
 import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.UnitDto
+import org.example.project.dtos.TestCompletedDto
+import org.example.project.dtos.TestDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
-import org.example.project.screens.studentScreens.StudentExerciseResolverScreen
 import org.example.project.viewModel.ExercisesViewModel
 import org.example.project.viewModel.UnitViewModel
+import org.example.project.viewModel.TestViewModel
+import org.example.project.viewModel.UserViewModel
 
 private const val UNLOCK_THRESHOLD = 0.8f
 
@@ -58,9 +66,13 @@ class StudentLearnScreen(
         val navigator = LocalNavigator.currentOrThrow
         val unitVm = rememberScreenModel { UnitViewModel(RepositoryProvider.unitRepo) }
         val exercisesVm = rememberScreenModel { ExercisesViewModel(RepositoryProvider.exerciseRepo) }
+        val testVm = rememberScreenModel { TestViewModel(RepositoryProvider.testRepo, RepositoryProvider.welcomeTestRepo) }
+        val userVm = rememberScreenModel { UserViewModel(RepositoryProvider.userRepo, RepositoryProvider.unitRepo) }
 
         val unitUi by unitVm.state.collectAsState()
         val exercisesUi by exercisesVm.state.collectAsState()
+        val testUi by testVm.state.collectAsState()
+        val userUi by userVm.state.collectAsState()
 
         val userId = userIdArg ?: UserSession.idUser
         val studentName = studentNameArg ?: UserSession.name ?: "Estudiante"
@@ -69,14 +81,32 @@ class StudentLearnScreen(
         LaunchedEffect(userId) {
             unitVm.getAllUnits()
             exercisesVm.getAllExercises()
+            testVm.getAllTests()
             if (userId != null && userId > 0) {
+                userVm.getUserById(userId)
+                unitVm.getAllUnitsCompletedByUserId(userId)
+                testVm.getTestsCompletedByUser(userId)
                 exercisesVm.getExercisesCompletedByUserId(userId)
+            }
+        }
+
+        LaunchedEffect(userUi.currentUser) {
+            userUi.currentUser?.id?.let {
+                UserSession.set(
+                    id = it,
+                    name = userUi.currentUser?.name,
+                    role = userUi.currentUser?.role,
+                    actualUnit = userUi.currentUser?.currentUnitId
+                )
             }
         }
 
         LaunchedEffect(unitUi.error, exercisesUi.error) {
             val error = unitUi.error ?: exercisesUi.error
-            error?.let { snackbarHostState.showSnackbar(it) }
+            error?.let {
+                println("Error en StudentLearnScreen: $it")
+                snackbarHostState.showSnackbar(it)
+            }
         }
 
         val unitProgress = remember(unitUi.units, exercisesUi.exercises, exercisesUi.completedExercises) {
@@ -85,6 +115,36 @@ class StudentLearnScreen(
                 allExercises = exercisesUi.exercises,
                 completedExerciseIds = exercisesUi.completedExercises.map { it.exerciseId }.toSet()
             )
+        }
+
+        val completedUnitIds = remember(unitUi.unitsCompleted) {
+            unitUi.unitsCompleted.mapNotNull { it.id }.toSet()
+        }
+
+        val currentUnitId = userUi.currentUser?.currentUnitId ?: UserSession.actualUnit ?: unitProgress.firstOrNull()?.unit?.id
+        val unlockedUnitIds = remember(unitProgress, currentUnitId, completedUnitIds) {
+            if (unitProgress.isEmpty()) return@remember emptySet()
+
+            val firstOrder = unitProgress.first().unit.orderUnit
+            val currentOrder = unitProgress.firstOrNull { it.unit.id == currentUnitId }?.unit?.orderUnit
+            val maxCompletedOrder = unitProgress
+                .filter { it.unit.id in completedUnitIds }
+                .maxOfOrNull { it.unit.orderUnit }
+
+            val highestUnlockedOrder = listOfNotNull(
+                currentOrder,
+                maxCompletedOrder?.plus(1),
+                firstOrder
+            ).maxOrNull() ?: firstOrder
+
+            unitProgress
+                .filter { it.unit.orderUnit <= highestUnlockedOrder }
+                .mapNotNull { it.unit.id }
+                .toSet()
+        }
+
+        val testsByUnitId = remember(testUi.allTests) {
+            testUi.allTests.groupBy { it.unitId }
         }
 
         StudentAppLayout(
@@ -126,10 +186,23 @@ class StudentLearnScreen(
                         }
                     } else {
                         items(unitProgress, key = { it.unit.id ?: -1 }) { progress ->
+                            val unitId = progress.unit.id ?: return@items
+                            val unitTest = testsByUnitId[unitId]?.firstOrNull()
+                            val isUnitLocked = unitId !in unlockedUnitIds
+                            val isUnitCompleted = unitId in completedUnitIds
+                            val latestAttempt = unitTest?.let { testVm.getLastAttemptForTest(it.id) }
+                            val unitExercisesCount = progress.totalCount
+                            val requiresReview = unitTest != null && testVm.requiresReview(unitId, completedUnitIds.size)
+                            val remainingReview = if (requiresReview) {
+                                testVm.remainingReviewExercises(unitId, unitExercisesCount)
+                            } else 0
+                            val isTestLocked = unitTest != null && (!isUnitCompleted || requiresReview)
+
                             UnitCard(
                                 progress = progress,
+                                isLocked = isUnitLocked,
                                 onClick = {
-                                    val unitId = progress.unit.id ?: return@UnitCard
+                                    if (isUnitLocked) return@UnitCard
                                     navigator.push(
                                         StudentUnitExercisesScreen(
                                             unitId = unitId,
@@ -140,6 +213,28 @@ class StudentLearnScreen(
                                     )
                                 }
                             )
+
+                            unitTest?.let { test ->
+                                UnitTestCard(
+                                    test = test,
+                                    isLocked = isTestLocked,
+                                    latestAttempt = latestAttempt,
+                                    remainingReviewExercises = remainingReview,
+                                    onClick = {
+                                        if (isTestLocked) return@UnitTestCard
+                                        navigator.push(
+                                            StudentTestResolverScreen(
+                                                testId = test.id,
+                                                testName = test.name,
+                                                unitId = unitId,
+                                                unitName = progress.unit.name,
+                                                userIdArg = userId,
+                                                studentNameArg = studentName
+                                            )
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -154,11 +249,18 @@ class StudentUnitExercisesScreen(
     private val userIdArg: Int? = null,
     private val studentNameArg: String? = null,
 ) : Screen {
+    @OptIn(ExperimentalTime::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val exercisesVm = rememberScreenModel { ExercisesViewModel(RepositoryProvider.exerciseRepo, unitId = unitId) }
+        val unitVm = rememberScreenModel { UnitViewModel(RepositoryProvider.unitRepo) }
+        val testVm = rememberScreenModel { TestViewModel(RepositoryProvider.testRepo, RepositoryProvider.welcomeTestRepo) }
+        val userVm = rememberScreenModel { UserViewModel(RepositoryProvider.userRepo, RepositoryProvider.unitRepo) }
         val exercisesUi by exercisesVm.state.collectAsState()
+        val unitUi by unitVm.state.collectAsState()
+        val testUi by testVm.state.collectAsState()
+        val userUi by userVm.state.collectAsState()
 
         val userId = userIdArg ?: UserSession.idUser
         val studentName = studentNameArg ?: UserSession.name ?: "Estudiante"
@@ -166,13 +268,23 @@ class StudentUnitExercisesScreen(
 
         LaunchedEffect(userId) {
             exercisesVm.getExercisesByUnitId(unitId)
+            unitVm.getAllUnits()
+            testVm.searchTests(
+                unitId = unitId, isActive = true, name = null
+            )
             if (userId != null && userId > 0) {
                 exercisesVm.getExercisesCompletedByUserId(userId)
+                unitVm.getAllUnitsCompletedByUserId(userId)
+                userVm.getUserById(userId)
             }
         }
 
-        LaunchedEffect(exercisesUi.error) {
-            exercisesUi.error?.let { snackbarHostState.showSnackbar(it) }
+        LaunchedEffect(exercisesUi.error, testUi.error, unitUi.error, userUi.error) {
+            val error = exercisesUi.error ?: testUi.error ?: unitUi.error ?: userUi.error
+            error?.let {
+                println("Error en StudentUnitExercisesScreen: $it")
+                snackbarHostState.showSnackbar(it)
+            }
         }
 
         val completedIds = remember(exercisesUi.completedExercises) {
@@ -185,6 +297,53 @@ class StudentUnitExercisesScreen(
         }
         val completionRate = remember(availableExercises, completedIds) {
             if (availableExercises.isEmpty()) 0f else availableExercises.count { it.id in completedIds }.toFloat() / availableExercises.size.toFloat()
+        }
+        val solvedExercises = remember(availableExercises, completedIds) {
+            availableExercises.count { it.id in completedIds }
+        }
+        val isAlreadyMarkedCompleted = remember(unitUi.unitsCompleted, unitId) {
+            unitUi.unitsCompleted.any { it.id == unitId }
+        }
+
+        LaunchedEffect(userId, unitId, availableExercises, solvedExercises, isAlreadyMarkedCompleted) {
+            val safeUserId = userId ?: return@LaunchedEffect
+            unitVm.ensureUnitCompletedIfFullySolved(
+                userId = safeUserId,
+                unitId = unitId,
+                totalExercises = availableExercises.size,
+                solvedExercises = solvedExercises,
+                completedAt = Clock.System.now().toString()
+            )
+        }
+
+        val unitCompleted = completionRate >= UNLOCK_THRESHOLD
+        val unitTest = remember(testUi.searchTest.firstOrNull()) { testUi.searchTest.firstOrNull()}
+        val latestAttempt = unitTest?.let { testVm.getLastAttemptForTest(it.id) }
+        val reviewBlocked = unitTest != null && testVm.requiresReview(unitId, unitUi.unitsCompleted.size)
+        val remainingReviewExercises = if (reviewBlocked) {
+            testVm.remainingReviewExercises(unitId, availableExercises.size)
+        } else 0
+        val testLocked = unitTest != null && (!isAlreadyMarkedCompleted || (reviewBlocked && remainingReviewExercises > 0))
+
+        LaunchedEffect(isAlreadyMarkedCompleted, unitTest, unitUi.units, userUi.currentUser?.currentUnitId, userId) {
+            val safeUserId = userId ?: return@LaunchedEffect
+            if (!isAlreadyMarkedCompleted || unitTest != null) return@LaunchedEffect
+
+            val orderedUnits = unitUi.units.sortedBy { it.orderUnit }
+            val completedUnitIndex = orderedUnits.indexOfFirst { it.id == unitId }
+            if (completedUnitIndex < 0 || completedUnitIndex + 1 >= orderedUnits.size) return@LaunchedEffect
+
+            val nextUnitId = orderedUnits[completedUnitIndex + 1].id ?: return@LaunchedEffect
+            val currentUnitId = userUi.currentUser?.currentUnitId ?: UserSession.actualUnit
+            if (currentUnitId == nextUnitId) return@LaunchedEffect
+
+            userVm.updateUserCurrentUnit(safeUserId, nextUnitId)
+            UserSession.set(
+                id = safeUserId,
+                name = studentName,
+                role = UserSession.role,
+                actualUnit = nextUnitId
+            )
         }
 
         StudentAppLayout(
@@ -229,11 +388,97 @@ class StudentUnitExercisesScreen(
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
-                                androidx.compose.material3.LinearProgressIndicator(
+                                LinearProgressIndicator(
                                     progress = { completionRate.coerceIn(0f, 1f) },
                                     modifier = Modifier.fillMaxWidth(),
                                     color = if (completionRate >= UNLOCK_THRESHOLD) Color(0xFF2E7D32) else Color(0xFF1565C0)
                                 )
+                                if (unitCompleted ) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = if (unitTest != null) {
+                                            "✓ Has completado todos los ejercicios. Realiza el test para desbloquear la siguiente unidad."
+                                        } else {
+                                            "✓ Has completado todos los ejercicios. Esta unidad no tiene test, por lo que se desbloquea la siguiente automáticamente."
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color(0xFF2E7D32),
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (unitTest != null) {
+                        item {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable(enabled = !testLocked) {
+                                        if (testLocked) return@clickable
+                                        navigator.push(
+                                            StudentTestResolverScreen(
+                                                testId = unitTest.id,
+                                                testName = unitTest.name,
+                                                unitId = unitId,
+                                                unitName = unitName,
+                                                userIdArg = userId,
+                                                studentNameArg = studentName
+                                            )
+                                        )
+                                    },
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = when {
+                                        testLocked -> Color(0xFFFFF4E5)
+                                        latestAttempt?.score == 100 -> Color(0xFFEAF7EE)
+                                        else -> Color(0xFFFFF8E1)
+                                    }
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = if (testLocked) 0.dp else 2.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (testLocked) Icons.Default.Lock else Icons.Default.TaskAlt,
+                                            contentDescription = null,
+                                            tint = if (testLocked) Color.Gray else Color(0xFFF57F17)
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text("Test de unidad", fontWeight = FontWeight.SemiBold)
+                                            Text(
+                                                text = unitTest.name,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = Color.Gray
+                                            )
+                                        }
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                            contentDescription = null,
+                                            tint = if (testLocked) Color.Gray else Color(0xFF003AB6)
+                                        )
+                                    }
+                                    Text(
+                                        text = when {
+                                            !isAlreadyMarkedCompleted -> "Completa la unidad para desbloquear este test."
+                                            reviewBlocked && remainingReviewExercises > 0 -> "Repaso pendiente: aprueba $remainingReviewExercises ejercicio(s) para habilitar el reintento del test."
+                                            latestAttempt?.score == 100 -> "Test aprobado. Puedes volver a abrirlo si deseas repasar."
+                                            else -> "⚠️ Respóndelo con calma: el intento quedará registrado incluso si no apruebas."
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (testLocked) Color.Gray.copy(alpha = 0.8f) else Color(0xFF8A5A00)
+                                    )
+                                }
                             }
                         }
                     }
@@ -247,15 +492,17 @@ class StudentUnitExercisesScreen(
                         }
                     } else {
                         items(availableExercises, key = { it.id }) { exercise ->
+                            val isCompleted = exercise.id in completedIds
                             ExerciseCard(
                                 exercise = exercise,
-                                completed = exercise.id in completedIds,
+                                completed = isCompleted,
                                 onOpen = {
                                     navigator.push(
                                         StudentExerciseResolverScreen(
                                             exerciseId = exercise.id,
                                             unitId = unitId,
                                             unitName = unitName,
+                                            allowCompletedReevaluation = reviewBlocked,
                                             userIdArg = userId,
                                             studentNameArg = studentName
                                         )
@@ -273,6 +520,7 @@ class StudentUnitExercisesScreen(
 @Composable
 private fun UnitCard(
     progress: UnitProgress,
+    isLocked: Boolean = false,
     onClick: () -> Unit,
 ) {
     val completed = progress.completedCount
@@ -282,9 +530,12 @@ private fun UnitCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(enabled = !isLocked, onClick = onClick),
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFC))
+        colors = CardDefaults.cardColors(
+            containerColor = if (isLocked) Color(0xFFE0E0E0) else Color(0xFFF9FAFC)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isLocked) 0.dp else 1.dp)
     ) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
@@ -293,30 +544,44 @@ private fun UnitCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(progress.unit.name, fontWeight = FontWeight.Bold)
+                    Text(
+                        progress.unit.name,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isLocked) Color.Gray else Color.Black
+                    )
                     Text(
                         text = progress.unit.description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
+                        color = if (isLocked) Color.Gray.copy(alpha = 0.6f) else Color.Gray,
                         maxLines = 2
                     )
                 }
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    imageVector = if (isLocked) Icons.Default.Lock else Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = null,
-                    tint = Color(0xFF003AB6)
+                    tint = if (isLocked) Color.Gray else Color(0xFF003AB6)
                 )
             }
 
             Text(
                 text = "$completed/$total ejercicios (${(rate * 100).toInt()}%)",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
+                color = if (isLocked) Color.Gray.copy(alpha = 0.6f) else Color.Gray
             )
-            androidx.compose.material3.LinearProgressIndicator(
+            LinearProgressIndicator(
                 progress = { rate.coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                color = if (isLocked) Color.Gray else Color(0xFF1565C0),
+                trackColor = if (isLocked) Color.Gray.copy(alpha = 0.3f) else Color(0xFFE0E0E0)
             )
+
+            if (isLocked) {
+                Text(
+                    text = "🔒 Desbloqueada después de completar la unidad anterior",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray.copy(alpha = 0.7f)
+                )
+            }
         }
     }
 }
@@ -363,6 +628,87 @@ private fun ExerciseCard(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
                     tint = Color(0xFF2E7D32)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun UnitTestCard(
+    test: TestDto,
+    isLocked: Boolean,
+    latestAttempt: TestCompletedDto?,
+    remainingReviewExercises: Int,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !isLocked, onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = when {
+                isLocked -> Color(0xFFFFF4E5)
+                latestAttempt?.score == 100 -> Color(0xFFEAF7EE)
+                else -> Color(0xFFEFF5FF)
+            }
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isLocked) 0.dp else 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = test.name,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isLocked) Color.Gray else Color.Black
+                    )
+                    Text(
+                        text = test.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isLocked) Color.Gray.copy(alpha = 0.6f) else Color.Gray,
+                        maxLines = 2
+                    )
+                }
+                Icon(
+                    imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.Quiz,
+                    contentDescription = null,
+                    tint = if (isLocked) Color.Gray else Color(0xFF003AB6)
+                )
+            }
+
+            when {
+                latestAttempt?.score == 100 -> Text(
+                    text = "✅ Aprobado. Puedes volver a abrirlo si deseas repasar.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF2E7D32)
+                )
+                isLocked -> Text(
+                    text = if (remainingReviewExercises > 0) {
+                        "🔒 Repaso pendiente: aprueba $remainingReviewExercises ejercicio(s) para reintentar."
+                    } else {
+                        "🔒 Completa la unidad para desbloquear este test."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray.copy(alpha = 0.8f)
+                )
+                else -> Text(
+                    text = "⚠️ Responde con calma: el intento quedará registrado incluso si no apruebas.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF8A5A00)
+                )
+            }
+
+            if (latestAttempt?.score != null && latestAttempt.score != 100) {
+                Text(
+                    text = "Último intento: ${latestAttempt.score}%",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
                 )
             }
         }

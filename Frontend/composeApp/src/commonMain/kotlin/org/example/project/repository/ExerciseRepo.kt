@@ -1,7 +1,6 @@
 package org.example.project.repository
 
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
@@ -9,8 +8,8 @@ import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import io.ktor.http.isSuccess
 import org.example.project.dtos.CreateExerciseContentDto
 import org.example.project.dtos.CreateExerciseDto
 import org.example.project.dtos.CreateExerciseCompletedDto
@@ -29,49 +28,49 @@ class ExerciseRepo(private val httpClient: HttpClient, private val baseUrl: Stri
             url("$baseUrl/api/v1/exercises/search")
             filters.name?.let { parameter("name", it) }
             filters.isActive?.let { parameter("isActive", it) }
-        }.body()
+        }.parseOrThrow()
     }
 
     suspend fun getAllExercises(): List<ExerciseDto> =
-        httpClient.get("$baseUrl/api/v1/exercises").body()
+        httpClient.get("$baseUrl/api/v1/exercises").parseOrThrow()
 
     suspend fun getExerciseById(id: Int): ExerciseDto? =
-        httpClient.get("$baseUrl/api/v1/exercises/$id").body()
+        httpClient.get("$baseUrl/api/v1/exercises/$id").parseOrThrow()
 
     suspend fun getExercisesByUnitId(unitId: Int): List<ExerciseDto> =
-        httpClient.get("$baseUrl/api/v1/exercises/unit/$unitId").body()
+        httpClient.get("$baseUrl/api/v1/exercises/unit/$unitId").parseOrThrow()
 
     suspend fun createExercise(exercise: CreateExerciseDto): ExerciseDto =
         httpClient.post("$baseUrl/api/v1/exercises") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(exercise)
-        }.body()
+        }.parseOrThrow()
 
     suspend fun updateExercise(id: Int, exercise: UpdateExerciseDto): Boolean =
         httpClient.put("$baseUrl/api/v1/exercises/$id") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(exercise)
-        }.status.isSuccess()
+        }.ensureSuccessOrThrow()
 
     suspend fun reorderExercises(orders: List<Pair<Int, Int>>): Boolean =
         httpClient.put("$baseUrl/api/v1/exercises/reorder") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(orders)
-        }.status.isSuccess()
+        }.ensureSuccessOrThrow()
 
 
     suspend fun deleteExercise(id: Int): Boolean =
-        httpClient.delete("$baseUrl/api/v1/exercises/$id").body()
+        httpClient.delete("$baseUrl/api/v1/exercises/$id").ensureSuccessOrThrow()
 
 
     // ExerciseContent
 
     suspend fun getAllExerciseContent(): List<ExerciseContentDto> =
-        httpClient.get("$baseUrl/api/v1/exerciseContent").body()
+        httpClient.get("$baseUrl/api/v1/exerciseContent").parseOrThrow()
 
     suspend fun getExerciseContentByExerciseId(exerciseId: Int): ExerciseContentDto? {
         val response = httpClient.get("$baseUrl/api/v1/exerciseContent/exercise/$exerciseId")
-        return if (response.status == io.ktor.http.HttpStatusCode.NotFound) null else response.body()
+        return if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
     }
 
     suspend fun createExerciseContent(
@@ -81,37 +80,37 @@ class ExerciseRepo(private val httpClient: HttpClient, private val baseUrl: Stri
         httpClient.post("$baseUrl/api/v1/exerciseContent/$exerciseId") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(content)
-        }.body()
+        }.parseOrThrow()
 
     suspend fun updateExerciseContent(exerciseId: Int, content: UpdateExerciseContentDto): Boolean =
         httpClient.put("$baseUrl/api/v1/exerciseContent/exercise/$exerciseId") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(content)
-        }.status.isSuccess()
+        }.ensureSuccessOrThrow()
 
     suspend fun deleteExerciseContent(exerciseId: Int): Boolean =
-        httpClient.delete("$baseUrl/api/v1/exerciseContent/exercise/$exerciseId").body()
+        httpClient.delete("$baseUrl/api/v1/exerciseContent/exercise/$exerciseId").ensureSuccessOrThrow()
 
 
     //ExercisesCompleted
     suspend fun getAllExercisesCompleted(): List<ExerciseCompletedDto> =
-        httpClient.get("$baseUrl/api/v1/exercisesCompleted").body()
+        httpClient.get("$baseUrl/api/v1/exercisesCompleted").parseOrThrow()
 
     suspend fun getExercisesCompletedByUserId(userId: Int): List<ExerciseCompletedDto> =
-        httpClient.get("$baseUrl/api/v1/exercisesCompleted/user/$userId").body()
+        httpClient.get("$baseUrl/api/v1/exercisesCompleted/user/$userId").parseOrThrow()
 
     suspend fun createExerciseCompleted(dto: CreateExerciseCompletedDto): ExerciseCompletedDto =
         httpClient.post("$baseUrl/api/v1/exercisesCompleted") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(dto)
-        }.body()
+        }.parseOrThrow()
 
     suspend fun updateExerciseCompleted(id: Int, dto: UpdateExerciseCompletedDto): Boolean =
         httpClient.put("$baseUrl/api/v1/exercisesCompleted/$id") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(dto)
-        }.status.isSuccess()
+        }.ensureSuccessOrThrow()
 
     suspend fun deleteExerciseCompleted(id: Int): Boolean =
-        httpClient.delete("$baseUrl/api/v1/exercisesCompleted/$id").body()
+        httpClient.delete("$baseUrl/api/v1/exercisesCompleted/$id").ensureSuccessOrThrow()
 }

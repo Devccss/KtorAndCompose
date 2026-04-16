@@ -69,7 +69,7 @@ fun StudentAppLayout(
                 selectedIndex = selectedIndex,
                 onNavigate = { index ->
                     when (index) {
-                        0 -> navigator.replaceAll(StudentWelcomeScreen(userId,userName))
+                        0 -> navigator.replaceAll(StudentWelcomeScreen(userId))
                         1 -> navigator.replaceAll(StudentLearnScreen(userId, userName))
                         2 -> {
                             UserSession.clear()

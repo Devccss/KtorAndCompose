@@ -180,208 +180,111 @@ fun createExercises() {
 
         val seeds = listOf(
             ExSeed(
-                "Verbo To Be afirmativo", 1, "Verbo To Be en su forma afirmativa",
-                "A continuación, se te presentan los pronombres personales en inglés conjugados con el verbo to be. [Pronombre][Verbo To be][Contracción][Traducción][Persona a la que corresponde] [I][am][I´m][Yo soy o estoy][Primera persona del singular]  [You][are][You´re][Tu eres o estás][Segunda persona del singular] [She,He,It][is][She´s,He´s,It´s][Ella es o está,Él es o está,Ello es o está][Tercera persona del singular][We][are][We´re][Nosotros somos o estamos][Primera persona del plural] [You][are][You´re][Ustedes son o están][Segunda persona del plural] [They][are][They´re][Ellos son o están][Tercera persona del plural]",
-                "El verbo to be, que significa ser, estar o tener, según el uso que se le dé, es sin lugar a duda el verbo más utilizado en la lengua inglesa y también el más importante. Se utiliza como verbo principal y como auxiliar, y es irregular en pasado y en presente. En este momento aprenderás y / o reafirmarás el uso de este verbo to be en presente simple. Debes recordar que los pronombres personales son palabras que se utilizan en el discurso para hacer alusión a sustantivos sin nombrarlos, a partir de su persona gramatical.Ejemplo: Juan y Ana son esposos. = Ellos son esposos Roberto es un arquitecto muy famoso = Él es un arquitecto muy famoso De esta misma forma funcionan en inglés, si nosotros queremos sustituir un nombre, utilizamos un pronombre personal.",
+                "Verbo To Be básico",
+                1,
+                "Uso básico del verbo to be con pronombres",
+                "Maria is a nurse. Luis and I are Mexican.",
+                "El verbo to be se utiliza para expresar identidad o estado. En presente simple se conjuga como am, is o are dependiendo del pronombre personal. El verbo to be cambia según el sujeto. Cuando el sujeto es plural como \"Luis and I\", se utiliza \"are\" y el pronombre correspondiente es \"we\". Vocabulario: nurse = enfermera; Mexican = mexicano.",
                 listOf(
                     QSeed(
-                        "¿Como quedaría la siguiente oracion utilizando un pronombre personal?: Maria is a nurse",
-                        listOf(
-                            "He is a nurse",
-                            "I is a nurse",
-                            "Maria are a nurse",
-                            "She is a nurse"
-                        ),
+                        "¿Como quedaría la siguiente oración utilizando un pronombre personal?: Maria is a nurse",
+                        listOf("He is a nurse", "She is a nurse", "They is a nurse", "We are a nurse"),
                         "She is a nurse"
                     ),
                     QSeed(
-                        "¿Como quedaría la siguiente oracion utilizando un pronombre personal?: Luis and I are Mexican",
-                        listOf(
-                            "I are Mexican",
-                            "We are Mexican",
-                            "She are Mexican",
-                            " Luis and I is Mexican"
-                        ),
+                        "¿Como quedaría la siguiente oración utilizando un pronombre personal?: Luis and I are Mexican",
+                        listOf("We are Mexican", "They is Mexican", "He are Mexican", "I is Mexican"),
                         "We are Mexican"
                     )
                 )
             ),
             ExSeed(
-                "Verbo To Be negativo", 1, "Verbo To Be en su forma negativa",
-                "Al conjugar los verbos en inglés existen las formas negativas e interrogativas para expresar distintas ideas. Para formar la forma negativa del verbo to be debes agregar la palabra not después del verbo conjugado. [Pronombre personal][Forma negativa][Contracción o forma corta] [I][am not][I´m not] [You][are not][You aren’t] [She][is not][She isn’t] [He][is not][He isn’t] [It][is not][It isn’t] [We][are not][We aren’t] [You][are not][You aren’t] [They][are not][They aren’t]",
-                "Al conjugar los verbos en inglés existen las formas negativas e interro gativas para expresar distintas ideas. Para formar la forma negativa del verbo to be debes agregar la palabra not después del verbo conjugado.",
-                listOf(
-                    QSeed(
-                        "Completa la siguiente frase en forma negativa: We____singers",
-                        listOf(
-                            "We are singers",
-                            " We is not singers",
-                            "We are not singers",
-                            "We not are singers "
-                        ),
-                        "We are not singers"
-                    ),
-                    QSeed(
-                        "Completa la siguiente frase en forma negativa: He____my brother",
-                        listOf(
-                            "He is not my brother",
-                            "He aren’t my brother",
-                            "He is my brother",
-                            "He not my brother"
-                        ),
-                        "He is not my brother"
-                    )
-                )
-            ),
-            ExSeed(
-                "Verbo To Be interrogativo", 1, "Verbo To Be en su forma interrogativa",
-                "Ejemplo de forma interrogativa: They are my parents = Ellos son mis padres  Forma interrogativa -> Are they my parents? = ¿Son ellos mis padres? ",
-                "La forma interrogativa del verbo to be se forma anteponiendo el verbo antes que el sujeto y el pronombre personal.",
-                listOf(
-                    QSeed(
-                        "Ordena las siguientes palabras para formar la oración correcta: sunny/ ? / it / is",
-                        listOf(
-                            "Is it sunny ?",
-                            " sunny it is ?",
-                            " it sunny is?",
-                            " it is sunny ? "
-                        ),
-                        "Is it sunny ?"
-                    )
-                )
-            ),
-            ExSeed(
-                "Adjetivos posesivos", 1, "Uso de adjetivos posesivos en inglés",
-                "Pronombre personal y adjetivo posesivo correspondiente: [Pronombre][Adjetivo posesivo][Traducción] [I][my][mi/mis] [you][your][tu/tus] [he][his][su de él] [she][her][su de ella] [it][its][su de ello] [we][our][nuestro/nuestra] [they][their][su de ellos]",
-                "En inglés los adjetivos posesivos indican a quién pertenece un sustantivo. Estos adjetivos se colocan antes del sustantivo para mostrar quién o qué lo posee. Los principales son my, your, his, her, its, our y their.",
-                listOf(
-                    QSeed(
-                        "Completa la oración con el adjetivo posesivo correcto: I think ____ cat is beautiful",
-                        listOf("her", "my", "his", "their"),
-                        "her"
-                    ),
-                    QSeed(
-                        "Completa la oración con el adjetivo posesivo correcto: These are ____ books",
-                        listOf("your", "his", "my", "their"),
-                        "my"
-                    )
-                )
-            ),
-            ExSeed(
-                "Adjetivos posesivos en oraciones",
+                "Verbo To Be negativo",
                 1,
-                "Uso de adjetivos posesivos en objetos personales",
-                "Ejemplos del uso de adjetivos posesivos: I think her cat is beautiful That is my pencil These are my books I cut my hair every month",
-                "En inglés es común utilizar adjetivos posesivos con objetos personales o partes del cuerpo para indicar a quién pertenecen. Estos adjetivos siempre se colocan antes del sustantivo.",
+                "Uso del verbo to be en forma negativa",
+                "We are not singers. He is not my brother.",
+                "Para formar la forma negativa del verbo to be se agrega la palabra \"not\" después del verbo. También existen contracciones como \"aren't\". En la tercera persona del singular (he, she, it) se utiliza \"is\" y en negativo \"is not\" o su contracción \"isn't\". Vocabulario: singers = cantantes; brother = hermano.",
                 listOf(
                     QSeed(
-                        "Completa la oración con el adjetivo posesivo correcto: I cut ____ hair every month",
-                        listOf("her", "our", "their", "my"),
-                        "my"
+                        "Completa la siguiente frase en forma negativa: We ____ singers",
+                        listOf("are not", "is not", "am not", "be not"),
+                        "are not"
                     ),
                     QSeed(
-                        "Completa la oración con el adjetivo posesivo correcto: That is ____ pencil",
-                        listOf("my", "your", "his", "their"),
-                        "my"
+                        "Completa la siguiente frase en forma negativa: He ____ my brother",
+                        listOf("is not", "are not", "am not", "be not"),
+                        "is not"
                     )
                 )
             ),
             ExSeed(
-                "Posesivo anglosajón", 1, "Uso del genitivo sajón para expresar posesión",
-                "Ejemplos de posesivo anglosajón: My sister's cat Ana's mother Laura's dog",
-                "El posesivo anglosajón o genitivo sajón se usa en inglés para indicar que algo pertenece a alguien. Se forma agregando un apóstrofe y la letra s ('s) al sustantivo que posee algo, por ejemplo: My sister's cat.",
-                listOf(
-                    QSeed(
-                        "Selecciona la oración correcta para expresar: El perro de Laura",
-                        listOf("Laura's dog", "Laura dog", "Laura dog's", "Laura dogs"),
-                        "Laura's dog"
-                    ),
-                    QSeed(
-                        "Selecciona la oración correcta para expresar: La mamá de Ana",
-                        listOf("Ana mother", "Ana's mother", "Ana mothers'", "Ana's mothers"),
-                        "Ana's mother"
-                    )
-                )
-            ),
-            ExSeed(
-                "Presente simple afirmativo", 1, "Uso del presente simple para describir rutinas",
-                "Estructura del presente simple afirmativo: [Subject][Verb][Complement] [I][play][with a ball] [He][plays][with a ball] [We][play][with a ball]",
-                "Utilizamos el presente simple para expresar acciones que ocurren regularmente como rutinas, hábitos o actividades cotidianas. Para formar una oración afirmativa se utiliza la estructura sujeto + verbo + complemento. En tercera persona singular (he, she, it) el verbo generalmente termina en “s”.",
-                listOf(
-                    QSeed(
-                        "Corrige la siguiente oración: He watchs TV everyday.",
-                        listOf(
-                            "He watches TV everyday.",
-                            "He watch TV everyday.",
-                            "He watching TV everyday.",
-                            "He watches TV everydays."
-                        ),
-                        "He watches TV everyday."
-                    ),
-                    QSeed(
-                        "Corrige la siguiente oración: She work in an office.",
-                        listOf(
-                            "She works in an office.",
-                            "She working in an office.",
-                            "She works at office.",
-                            "She workes in an office."
-                        ),
-                        "She works in an office."
-                    )
-                )
-            ),
-            ExSeed(
-                "Presente simple tercera persona",
+                "Verbo To Be interrogativo",
                 1,
-                "Conjugación del verbo en tercera persona singular",
-                "Ejemplos de presente simple: I play with a ball He plays with a ball She plays with a ball",
-                "En el presente simple los verbos cambian en tercera persona del singular (he, she, it). Generalmente se agrega la letra “s” al verbo para indicar que la acción la realiza una tercera persona.",
+                "Formación de preguntas con el verbo to be",
+                "They are my parents.",
+                "La forma interrogativa del verbo to be se forma colocando el verbo antes del sujeto. Vocabulario: parents = padres.",
                 listOf(
                     QSeed(
-                        "Selecciona la oración correcta en presente simple: Bobby crys all nights",
+                        "Ordena las siguientes palabras para formar la oración correcta: are / they / my / parents / ?",
                         listOf(
-                            "Bobby cries all nights.",
-                            "Bobby cry all nights.",
-                            "Bobby crys all nights.",
-                            "Bobby crying all nights."
+                            "Are they my parents ?",
+                            "They are my parents ?",
+                            "Are my parents they ?",
+                            "They my parents are ?"
                         ),
-                        "Bobby cries all nights."
+                        "Are they my parents ?"
                     )
                 )
             ),
             ExSeed(
-                "Presente simple negativo", 1, "Uso de auxiliares do y does en forma negativa",
-                "Forma negativa del presente simple: [Subject][Auxiliar][Not][Verb] [I][do][not][play] [He][does][not][play] [They][do][not][play]",
-                "Para formar la forma negativa en presente simple se utilizan los auxiliares do o does después del sujeto, seguidos de la negación not. Las terceras personas del singular (he, she, it) utilizan does y el verbo principal no lleva la terminación “s”.",
+                "Rutinas diarias en contexto",
+                3,
+                "Uso del presente simple en historias más completas",
+                "Maria is a doctor and she works in a hospital every day. She helps people and she is very kind with her patients. Juan is a teacher and he teaches English in a school. He loves his job and he works with many students every week.",
+                "El presente simple se utiliza para describir rutinas diarias y hábitos. En tercera persona singular (she, he, it) el verbo generalmente termina en \"s\", como en \"works\" o \"helps\". En presente simple, la tercera persona del singular agrega \"s\" o \"es\" al verbo. Además, se usa para expresar acciones habituales como \"teaches\" o \"works\". Vocabulario: doctor = doctor, hospital = hospital, helps = ayuda, kind = amable, patients = pacientes, teaches = enseña, school = escuela, loves = ama, job = trabajo, students = estudiantes.",
                 listOf(
                     QSeed(
-                        "Completa la oración en forma negativa: She ____ work on Sundays.",
-                        listOf("do not", "doesn't works", "do doesn't", "does not"),
-                        "does not"
+                        "Selecciona la opción correcta: She ____ in a hospital every day",
+                        listOf("work", "works", "working", "worked"),
+                        "works"
                     ),
                     QSeed(
-                        "Completa la oración en forma negativa: They ____ cut the grass in the garden.",
-                        listOf("do nots", "do not", "does not", "doesn't"),
-                        "do not"
+                        "Completa la oración: He ____ English in a school",
+                        listOf("teach", "teaches", "teaching", "teached"),
+                        "teaches"
                     )
                 )
             ),
             ExSeed(
-                "Presente simple negativo contracciones",
-                1,
-                "Uso de contracciones en presente simple",
-                "Forma negativa larga y corta: [I][do not][don't] [He][does not][doesn't] [They][do not][don't]",
-                "La forma negativa del presente simple puede expresarse de forma larga (do not / does not) o con contracciones (don't / doesn't). Ambas formas tienen el mismo significado.",
+                "Vida diaria en familia",
+                3,
+                "Uso del presente simple con diferentes sujetos",
+                "Ana and Luis are siblings and they live in a big house. They eat dinner together and they watch TV every night. I am a student and I study every day. I have classes in the morning and I do homework in the afternoon.",
+                "El presente simple también se usa con sujetos en plural (they, we, you), donde el verbo no cambia y se usa en su forma base, como \"eat\" o \"watch\". El presente simple se usa con \"I\" en su forma base del verbo. Expresa rutinas como \"study\", \"have\" o \"do\". Vocabulario: siblings = hermanos, live = viven, house = casa, dinner = cena, together = juntos, study = estudiar, classes = clases, morning = mañana, homework = tarea, afternoon = tarde.",
                 listOf(
                     QSeed(
-                        "Selecciona la contracción correcta de: He does not play soccer.",
-                        listOf(
-                            "He don't play soccer.",
-                            "He doesn't play soccer.",
-                            "He dont play soccer.",
-                            "He does'nt play soccer."
-                        ),
-                        "He doesn't play soccer."
+                        "Selecciona la opción correcta: They ____ dinner together",
+                        listOf("eat", "eats", "eating", "ate"),
+                        "eat"
+                    ),
+                    QSeed(
+                        "Completa la oración: I ____ every day",
+                        listOf("study", "studies", "studying", "studied"),
+                        "study"
+                    )
+                )
+            ),
+            ExSeed(
+                "Rutinas y hábitos",
+                3,
+                "Uso del presente simple en diferentes contextos",
+                "My parents work in an office and they travel to the city every week. They like their jobs and they are very responsible.",
+                "El presente simple describe hábitos y rutinas. Con sujetos en plural como \"they\", el verbo se mantiene en su forma base como \"work\" o \"travel\". Vocabulario: office = oficina, travel = viajar, city = ciudad, week = semana, responsible = responsable.",
+                listOf(
+                    QSeed(
+                        "Selecciona la opción correcta: They ____ to the city every week",
+                        listOf("travel", "travels", "traveling", "traveled"),
+                        "travel"
                     )
                 )
             )

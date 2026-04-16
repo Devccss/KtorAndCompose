@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,7 +16,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Quiz
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -44,16 +49,21 @@ import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
+import kotlinx.coroutines.delay
 import org.example.project.components.StudentAppLayout
 import org.example.project.dtos.AlternativesDto
 import org.example.project.dtos.CreateExerciseCompletedDto
 import org.example.project.dtos.QuestionDto
+import org.example.project.dtos.WordDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
 import org.example.project.viewModel.ExercisesViewModel
 import org.example.project.viewModel.QuestionViewModel
+import org.example.project.viewModel.TestViewModel
+import org.example.project.viewModel.UnitViewModel
+import org.example.project.viewModel.WordViewModel
+import org.example.project.dtos.CreateUnitCompletedDto
 
 private const val EXERCISE_PASS_THRESHOLD = 0.8f
 
@@ -61,6 +71,7 @@ class StudentExerciseResolverScreen(
     private val exerciseId: Int,
     private val unitId: Int,
     private val unitName: String,
+    private val allowCompletedReevaluation: Boolean = false,
     private val userIdArg: Int? = null,
     private val studentNameArg: String? = null,
 ) : Screen {
@@ -78,9 +89,16 @@ class StudentExerciseResolverScreen(
         val questionVm = rememberScreenModel {
             QuestionViewModel(RepositoryProvider.questionRepo, exerciseId)
         }
+        val testVm = rememberScreenModel {
+            TestViewModel(RepositoryProvider.testRepo, RepositoryProvider.welcomeTestRepo)
+        }
+        val unitVm = rememberScreenModel { UnitViewModel(RepositoryProvider.unitRepo) }
+        val wordVm = rememberScreenModel { WordViewModel(RepositoryProvider.wordRepo) }
 
         val exerciseUi by exerciseVm.state.collectAsState()
         val questionUi by questionVm.state.collectAsState()
+        val unitUi by unitVm.state.collectAsState()
+        val wordUi by wordVm.state.collectAsState()
 
         val userId = userIdArg ?: UserSession.idUser
         val studentName = studentNameArg ?: UserSession.name ?: "Estudiante"
@@ -90,41 +108,51 @@ class StudentExerciseResolverScreen(
         var score by remember { mutableStateOf<Float?>(null) }
         var passing by remember { mutableStateOf(false) }
         var isSaving by remember { mutableStateOf(false) }
+        var retryCooldownSeconds by remember { mutableStateOf(0) }
+        var vocabularyExpanded by remember(exerciseId) { mutableStateOf(false) }
         val selectedAnswers = remember { mutableStateMapOf<Int, Int>() }
 
         LaunchedEffect(exerciseId) {
             exerciseVm.getExerciseById(exerciseId)
+            exerciseVm.getExercisesByUnitId(unitId)
             questionVm.getQuestionsByExerciseId(exerciseId)
+            wordVm.getWordsByExerciseId(exerciseId)
             if (userId != null && userId > 0) {
                 exerciseVm.getExercisesCompletedByUserId(userId)
+                unitVm.getAllUnitsCompletedByUserId(userId)
+            }
+        }
+
+        LaunchedEffect(retryCooldownSeconds) {
+            if (retryCooldownSeconds > 0) {
+                delay(1000)
+                retryCooldownSeconds -= 1
             }
         }
 
         LaunchedEffect(exerciseUi.error, questionUi.error) {
             val error = exerciseUi.error ?: questionUi.error
-            error?.let { snackbarHostState.showSnackbar(it) }
+            error?.let {
+                println("Error en StudentExerciseResolverScreen: $it")
+                snackbarHostState.showSnackbar(it)
+            }
         }
 
         val exercise = exerciseUi.selectedExercise
         val questions = questionUi.selectedQuestions.sortedBy { it.orderQuestion }
         val alternativesByQuestion = questionUi.alternatives
-        val alreadyCompletedIds = remember(exerciseUi.completedExercises) {
-            exerciseUi.completedExercises.map { it.exerciseId }.toSet()
+        val successCount = remember(exerciseUi.completedExercises, exerciseId) {
+            exerciseUi.completedExercises.count { it.exerciseId == exerciseId }
         }
-
-        LaunchedEffect(questions, alternativesByQuestion) {
-            questions.forEach { question ->
-                if (selectedAnswers[question.id] == null) {
-                    alternativesByQuestion[question.id]?.firstOrNull()?.id?.let { firstAltId ->
-                        selectedAnswers[question.id] = firstAltId
-                    }
-                }
-            }
+        val canAttempt = retryCooldownSeconds == 0
+        val totalActiveExercisesInUnit = remember(exerciseUi.exercises) {
+            exerciseUi.exercises.count { it.unitId == unitId && it.isActive }
         }
 
         fun submitAnswers() {
             val safeUserId = userId ?: return
             if (questions.isEmpty()) return
+            if (!canAttempt) return
 
             val answered = questions.count { selectedAnswers[it.id] != null }
             if (answered != questions.size) {
@@ -145,18 +173,39 @@ class StudentExerciseResolverScreen(
             passing = localScore >= EXERCISE_PASS_THRESHOLD
             submitted = true
 
-            if (passing && exerciseId !in alreadyCompletedIds) {
+            if (passing) {
                 isSaving = true
-                val now = Clock.System.now().toString()
                 exerciseVm.createExerciseCompleted(
                     CreateExerciseCompletedDto(
                         userId = safeUserId,
-                        exerciseId = exerciseId,
-                        completedAt = now
+                        exerciseId = exerciseId
                     )
                 )
                 isSaving = false
+            } else {
+                retryCooldownSeconds = 30
             }
+
+            val requiresReview = testVm.requiresReview(unitId, unitUi.unitsCompleted.size)
+            if (passing && (allowCompletedReevaluation || requiresReview)) {
+                testVm.registerReviewedExercise(unitId, exerciseId)
+
+                if (
+                    testVm.remainingReviewExercises(unitId, totalActiveExercisesInUnit) == 0 &&
+                    UserSession.canEmitReviewUnitCompleted(unitId)
+                ) {
+                    unitVm.createUnitCompleted(
+                        CreateUnitCompletedDto(
+                            userId = safeUserId,
+                            unitId = unitId
+                        )
+                    )
+                    UserSession.markReviewUnitCompletedEmitted(unitId)
+                }
+            }
+
+            // Siempre limpiamos selecciones luego de evaluar para forzar un nuevo intento limpio.
+            selectedAnswers.clear()
         }
 
         StudentAppLayout(
@@ -217,6 +266,19 @@ class StudentExerciseResolverScreen(
                                     progress = { (score ?: 0f).coerceIn(0f, 1f) },
                                     modifier = Modifier.fillMaxWidth()
                                 )
+                                Text(
+                                    text = "Completado correctamente: $successCount vez/veces",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF2E7D32),
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                if (retryCooldownSeconds > 0) {
+                                    Text(
+                                        text = "Fallaste este intento. Espera $retryCooldownSeconds s para volver a intentarlo.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color(0xFFC62828)
+                                    )
+                                }
                                 if (submitted) {
                                     Text(
                                         text = if (passing) "Ejercicio aprobado" else "Ejercicio no aprobado",
@@ -225,6 +287,61 @@ class StudentExerciseResolverScreen(
                                     )
                                 }
                             }
+                        }
+                    }
+
+                    exerciseUi.selectedContent?.let { content ->
+                        item {
+                            ContentSectionCard(
+                                title = "Contexto",
+                                iconTint = Color(0xFF1565C0),
+                                icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = Color(0xFF1565C0)) },
+                                content = {
+                                    Text(
+                                        text = "Tipo: ${content.contentType}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.Gray
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(content.textContent)
+                                }
+                            )
+                        }
+
+                        item {
+                            ContentSectionCard(
+                                title = "Gramática",
+                                iconTint = Color(0xFF6A1B9A),
+                                icon = { Icon(Icons.Default.Translate, contentDescription = null, tint = Color(0xFF6A1B9A)) },
+                                content = {
+                                    Text(content.grammarExplanation)
+                                }
+                            )
+                        }
+
+                        if (!content.audioUrl.isNullOrBlank()) {
+                            item {
+                                ContentSectionCard(
+                                    title = "Audio",
+                                    iconTint = Color(0xFF00897B),
+                                    icon = { Icon(Icons.Default.Quiz, contentDescription = null, tint = Color(0xFF00897B)) },
+                                    content = {
+                                        Text(
+                                            text = content.audioUrl,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color(0xFF37474F)
+                                        )
+                                    }
+                                )
+                            }
+                        }
+
+                        item {
+                            VocabularyExpandableCard(
+                                words = wordUi.words,
+                                expanded = vocabularyExpanded,
+                                onToggle = { vocabularyExpanded = !vocabularyExpanded }
+                            )
                         }
                     }
 
@@ -247,7 +364,7 @@ class StudentExerciseResolverScreen(
                     item {
                         Button(
                             onClick = { submitAnswers() },
-                            enabled = !isSaving && questions.isNotEmpty(),
+                            enabled = !isSaving && questions.isNotEmpty() && canAttempt,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         ) {
@@ -263,6 +380,114 @@ class StudentExerciseResolverScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContentSectionCard(
+    title: String,
+    iconTint: Color,
+    icon: @Composable () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFF)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                icon()
+                Text(title, fontWeight = FontWeight.Bold, color = iconTint)
+            }
+            content()
+        }
+    }
+}
+
+@Composable
+private fun VocabularyExpandableCard(
+    words: List<WordDto>,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5FFF8)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggle),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = Color(0xFF2E7D32))
+                    Text("Vocabulario", fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "${words.size} palabra(s)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                    Icon(
+                        imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = Color(0xFF2E7D32)
+                    )
+                }
+            }
+
+            if (words.isEmpty()) {
+                Text(
+                    text = "No hay vocabulario asociado a este ejercicio.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            } else if (expanded) {
+                words.forEach { word ->
+                    Text(
+                        text = "- ${word.english} | ${word.spanish}" +
+                            (word.phonetic?.takeIf { it.isNotBlank() }?.let { " | $it" } ?: "") +
+                            (word.description?.takeIf { it.isNotBlank() }?.let { " | $it" } ?: ""),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF37474F)
+                    )
+                }
+            } else {
+                val preview = words.take(2).joinToString(" - ") { it.english }
+                Text(
+                    text = "Vista previa: $preview",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
             }
         }
     }

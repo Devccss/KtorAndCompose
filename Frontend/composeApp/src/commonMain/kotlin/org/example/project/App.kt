@@ -32,7 +32,7 @@ fun App() {
         if (initialized) {
             //Navigator(screen = AdminDashboard(1,"Deivid",Role.ADMIN))
             //Navigator(screen = LoginScreen())
-            Navigator(screen = StudentWelcomeScreen( 1,"Deivid"))
+            Navigator(screen = StudentWelcomeScreen( 4))
         } else {
             // Loader o pantalla de espera
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

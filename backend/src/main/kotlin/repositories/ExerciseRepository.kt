@@ -13,6 +13,7 @@ import models.Exercises
 
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -38,7 +39,8 @@ class ExerciseRepository {
     fun getAll(): List<ExerciseDto> = transaction {
         Exercises.selectAll().orderBy(Exercises.orderExercise).map(::resultRowToExercise)
     }
-    fun searchExercises(filters:FilterExercisesDto){
+
+    fun searchExercises(filters: FilterExercisesDto) {
         transaction {
             var query = Exercises.selectAll()
 
@@ -53,6 +55,7 @@ class ExerciseRepository {
         }
 
     }
+
     fun getById(id: Int): ExerciseDto? = transaction {
         Exercises.selectAll().where { Exercises.id eq id }.singleOrNull()
             ?.let(::resultRowToExercise)
@@ -117,7 +120,7 @@ class ExerciseRepository {
                 }
             }
             true
-        }catch (e: Exception) {
+        } catch (e: Exception) {
             e.printStackTrace()
             rollback() // Revertir cambios si algo falla
             throw BadRequestException("Error al reordenar los ejercicios: ${e.message}")
@@ -166,8 +169,13 @@ class ExerciseRepository {
             }
     }
 
-    fun createExerciseCompleted(dto: CreateExerciseCompletedDto): ExerciseCompletedDto = try {
+    fun createExerciseCompleted(dto: CreateExerciseCompletedDto): ExerciseCompletedDto =
         transaction {
+            val exists = ExerciseCompleted.selectAll().where {
+                (ExerciseCompleted.userId eq dto.userId) and
+                        (ExerciseCompleted.exerciseId eq dto.exerciseId)
+            }.count() > 50
+
             val newId = ExerciseCompleted.insert {
                 it[userId] = dto.userId
                 it[exerciseId] = dto.exerciseId
@@ -181,9 +189,7 @@ class ExerciseRepository {
                 completedAt = LocalDateTime.now().toString()
             )
         }
-    } catch (e: Exception) {
-        throw BadRequestException("Error al crear el registro de ejercicio completado: ${e.message}")
-    }
+
 
     fun updateExerciseCompleted(id: Int, dto: UpdateExerciseCompletedDto) {
         transaction {

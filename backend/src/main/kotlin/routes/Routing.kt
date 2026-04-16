@@ -21,6 +21,7 @@ import kotlinx.serialization.Serializable
 import models.DifficultyLevel
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.koin.ktor.ext.get
+import services.UnitService
 
 
 @Serializable
@@ -523,6 +524,19 @@ fun Application.configureRouting() {
                     val tests = testService.getTestsByUnitId(unitId)?: throw NotFoundException("No tests found for unit ID $unitId")
                     call.respond(tests)
                 }
+                get("/search") {
+                    val name = call.request.queryParameters["name"]
+                    val unitId = call.request.queryParameters["unitId"]?.toIntOrNull()
+                    val isActiveParam = call.request.queryParameters["isActive"]
+                    val isActive = isActiveParam?.let {
+                        when (it.lowercase()) {
+                            "true", "1", "yes" -> true
+                            "false", "0", "no" -> false
+                            else -> null
+                        }
+                    }
+                    call.respond(testService.filtered( name = name, unitId = unitId, isActive = isActive))
+                }
                 get("/byExercise/{exerciseId}") {
                     val exerciseId = call.parameters["exerciseId"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid Exercise ID")
@@ -596,9 +610,9 @@ fun Application.configureRouting() {
                     val test = testService.getById(dto.testId)
                     val isWelcome = welcomeTestService.getByTestId(dto.testId) != null
                     val exercise = exerciseService.getById(dto.exerciseId)
-                    if (test?.unitId != exercise?.unitId && !isWelcome) {
-                        throw BadRequestException("El test y el ejercicio deben pertenecer a la misma unidad")
-                    }
+                    //if (test?.unitId != exercise?.unitId && !isWelcome) {
+                      //  throw BadRequestException("El test y el ejercicio deben pertenecer a la misma unidad")
+                    //}
                     val created = testExerciseService.create(dto)
                     call.respond(HttpStatusCode.Created, created)
                 }
@@ -686,8 +700,9 @@ fun Application.configureRouting() {
             }
 
             // UnitsCompleted
-            route("/units-completed") {
+            route("/unitsCompleted") {
                 get { call.respond(unitService.getAllUnitsCompleted()) }
+
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
@@ -695,10 +710,18 @@ fun Application.configureRouting() {
                         ?: throw NotFoundException("UnitCompleted not found")
                     call.respond(item)
                 }
+                get("user/{userId}") {
+                    val userId = call.parameters["userId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid User ID")
+                    val items = unitService.getUnitsCompletedByUser(userId)
+                    call.respond(items)
+                }
                 post {
                     val dto = call.receive<CreateUnitCompletedDto>()
-                    val created = unitService.createUnitCompleted(dto)
-                    call.respond(HttpStatusCode.Created, created)
+                    unitService.createUnitCompleted(dto)
+                    val unit = unitService.getUnitById(dto.unitId)
+                        ?: throw NotFoundException("Unit with ID ${dto.unitId} not found")
+                    call.respond(HttpStatusCode.Created, unit)
                 }
                 put("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()

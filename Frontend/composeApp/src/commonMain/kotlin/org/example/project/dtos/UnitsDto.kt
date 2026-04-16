@@ -37,7 +37,6 @@ data class UpdateUnitDto(
 data class CreateUnitCompletedDto(
     val userId: Int,
     val unitId: Int,
-    val completedAt: String
 )
 
 @Serializable

@@ -1,12 +1,12 @@
 package org.example.project.repository
 
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import org.example.project.dtos.CreateUserDto
 import org.example.project.dtos.FilterUsersDto
@@ -15,47 +15,48 @@ import org.example.project.dtos.UserDto
 
 class UserRepo(private val httpClient: HttpClient, private val baseUrl: String) {
     suspend fun getAllUsers(): List<UserDto> =
-        httpClient.get("$baseUrl/api/v1/users").body()
+        httpClient.get("$baseUrl/api/v1/users").parseOrThrow()
 
 
     suspend fun getUserById(id: Int): UserDto? =
-        httpClient.get("$baseUrl/api/v1/users/$id").body()
+        httpClient.get("$baseUrl/api/v1/users/$id").let { response ->
+            if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
+        }
 
     suspend fun getUserByEmail(email: String): UserDto? =
-        httpClient.get("$baseUrl/api/v1/users/email/$email").body()
+        httpClient.get("$baseUrl/api/v1/users/email/$email").let { response ->
+            if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
+        }
 
     suspend fun getFilterUsers(filters:FilterUsersDto): List<UserDto>? =
         httpClient.post("$baseUrl/api/v1/users/filter") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(filters)
-        }.body()
+        }.parseOrThrow()
 
     suspend fun getUsersByName(name: String): List<UserDto> =
-        httpClient.get("$baseUrl/api/v1/users/name/$name").body()
+        httpClient.get("$baseUrl/api/v1/users/name/$name").parseOrThrow()
 
     suspend fun loginUser(dto: LoginDto): UserDto =
         httpClient.post("$baseUrl/api/v1/users/login") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(dto)
-        }.body()
+        }.parseOrThrow()
 
-    suspend fun createUser(user: CreateUserDto): UserDto = try {
+    suspend fun createUser(user: CreateUserDto): UserDto =
         httpClient.post("$baseUrl/api/v1/users/register") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(user)
-        }.body()
-    } catch (e: Exception) {
-        throw e
-    }
+        }.parseOrThrow()
 
-    suspend fun updateUser(id: Int, user: UserDto): UserDto =
+    suspend fun updateUser(id: Int, user: UserDto): Boolean =
         httpClient.put("$baseUrl/api/v1/users/$id") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(user)
-        }.body()
+        }.ensureSuccessOrThrow()
 
     suspend fun deleteUser(id: Int): Boolean =
-        httpClient.delete("$baseUrl/api/v1/users/$id").body()
+        httpClient.delete("$baseUrl/api/v1/users/$id").ensureSuccessOrThrow()
 
 
 }

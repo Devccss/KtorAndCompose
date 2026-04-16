@@ -9,6 +9,7 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.example.project.dtos.CreateUnitCompletedDto
 import org.example.project.dtos.CreateUnitDto
 import org.example.project.dtos.CreateUserDto
 import org.example.project.dtos.FilterUnitsDto
@@ -22,6 +23,8 @@ data class UnitUiState(
     val units: List<UnitDto> = emptyList(),
     val actualUnit: UnitDto? = null,
     val currentUser: UserDto? = null,
+    
+    val unitsCompleted: List<UnitDto> = emptyList(),
     val isLoading: Boolean = false,
     val registerUser: CreateUserDto? = null,
     var error: String? = null,
@@ -42,6 +45,10 @@ class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : V
     fun updateMessage(message: String?) {
         _state.value = _state.value.copy(error = message)
     }
+
+    fun isUnitCompleted(unitId: Int): Boolean = _state.value.unitsCompleted.any { it.id == unitId }
+
+    fun completedUnitIds(): Set<Int> = _state.value.unitsCompleted.mapNotNull { it.id }.toSet()
 
     fun getAllUnits() {
         launchCatching(
@@ -202,9 +209,70 @@ class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : V
         )
     }
 
-    fun logout() {
-        _state.value = _state.value.copy(currentUser = null)
+    //CompleteUnits
+    
+    fun getAllUnitsCompletedByUserId(userId: Int) {
+        launchCatching(
+            block = { unitRepo.getAllCompletedUnitsByUserId(userId) },
+            onSuccess = { units ->
+                _state.value = _state.value.copy(unitsCompleted = units)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = error.message, unitsCompleted = emptyList())
+            }
+        )
     }
+    fun createUnitCompleted(dto: CreateUnitCompletedDto) {
+        launchCatching(
+            block = { unitRepo.createUnitCompleted(dto) },
+            onSuccess = { unit ->
+                generalMessage = "Unidad marcada como completada"
+                _state.value = _state.value.copy(
+                    unitsCompleted = _state.value.unitsCompleted.plus(unit)
+                )
+            },
+            onError = { error ->
+                generalMessage = "Error: ${error.message}"
+            }
+        )
+    }
+
+    fun ensureUnitCompletedIfFullySolved(
+        userId: Int,
+        unitId: Int,
+        totalExercises: Int,
+        solvedExercises: Int,
+        completedAt: String,
+    ) {
+        if (totalExercises !in 1..solvedExercises) return
+
+        val alreadyCompleted = _state.value.unitsCompleted.any { it.id == unitId }
+        if (alreadyCompleted) return
+
+        createUnitCompleted(
+            CreateUnitCompletedDto(
+                userId = userId,
+                unitId = unitId
+            )
+        )
+    }
+    fun deleteUnitsCompleted(completedId: Int) {
+        launchCatching(
+            block = { unitRepo.deleteUnitsCompleted(completedId) },
+            onSuccess = { success ->
+                if (success) {
+                    generalMessage = "Unidad desmarcada como completada"
+                } else {
+                    generalMessage = "Error al desmarcar la unidad como completada"
+                }
+            },
+            onError = { error ->
+                generalMessage = "Error: ${error.message}"
+            }
+        )
+    }
+    
+
 
     private fun <T> launchCatching(
         block: suspend () -> T,

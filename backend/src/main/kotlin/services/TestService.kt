@@ -15,6 +15,7 @@ class TestService(private val repo: TestRepository) {
     fun create(dto: CreateTestDto): TestDto = repo.createTest(dto)
     fun update(id: Int, dto: UpdateTestDto) = repo.updateTest(id, dto)
     fun delete(id: Int): Boolean = repo.deleteTest(id)
+    fun filtered(name: String?, unitId: Int?, isActive: Boolean?): List<TestDto> = repo.filterTests(name, unitId, isActive)
 
     fun createTestCompleted(dto: CreateTestCompletedDto): TestCompletedDto = repo.createTestCompleted(dto)
     fun getAllTestCompleted(): List<TestCompletedDto> = repo.getAllTestCompleted()
