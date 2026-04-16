@@ -1,0 +1,16 @@
+meta {
+  name: Get All test completed
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{BackendKtor}}/testsCompleted
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

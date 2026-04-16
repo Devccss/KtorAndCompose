@@ -1,0 +1,24 @@
+meta {
+  name: Update Exercise
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{BackendKtor}}/exercises/1
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "unitId": 1,
+    "name": "Ejercicio nuevo nuevo nuevo",
+    "description": "Contenido del ejercicio"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
