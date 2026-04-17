@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,11 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Quiz
-import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -51,11 +46,11 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.delay
+import org.example.project.components.ExerciseInfoSections
 import org.example.project.components.StudentAppLayout
 import org.example.project.dtos.AlternativesDto
 import org.example.project.dtos.CreateExerciseCompletedDto
 import org.example.project.dtos.QuestionDto
-import org.example.project.dtos.WordDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
 import org.example.project.viewModel.ExercisesViewModel
@@ -212,7 +207,15 @@ class StudentExerciseResolverScreen(
             actualScreen = exercise?.name ?: "Resolver ejercicio",
             selectedIndex = 1,
             initialUserName = studentName,
-            snackbarHostState = snackbarHostState
+            snackbarHostState = snackbarHostState,
+            onAvatarClick = {
+                navigator.push(
+                    StudentMeUserScreen(
+                        userIdArg = userId,
+                        studentNameArg = studentName
+                    )
+                )
+            }
         ) { _, _, _ ->
             Card(
                 modifier = Modifier.fillMaxSize(),
@@ -292,55 +295,11 @@ class StudentExerciseResolverScreen(
 
                     exerciseUi.selectedContent?.let { content ->
                         item {
-                            ContentSectionCard(
-                                title = "Contexto",
-                                iconTint = Color(0xFF1565C0),
-                                icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = Color(0xFF1565C0)) },
-                                content = {
-                                    Text(
-                                        text = "Tipo: ${content.contentType}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color.Gray
-                                    )
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Text(content.textContent)
-                                }
-                            )
-                        }
-
-                        item {
-                            ContentSectionCard(
-                                title = "Gramática",
-                                iconTint = Color(0xFF6A1B9A),
-                                icon = { Icon(Icons.Default.Translate, contentDescription = null, tint = Color(0xFF6A1B9A)) },
-                                content = {
-                                    Text(content.grammarExplanation)
-                                }
-                            )
-                        }
-
-                        if (!content.audioUrl.isNullOrBlank()) {
-                            item {
-                                ContentSectionCard(
-                                    title = "Audio",
-                                    iconTint = Color(0xFF00897B),
-                                    icon = { Icon(Icons.Default.Quiz, contentDescription = null, tint = Color(0xFF00897B)) },
-                                    content = {
-                                        Text(
-                                            text = content.audioUrl,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = Color(0xFF37474F)
-                                        )
-                                    }
-                                )
-                            }
-                        }
-
-                        item {
-                            VocabularyExpandableCard(
+                            ExerciseInfoSections(
+                                content = content,
                                 words = wordUi.words,
-                                expanded = vocabularyExpanded,
-                                onToggle = { vocabularyExpanded = !vocabularyExpanded }
+                                vocabularyExpanded = vocabularyExpanded,
+                                onToggleVocabulary = { vocabularyExpanded = !vocabularyExpanded }
                             )
                         }
                     }
@@ -385,113 +344,6 @@ class StudentExerciseResolverScreen(
     }
 }
 
-@Composable
-private fun ContentSectionCard(
-    title: String,
-    iconTint: Color,
-    icon: @Composable () -> Unit,
-    content: @Composable () -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFF)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                icon()
-                Text(title, fontWeight = FontWeight.Bold, color = iconTint)
-            }
-            content()
-        }
-    }
-}
-
-@Composable
-private fun VocabularyExpandableCard(
-    words: List<WordDto>,
-    expanded: Boolean,
-    onToggle: () -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5FFF8)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onToggle),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = Color(0xFF2E7D32))
-                    Text("Vocabulario", fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = "${words.size} palabra(s)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
-                    )
-                    Icon(
-                        imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = null,
-                        tint = Color(0xFF2E7D32)
-                    )
-                }
-            }
-
-            if (words.isEmpty()) {
-                Text(
-                    text = "No hay vocabulario asociado a este ejercicio.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-            } else if (expanded) {
-                words.forEach { word ->
-                    Text(
-                        text = "- ${word.english} | ${word.spanish}" +
-                            (word.phonetic?.takeIf { it.isNotBlank() }?.let { " | $it" } ?: "") +
-                            (word.description?.takeIf { it.isNotBlank() }?.let { " | $it" } ?: ""),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF37474F)
-                    )
-                }
-            } else {
-                val preview = words.take(2).joinToString(" - ") { it.english }
-                Text(
-                    text = "Vista previa: $preview",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-            }
-        }
-    }
-}
 
 @Composable
 private fun QuestionCard(

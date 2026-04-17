@@ -51,12 +51,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import org.example.project.components.ExerciseInfoSections
 import org.example.project.components.StudentAppLayout
 import org.example.project.dtos.CreateExerciseCompletedDto
 import org.example.project.dtos.CreateTestCompletedDto
 import org.example.project.dtos.ExerciseDto
+import org.example.project.dtos.ExerciseContentDto
 import org.example.project.dtos.QuestionDto
 import org.example.project.dtos.UnitDto
+import org.example.project.dtos.WordDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
 import org.example.project.viewModel.ExercisesViewModel
@@ -91,6 +99,7 @@ class StudentWelcomeScreen(val id: Int? = null) : Screen {
         val userId = id ?: UserSession.idUser
         val name = UserSession.name ?: "Estudiante"
         val snackbarHostState = remember { SnackbarHostState() }
+        val navigator = LocalNavigator.currentOrThrow
 
         LaunchedEffect(userId) {
             testVm.getAllWelcomeTests()
@@ -151,7 +160,15 @@ class StudentWelcomeScreen(val id: Int? = null) : Screen {
             actualScreen = "Inicio",
             selectedIndex = 0,
             initialUserName = name,
-            snackbarHostState = snackbarHostState
+            snackbarHostState = snackbarHostState,
+            onAvatarClick = {
+                navigator.push(
+                    StudentMeUserScreen(
+                        userIdArg = userId,
+                        studentNameArg = name
+                    )
+                )
+            }
         ) { _, _, _ ->
             StudentDashboardContent(
                 name = name,
@@ -385,8 +402,13 @@ private fun WelcomePlacementCard(
     onFinish: (Set<Int>, PlacementSummary) -> Unit,
 ) {
     val questionRepo = RepositoryProvider.questionRepo
+    val exerciseRepo = RepositoryProvider.exerciseRepo
+    val wordRepo = RepositoryProvider.wordRepo
     val questionsByExercise = remember(welcomeExercises) { mutableStateMapOf<Int, List<QuestionDto>>() }
     val alternativesByQuestion = remember(welcomeExercises) { mutableStateMapOf<Int, List<org.example.project.dtos.AlternativesDto>>() }
+    val contentByExercise = remember(welcomeExercises) { mutableStateMapOf<Int, ExerciseContentDto?>() }
+    val wordsByExercise = remember(welcomeExercises) { mutableStateMapOf<Int, List<WordDto>>() }
+    val vocabularyExpandedByExercise = remember(welcomeExercises) { mutableStateMapOf<Int, Boolean>() }
     val selectedAnswers = remember(welcomeExercises) { mutableStateMapOf<Int, Int>() }
 
     var loadingResolver by remember(welcomeExercises) { mutableStateOf(false) }
@@ -395,23 +417,46 @@ private fun WelcomePlacementCard(
     var passedExerciseIds by remember(welcomeExercises) { mutableStateOf(emptySet<Int>()) }
     var placementResult by remember(welcomeExercises) { mutableStateOf<PlacementSummary?>(null) }
 
+    suspend fun loadWordsForExercise(exerciseId: Int): List<WordDto> {
+        val relations = wordRepo.getExerciseWordsByExerciseId(exerciseId)
+        return coroutineScope {
+            relations.map { relation ->
+                async { wordRepo.getWordById(relation.wordId) }
+            }.awaitAll()
+        }
+    }
+
     LaunchedEffect(expanded, welcomeExercises) {
         if (!expanded || welcomeExercises.isEmpty() || questionsByExercise.isNotEmpty()) return@LaunchedEffect
         loadingResolver = true
         resolverError = null
         try {
-            welcomeExercises.sortedBy { it.orderExercise }.forEach { exercise ->
-                val questions = questionRepo.getQuestionsByExerciseId(exercise.id).sortedBy { it.orderQuestion }
-                questionsByExercise[exercise.id] = questions
-                questions.forEach { question ->
-                    val alternatives = questionRepo.getAlternativesByQuestionId(question.id)
-                    alternativesByQuestion[question.id] = alternatives
-                    if (selectedAnswers[question.id] == null) {
-                        alternatives.firstOrNull()?.id?.let { firstAlternativeId ->
-                            selectedAnswers[question.id] = firstAlternativeId
+            coroutineScope {
+                welcomeExercises.sortedBy { it.orderExercise }.map { exercise ->
+                    async {
+                        val exerciseId = exercise.id
+                        contentByExercise[exerciseId] = runCatching {
+                            exerciseRepo.getExerciseContentByExerciseId(exerciseId)
+                        }.getOrNull()
+
+                        val questions = questionRepo.getQuestionsByExerciseId(exerciseId).sortedBy { it.orderQuestion }
+                        questionsByExercise[exerciseId] = questions
+
+                        questions.forEach { question ->
+                            val alternatives = questionRepo.getAlternativesByQuestionId(question.id)
+                            alternativesByQuestion[question.id] = alternatives
+                            if (selectedAnswers[question.id] == null) {
+                                alternatives.firstOrNull()?.id?.let { firstAlternativeId ->
+                                    selectedAnswers[question.id] = firstAlternativeId
+                                }
+                            }
                         }
+
+                        wordsByExercise[exerciseId] = runCatching {
+                            loadWordsForExercise(exerciseId)
+                        }.getOrDefault(emptyList())
                     }
-                }
+                }.awaitAll()
             }
         } catch (e: Exception) {
             resolverError = "No se pudo cargar el welcome test: ${e.message}"
@@ -516,6 +561,15 @@ private fun WelcomePlacementCard(
                             ) {
                                 Text(exercise.name, fontWeight = FontWeight.SemiBold)
                                 Text(unitName, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+
+                                ExerciseInfoSections(
+                                    content = contentByExercise[exercise.id],
+                                    words = wordsByExercise[exercise.id].orEmpty(),
+                                    vocabularyExpanded = vocabularyExpandedByExercise[exercise.id] == true,
+                                    onToggleVocabulary = {
+                                        vocabularyExpandedByExercise[exercise.id] = !(vocabularyExpandedByExercise[exercise.id] ?: false)
+                                    }
+                                )
 
                                 if (questions.isEmpty()) {
                                     Text(

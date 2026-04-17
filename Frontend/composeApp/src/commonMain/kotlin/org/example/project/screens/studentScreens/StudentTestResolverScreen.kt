@@ -45,14 +45,19 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlin.time.ExperimentalTime
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import org.example.project.components.ExerciseInfoSections
 import org.example.project.components.StudentAppLayout
 import org.example.project.dtos.AlternativesDto
 import org.example.project.dtos.CreateTestCompletedDto
+import org.example.project.dtos.ExerciseContentDto
 import org.example.project.dtos.QuestionDto
+import org.example.project.dtos.WordDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
 import org.example.project.viewModel.ExercisesViewModel
-import org.example.project.viewModel.QuestionViewModel
 import org.example.project.viewModel.TestViewModel
 import org.example.project.viewModel.UnitViewModel
 import org.example.project.viewModel.UserViewModel
@@ -79,9 +84,6 @@ class StudentTestResolverScreen(
         }
         val unitVm = rememberScreenModel { UnitViewModel(RepositoryProvider.unitRepo) }
         val exercisesVm = rememberScreenModel { ExercisesViewModel(RepositoryProvider.exerciseRepo, unitId = unitId) }
-        val questionVm = rememberScreenModel {
-            QuestionViewModel(RepositoryProvider.questionRepo)
-        }
         val userVm = rememberScreenModel {
             UserViewModel(RepositoryProvider.userRepo, RepositoryProvider.unitRepo)
         }
@@ -89,7 +91,6 @@ class StudentTestResolverScreen(
         val testUi by testVm.state.collectAsState()
         val unitUi by unitVm.state.collectAsState()
         val exercisesUi by exercisesVm.state.collectAsState()
-        val questionUi by questionVm.state.collectAsState()
         val userUi by userVm.state.collectAsState()
 
         val userId = userIdArg ?: UserSession.idUser
@@ -100,6 +101,13 @@ class StudentTestResolverScreen(
         var score by remember { mutableStateOf<Float?>(null) }
         var passing by remember { mutableStateOf(false) }
         val selectedAnswers = remember { mutableStateMapOf<Int, Int>() }
+        val questionsByExercise = remember { mutableStateMapOf<Int, List<QuestionDto>>() }
+        val alternativesByQuestion = remember { mutableStateMapOf<Int, List<AlternativesDto>>() }
+        val contentByExercise = remember { mutableStateMapOf<Int, ExerciseContentDto?>() }
+        val wordsByExercise = remember { mutableStateMapOf<Int, List<WordDto>>() }
+        val vocabularyExpandedByExercise = remember { mutableStateMapOf<Int, Boolean>() }
+        var loadingExerciseData by remember { mutableStateOf(false) }
+        var resolverError by remember { mutableStateOf<String?>(null) }
 
         LaunchedEffect(testId) {
             testVm.getExercisesByTestId(testId)
@@ -113,20 +121,84 @@ class StudentTestResolverScreen(
             }
         }
 
-        // Obtener preguntas para todos los ejercicios del test
-        LaunchedEffect(testUi.testExercises) {
-            testUi.testExercises.forEach { exercise ->
-                questionVm.getQuestionsByExerciseId(exercise.id)
+        suspend fun loadWordsForExercise(exerciseId: Int): List<WordDto> {
+            val relations = RepositoryProvider.wordRepo.getExerciseWordsByExerciseId(exerciseId)
+            return coroutineScope {
+                relations.map { relation ->
+                    async { RepositoryProvider.wordRepo.getWordById(relation.wordId) }
+                }.awaitAll()
             }
         }
 
-        LaunchedEffect(testUi.error, questionUi.error, userUi.error) {
-            val error = testUi.error ?: questionUi.error ?: userUi.error
+        LaunchedEffect(testUi.testExercises) {
+            val exercises = testUi.testExercises.sortedBy { it.orderExercise }
+            if (exercises.isEmpty()) {
+                questionsByExercise.clear()
+                alternativesByQuestion.clear()
+                contentByExercise.clear()
+                wordsByExercise.clear()
+                loadingExerciseData = false
+                resolverError = null
+                return@LaunchedEffect
+            }
+
+            loadingExerciseData = true
+            resolverError = null
+            questionsByExercise.clear()
+            alternativesByQuestion.clear()
+            contentByExercise.clear()
+            wordsByExercise.clear()
+
+            try {
+                coroutineScope {
+                    exercises.map { exercise ->
+                        async {
+                            val exerciseId = exercise.id
+                            contentByExercise[exerciseId] = runCatching {
+                                RepositoryProvider.exerciseRepo.getExerciseContentByExerciseId(exerciseId)
+                            }.getOrNull()
+
+                            val questions = runCatching {
+                                RepositoryProvider.questionRepo.getQuestionsByExerciseId(exerciseId)
+                            }.getOrDefault(emptyList()).sortedBy { it.orderQuestion }
+
+                            questionsByExercise[exerciseId] = questions
+
+                            questions.forEach { question ->
+                                val alternatives = runCatching {
+                                    RepositoryProvider.questionRepo.getAlternativesByQuestionId(question.id)
+                                }.getOrDefault(emptyList())
+
+                                alternativesByQuestion[question.id] = alternatives
+                                if (selectedAnswers[question.id] == null) {
+                                    alternatives.firstOrNull()?.id?.let { selectedAnswers[question.id] = it }
+                                }
+                            }
+
+                            wordsByExercise[exerciseId] = runCatching {
+                                loadWordsForExercise(exerciseId)
+                            }.getOrDefault(emptyList())
+                        }
+                    }.awaitAll()
+                }
+            } catch (e: Exception) {
+                resolverError = "No se pudieron cargar los datos del test: ${e.message}"
+            } finally {
+                loadingExerciseData = false
+            }
+        }
+
+        LaunchedEffect(testUi.error, userUi.error, resolverError) {
+            val error = testUi.error ?: userUi.error ?: resolverError
             error?.let { snackbarHostState.showSnackbar(it) }
         }
 
-        val allQuestions = questionUi.selectedQuestions.sortedBy { it.orderQuestion }
-        val alternativesByQuestion = questionUi.alternatives
+        val orderedExercises = remember(testUi.testExercises) {
+            testUi.testExercises.sortedBy { it.orderExercise }
+        }
+        val allQuestions = orderedExercises.flatMap { exercise ->
+            questionsByExercise[exercise.id].orEmpty()
+        }
         val completedUnitsCount = unitUi.unitsCompleted.size
         val totalActiveExercisesInUnit = remember(exercisesUi.exercises) {
             exercisesUi.exercises.count { it.unitId == unitId && it.isActive }
@@ -138,16 +210,6 @@ class StudentTestResolverScreen(
             testVm.remainingReviewExercises(unitId, totalActiveExercisesInUnit)
         } else 0
         val reviewBlocked = latestAttempt?.score != 100 && remainingReviewExercises > 0
-
-        LaunchedEffect(allQuestions, alternativesByQuestion) {
-            allQuestions.forEach { question ->
-                if (selectedAnswers[question.id] == null) {
-                    alternativesByQuestion[question.id]?.firstOrNull()?.id?.let { firstAltId ->
-                        selectedAnswers[question.id] = firstAltId
-                    }
-                }
-            }
-        }
 
         fun submitAnswers() {
             val safeUserId = userId ?: return
@@ -213,7 +275,15 @@ class StudentTestResolverScreen(
             actualScreen = testName,
             selectedIndex = 1,
             initialUserName = studentName,
-            snackbarHostState = snackbarHostState
+            snackbarHostState = snackbarHostState,
+            onAvatarClick = {
+                navigator.push(
+                    StudentMeUserScreen(
+                        userIdArg = userId,
+                        studentNameArg = studentName
+                    )
+                )
+            }
         ) { _, _, _ ->
             Card(
                 modifier = Modifier.fillMaxSize(),
@@ -263,11 +333,15 @@ class StudentTestResolverScreen(
                                     },
                                     fontWeight = FontWeight.SemiBold
                                 )
-                                LinearProgressIndicator(
-                                    progress = { (score ?: 0f).coerceIn(0f, 1f) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    color = if (passing) Color(0xFF2E7D32) else Color(0xFF1565C0)
-                                )
+                                score?.let {
+                                    if(it  >= 0f) {
+                                        LinearProgressIndicator(
+                                            progress = { (it ).coerceIn(0f, 1f) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            color = if (passing) Color(0xFF2E7D32) else Color(0xFF1565C0)
+                                        )
+                                    }
+                                }
                                 if (submitted) {
                                     Text(
                                         text = if (passing) "¡Test aprobado! Acceso a la siguiente unidad desbloqueado." else "Test no aprobado. Intenta nuevamente.",
@@ -285,20 +359,93 @@ class StudentTestResolverScreen(
                             }
                         }
                     }
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                        ){
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)){
+                                Text(
+                                    text = "⚠️ Resuelve el test con calma, debes repasar la unidad si fallas.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF8A5A00)
+                                )
 
-                    if (allQuestions.isEmpty()) {
+                            }
+                        }
+                    }
+
+                    if (loadingExerciseData) {
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF7F7F7))
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    CircularProgressIndicator()
+                                }
+                            }
+                        }
+                    } else if (allQuestions.isEmpty()) {
                         item {
                             ResolverEmptyCard()
                         }
                     } else {
-                        items(allQuestions, key = { it.id }) { question ->
-                            val alternatives = alternativesByQuestion[question.id].orEmpty()
-                            QuestionCard(
-                                question = question,
-                                alternatives = alternatives,
-                                selectedAlternativeId = selectedAnswers[question.id],
-                                onSelectAlternative = { selectedAnswers[question.id] = it }
-                            )
+                        items(orderedExercises, key = { it.id }) { exercise ->
+                            val exerciseQuestions = questionsByExercise[exercise.id].orEmpty()
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFFDFDFD))
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Text(
+                                        text = exercise.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+
+                                    ExerciseInfoSections(
+                                        content = contentByExercise[exercise.id],
+                                        words = wordsByExercise[exercise.id].orEmpty(),
+                                        vocabularyExpanded = vocabularyExpandedByExercise[exercise.id] == true,
+                                        onToggleVocabulary = {
+                                            vocabularyExpandedByExercise[exercise.id] = !(vocabularyExpandedByExercise[exercise.id] ?: false)
+                                        }
+                                    )
+
+                                    if (exerciseQuestions.isEmpty()) {
+                                        Text(
+                                            text = "Este ejercicio no tiene preguntas.",
+                                            color = Color.Gray,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    } else {
+                                        exerciseQuestions.forEach { question ->
+                                            val alternatives = alternativesByQuestion[question.id].orEmpty()
+                                            QuestionCard(
+                                                question = question,
+                                                alternatives = alternatives,
+                                                selectedAlternativeId = selectedAnswers[question.id],
+                                                onSelectAlternative = { selectedAnswers[question.id] = it }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 

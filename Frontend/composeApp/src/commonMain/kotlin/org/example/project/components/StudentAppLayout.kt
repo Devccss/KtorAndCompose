@@ -1,6 +1,7 @@
 package org.example.project.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
@@ -51,6 +52,7 @@ fun StudentAppLayout(
     selectedIndex: Int = 0,
     initialUserName: String? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onAvatarClick: (() -> Unit)? = null,
     content: @Composable (paddingValues: PaddingValues, userName: String, role: Role) -> Unit
 ) {
     val navigator = LocalNavigator.currentOrThrow
@@ -125,11 +127,21 @@ fun StudentAppLayout(
 
                     Spacer(modifier = Modifier.width(12.dp))
 
-                    Box(
-                        modifier = Modifier
+                    val avatarModifier = if (onAvatarClick != null) {
+                        Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF4A4A4A)),
+                            .background(Color(0xFF4A4A4A))
+                            .clickable { onAvatarClick.invoke() }
+                    } else {
+                        Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF4A4A4A))
+                    }
+
+                    Box(
+                        modifier = avatarModifier,
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -178,7 +190,7 @@ private fun StudentBottomBar(
             onClick = { onNavigate(1) }
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Default.ExitToApp, contentDescription = "Salir") },
+            icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Salir") },
             label = { Text("Salir") },
             selected = false,
             onClick = { onNavigate(2) },

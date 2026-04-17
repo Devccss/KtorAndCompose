@@ -697,11 +697,6 @@ private fun UnitTestCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray.copy(alpha = 0.8f)
                 )
-                else -> Text(
-                    text = "⚠️ Responde con calma: el intento quedará registrado incluso si no apruebas.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF8A5A00)
-                )
             }
 
             if (latestAttempt?.score != null && latestAttempt.score != 100) {
