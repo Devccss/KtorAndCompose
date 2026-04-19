@@ -45,6 +45,9 @@ import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import org.example.project.components.StudentAppLayout
 import org.example.project.dtos.ExerciseDto
+import org.example.project.dtos.FilterExercisesDto
+import org.example.project.dtos.FilterTestsDto
+import org.example.project.dtos.FilterUnitsDto
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.TestCompletedDto
 import org.example.project.dtos.TestDto
@@ -64,7 +67,7 @@ class StudentLearnScreen(
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val unitVm = rememberScreenModel { UnitViewModel(RepositoryProvider.unitRepo) }
+        val unitVm = rememberScreenModel { UnitViewModel(RepositoryProvider.unitRepo, autoLoad = false) }
         val exercisesVm = rememberScreenModel { ExercisesViewModel(RepositoryProvider.exerciseRepo) }
         val testVm = rememberScreenModel { TestViewModel(RepositoryProvider.testRepo, RepositoryProvider.welcomeTestRepo) }
         val userVm = rememberScreenModel { UserViewModel(RepositoryProvider.userRepo, RepositoryProvider.unitRepo) }
@@ -79,9 +82,10 @@ class StudentLearnScreen(
         val snackbarHostState = remember { SnackbarHostState() }
 
         LaunchedEffect(userId) {
-            unitVm.getAllUnits()
-            exercisesVm.getAllExercises()
-            testVm.getAllTests()
+            unitVm.searchUnits(FilterUnitsDto(isActive = true))
+            exercisesVm.searchExercises(FilterExercisesDto(isActive = true))
+            testVm.searchTests(FilterTestsDto(isActive = true))
+            testVm.getAllExercisesInTests(onlyActiveTests = true, onlyActiveExercises = true)
             if (userId != null && userId > 0) {
                 userVm.getUserById(userId)
                 unitVm.getAllUnitsCompletedByUserId(userId)
@@ -111,8 +115,8 @@ class StudentLearnScreen(
 
         val unitProgress = remember(unitUi.units, exercisesUi.exercises, exercisesUi.completedExercises) {
             buildUnitProgress(
-                units = unitUi.units,
-                allExercises = exercisesUi.exercises,
+                units = unitUi.units.filter { it.isActive },
+                allExercises = exercisesUi.exercises.filter { it.isActive },
                 completedExerciseIds = exercisesUi.completedExercises.map { it.exerciseId }.toSet()
             )
         }
@@ -144,7 +148,7 @@ class StudentLearnScreen(
         }
 
         val testsByUnitId = remember(testUi.allTests) {
-            testUi.allTests.groupBy { it.unitId }
+            testUi.allTests.filter { it.isActive }.groupBy { it.unitId }
         }
 
         StudentAppLayout(
@@ -254,7 +258,7 @@ class StudentUnitExercisesScreen(
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val exercisesVm = rememberScreenModel { ExercisesViewModel(RepositoryProvider.exerciseRepo, unitId = unitId) }
-        val unitVm = rememberScreenModel { UnitViewModel(RepositoryProvider.unitRepo) }
+        val unitVm = rememberScreenModel { UnitViewModel(RepositoryProvider.unitRepo, autoLoad = false) }
         val testVm = rememberScreenModel { TestViewModel(RepositoryProvider.testRepo, RepositoryProvider.welcomeTestRepo) }
         val userVm = rememberScreenModel { UserViewModel(RepositoryProvider.userRepo, RepositoryProvider.unitRepo) }
         val exercisesUi by exercisesVm.state.collectAsState()
@@ -267,11 +271,14 @@ class StudentUnitExercisesScreen(
         val snackbarHostState = remember { SnackbarHostState() }
 
         LaunchedEffect(userId) {
-            exercisesVm.getExercisesByUnitId(unitId)
-            unitVm.getAllUnits()
-            testVm.searchTests(
-                unitId = unitId, isActive = true, name = null
-            )
+            exercisesVm.searchExercises(FilterExercisesDto(unitId = unitId, isActive = true))
+            unitVm.searchUnits(FilterUnitsDto(isActive = true))
+            testVm.searchTests(FilterTestsDto(
+                unitId = unitId,
+                isActive = true,
+                name = null
+            ))
+            testVm.getAllExercisesInTests(onlyActiveTests = true, onlyActiveExercises = true)
             if (userId != null && userId > 0) {
                 exercisesVm.getExercisesCompletedByUserId(userId)
                 unitVm.getAllUnitsCompletedByUserId(userId)
@@ -290,9 +297,10 @@ class StudentUnitExercisesScreen(
         val completedIds = remember(exercisesUi.completedExercises) {
             exercisesUi.completedExercises.map { it.exerciseId }.toSet()
         }
-        val availableExercises = remember(exercisesUi.exercises, completedIds) {
+        val availableExercises = remember(exercisesUi.exercises, completedIds, testUi.allExercisesInTests) {
             exercisesUi.exercises
                 .filter { it.isActive }
+                .filter { it.id !in testUi.allExercisesInTests }  // Filtrar ejercicios que no están en tests
                 .sortedBy { it.orderExercise }
         }
         val completionRate = remember(availableExercises, completedIds) {

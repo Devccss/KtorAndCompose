@@ -12,6 +12,7 @@ import org.example.project.dtos.CreateTestDto
 import org.example.project.dtos.CreateTestExerciseDto
 import org.example.project.dtos.CreateWelcomeTestDto
 import org.example.project.dtos.ExerciseDto
+import org.example.project.dtos.FilterTestsDto
 import org.example.project.dtos.TestCompletedDto
 import org.example.project.dtos.TestDto
 import org.example.project.dtos.UpdateTestCompletedDto
@@ -29,6 +30,8 @@ data class TestUIState(
     val currentTest: TestDto? = null,
     val searchTest: List<TestDto> = emptyList(),
     val testExercises: List<ExerciseDto> = emptyList(),
+    val allTestExercises: Map<Int, List<ExerciseDto>> = emptyMap(),  // testId -> ejercicios
+    val allExercisesInTests: Set<Int> = emptySet(),  // IDs de ejercicios que están en algún test
     val welcomeTests: List<WelcomeTestDto> = emptyList(),
     val currentWelcomeTest : TestDto? = null,
     val testsCompleted: List<TestCompletedDto> = emptyList(),
@@ -192,11 +195,16 @@ class TestViewModel(
         )
     }
 
-        fun searchTests(name: String?, unitId: Int?, isActive: Boolean?) {
+        fun searchTests(filters: FilterTestsDto) {
+            val normalized = filters.copy(name = filters.name?.trim()?.takeIf { it.isNotEmpty() })
+            val hasFilters = normalized.name != null || normalized.unitId != null || normalized.isActive != null
             launchCatching(
-                block = { testRepo.searchTests(name, unitId, isActive) },
+                block = {
+                    if (hasFilters) testRepo.searchTests(normalized)
+                    else testRepo.getAllTests()
+                },
                 onSuccess = { tests ->
-                    _state.value = _state.value.copy(searchTest = tests)
+                    _state.value = _state.value.copy(searchTest = tests, allTests = tests)
                 },
                 onError = { error ->
                     _state.value =
@@ -212,7 +220,8 @@ class TestViewModel(
         launchCatching(
             block = { testRepo.getExercisesByTestId(testId) },
             onSuccess = { exercises ->
-                _state.value = _state.value.copy(testExercises = exercises)
+                val activeExercises = exercises.filter { it.isActive }
+                _state.value = _state.value.copy(testExercises = activeExercises)
             },
             onError = { error ->
                 _state.value =
@@ -286,7 +295,8 @@ class TestViewModel(
         launchCatching(
             block = { welcomeTestRepo.getAllTestsFromWelcomeTests() },
             onSuccess = { tests ->
-                _state.value = _state.value.copy(selectedTests = tests)
+                val activeTests = tests.filter { it.isActive }
+                _state.value = _state.value.copy(selectedTests = activeTests)
             },
             onError = { error ->
                 _state.value = _state.value.copy(error = "Error al obtener los tests de welcome tests: ${error.message}", selectedTests = emptyList())
@@ -521,6 +531,39 @@ class TestViewModel(
             },
             onError = { error ->
                 _state.value = _state.value.copy(error = "Error al eliminar el test completado: ${error.message}")
+            }
+        )
+    }
+
+    // Obtener todos los ejercicios que están en tests
+    fun getAllExercisesInTests(
+        onlyActiveTests: Boolean = false,
+        onlyActiveExercises: Boolean = false
+    ) {
+        launchCatching(
+            block = {
+                // Primero obtener todos los tests
+                val allTests = testRepo.getAllTests()
+                val sourceTests = if (onlyActiveTests) allTests.filter { it.isActive } else allTests
+                // Luego para cada test, obtener sus ejercicios
+                val testExercisesMap = mutableMapOf<Int, List<ExerciseDto>>()
+                val allExerciseIds = mutableSetOf<Int>()
+
+                sourceTests.forEach { test ->
+                    val rawExercises = testRepo.getExercisesByTestId(test.id)
+                    val exercises = if (onlyActiveExercises) rawExercises.filter { it.isActive } else rawExercises
+                    testExercisesMap[test.id] = exercises
+                    allExerciseIds.addAll(exercises.map { it.id })
+                }
+
+                _state.value = _state.value.copy(
+                    allTestExercises = testExercisesMap,
+                    allExercisesInTests = allExerciseIds
+                )
+            },
+            onSuccess = {},
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al obtener ejercicios en tests: ${error.message}")
             }
         )
     }

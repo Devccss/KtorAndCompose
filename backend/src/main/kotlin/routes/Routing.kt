@@ -18,7 +18,9 @@ import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import kotlinx.serialization.Serializable
+import models.ContentType
 import models.DifficultyLevel
+import models.NotificationType
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.koin.ktor.ext.get
 import services.UnitService
@@ -126,7 +128,7 @@ fun Application.configureRouting() {
                     val users = userService.getUsersByName(name)
                     call.respond(users)
                 }
-                post("filter") {
+                get("filter") {
                     val filters = call.receive<FilterUsersDto>()
                     val users = userService.getFilterUsers(filters)
                     call.respond(users)
@@ -284,6 +286,19 @@ fun Application.configureRouting() {
 
             route("/exerciseContent"){
                 get { call.respond(exerciseContentService.getAllExerciseContent()) }
+                get("/search") {
+                    val exerciseId = call.request.queryParameters["exerciseId"]?.toIntOrNull()
+                    val contentType = call.request.queryParameters["contentType"]?.let { ContentType.valueOf(it) }
+                    val textContent = call.request.queryParameters["textContent"]
+                    val grammarExplanation = call.request.queryParameters["grammarExplanation"]
+                    val filters = FilterExerciseContentDto(
+                        exerciseId = exerciseId,
+                        contentType = contentType,
+                        textContent = textContent,
+                        grammarExplanation = grammarExplanation
+                    )
+                    call.respond(exerciseContentService.searchExerciseContent(filters))
+                }
                 get("/exercise/{id}"){
                     val id = call.parameters["id"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
@@ -396,6 +411,26 @@ fun Application.configureRouting() {
             // Words
             route("/words") {
                 get { call.respond(wordService.getAll()) }
+                get("/search") {
+                    val english = call.request.queryParameters["english"]
+                    val spanish = call.request.queryParameters["spanish"]
+                    val phonetic = call.request.queryParameters["phonetic"]
+                    val isActiveParam = call.request.queryParameters["isActive"]
+                    val isActive = isActiveParam?.let {
+                        when (it.lowercase()) {
+                            "true", "1", "yes" -> true
+                            "false", "0", "no" -> false
+                            else -> null
+                        }
+                    }
+                    val filters = FilterWordsDto(
+                        english = english,
+                        spanish = spanish,
+                        phonetic = phonetic,
+                        isActive = isActive
+                    )
+                    call.respond(wordService.searchWords(filters))
+                }
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
@@ -424,6 +459,24 @@ fun Application.configureRouting() {
             // Questions
             route("/questions") {
                 get { call.respond(questionService.getAllQuestions()) }
+                get("/search") {
+                    val exerciseContentId = call.request.queryParameters["exerciseContentId"]?.toIntOrNull()
+                    val questionText = call.request.queryParameters["questionText"]
+                    val isActiveParam = call.request.queryParameters["isActive"]
+                    val isActive = isActiveParam?.let {
+                        when (it.lowercase()) {
+                            "true", "1", "yes" -> true
+                            "false", "0", "no" -> false
+                            else -> null
+                        }
+                    }
+                    val filters = FilterQuestionsDto(
+                        exerciseContentId = exerciseContentId,
+                        questionText = questionText,
+                        isActive = isActive
+                    )
+                    call.respond(questionService.searchQuestions(filters))
+                }
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
@@ -535,7 +588,7 @@ fun Application.configureRouting() {
                             else -> null
                         }
                     }
-                    call.respond(testService.filtered( name = name, unitId = unitId, isActive = isActive))
+                    call.respond(testService.filtered(FilterTestsDto(name = name, unitId = unitId, isActive = isActive)))
                 }
                 get("/byExercise/{exerciseId}") {
                     val exerciseId = call.parameters["exerciseId"]?.toIntOrNull()
@@ -839,6 +892,26 @@ fun Application.configureRouting() {
             // Notifications
             route("/notifications") {
                 get { call.respond(notificationsService.getAll()) }
+                get("/search") {
+                    val userId = call.request.queryParameters["userId"]?.toIntOrNull()
+                    val title = call.request.queryParameters["title"]
+                    val notificationType = call.request.queryParameters["notificationType"]?.let { NotificationType.valueOf(it) }
+                    val isReadParam = call.request.queryParameters["isRead"]
+                    val isRead = isReadParam?.let {
+                        when (it.lowercase()) {
+                            "true", "1", "yes" -> true
+                            "false", "0", "no" -> false
+                            else -> null
+                        }
+                    }
+                    val filters = FilterNotificationsDto(
+                        userId = userId,
+                        title = title,
+                        notificationType = notificationType,
+                        isRead = isRead
+                    )
+                    call.respond(notificationsService.searchNotifications(filters))
+                }
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")

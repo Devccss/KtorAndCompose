@@ -50,7 +50,8 @@ class WordViewModel(private val repo: WordRepository) : ViewModel(), ScreenModel
         launchCatching(
             block = { repo.getAllWords() },
             onSuccess = { words ->
-                _state.value = _state.value.copy(words = words, error = null)
+                val activeWords = words.filter { it.isActive == true }
+                _state.value = _state.value.copy(words = activeWords, error = null)
             },
             onError = { error ->
                 _state.value = _state.value.copy(error = error.message, words = emptyList())
@@ -74,7 +75,15 @@ class WordViewModel(private val repo: WordRepository) : ViewModel(), ScreenModel
             onSuccess = { exerciseWords ->
                 _state.value = _state.value.copy(words = emptyList())
                 exerciseWords.forEach {
-                    getWordById(it.wordId)
+                    launchCatching(
+                        block = { repo.getWordById(it.wordId) },
+                        onSuccess = { word ->
+                            if (word.isActive == true) {
+                                _state.value = _state.value.copy(words = _state.value.words + word)
+                            }
+                        },
+                        onError = {}
+                    )
                 }
             },
             onError = { error ->

@@ -46,3 +46,9 @@ data class UpdateQuestionCompletedDto(
     val questionId: Int? = null,
     val completedAt: String? = null
 )
+@Serializable
+data class FilterQuestionsDto(
+    val exerciseContentId: Int? = null,
+    val questionText: String? = null,
+    val isActive: Boolean? = null
+)

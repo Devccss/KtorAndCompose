@@ -59,31 +59,6 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
     }
 
 
-    private fun getAllLevels() {
-        launchCatching(
-            block = { unitRepo.getAllUnits() },
-            onSuccess = { unit ->
-                if (unit.isNotEmpty()) {
-                    _state.value = _state.value.copy(
-                        unit = unit,
-                    )
-                } else {
-
-                    _state.value = _state.value.copy(
-                        error = "No se encontraron unidades",
-                        unit = emptyList()
-                    )
-                }
-            },
-            onError = { error ->
-                _state.value = _state.value.copy(
-                    error = error.message,
-
-                    )
-            }
-        )
-    }
-
     private fun loadUsers() {
         launchCatching(
             block = { repo.getAllUsers() },
@@ -102,21 +77,23 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
     }
 
     fun getFilterUsers(filters: FilterUsersDto) {
+        val normalized = filters.copy(name = filters.name?.trim()?.takeIf { it.isNotEmpty() })
+        val hasFilters = normalized.name != null || normalized.unitId != null || normalized.role != null
         launchCatching(
-            block = { repo.getFilterUsers(filters) },
+            block = {
+                if (hasFilters) repo.searchUsers(normalized)
+                else repo.getAllUsers()
+            },
             onSuccess = { users ->
-                if (users != null) {
-                    if (users.isNotEmpty()) {
-                        _state.value = _state.value.copy(
-                            users = users,
-                        )
-                    } else {
-
-                        _state.value = _state.value.copy(
-                            error = "No se encontraron usuarios con esos filtros",
-                            users = emptyList()
-                        )
-                    }
+                if (users.isNotEmpty()) {
+                    _state.value = _state.value.copy(
+                        users = users,
+                    )
+                } else {
+                    _state.value = _state.value.copy(
+                        error = "No se encontraron usuarios con esos filtros",
+                        users = emptyList()
+                    )
                 }
             },
             onError = { error ->

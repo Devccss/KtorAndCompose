@@ -1,6 +1,7 @@
 package repositories
 
 import com.example.dtos.CreateWordDto
+import com.example.dtos.FilterWordsDto
 import com.example.dtos.UpdateWordDto
 import com.example.dtos.WordDto
 import io.ktor.server.plugins.BadRequestException
@@ -8,6 +9,7 @@ import models.Words
 
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -35,6 +37,17 @@ class WordRepository {
 
     fun getById(id: Int): WordDto? = transaction {
         Words.selectAll().where { Words.id eq id }.singleOrNull()?.let(::resultRowToWord)
+    }
+
+    fun searchWords(filters: FilterWordsDto): List<WordDto> = transaction {
+        var query = Words.selectAll()
+
+        filters.english?.takeIf { it.isNotBlank() }?.let { query = query.andWhere { Words.english like "%$it%" } }
+        filters.spanish?.takeIf { it.isNotBlank() }?.let { query = query.andWhere { Words.spanish like "%$it%" } }
+        filters.phonetic?.takeIf { it.isNotBlank() }?.let { query = query.andWhere { Words.phonetic like "%$it%" } }
+        filters.isActive?.let { query = query.andWhere { Words.isActive eq it } }
+
+        query.orderBy(Words.createdAt).map(::resultRowToWord)
     }
 
     fun create(dto: CreateWordDto): WordDto = try {

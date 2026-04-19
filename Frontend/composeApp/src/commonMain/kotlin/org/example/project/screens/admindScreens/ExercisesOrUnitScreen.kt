@@ -25,7 +25,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterList
@@ -100,8 +99,7 @@ class ExercisesOrUnitScreen(private val unitId: Int? = null) : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val exerciseVm =
-            rememberScreenModel { ExercisesViewModel(RepositoryProvider.exerciseRepo, unitId) }
+        val exerciseVm = rememberScreenModel { ExercisesViewModel(RepositoryProvider.exerciseRepo, unitId) }
         val unitVm = rememberScreenModel { UnitViewModel(RepositoryProvider.unitRepo, unitId) }
         val unitUi by unitVm.state.collectAsState()
         val exerciseUi by exerciseVm.state.collectAsState()
@@ -134,6 +132,8 @@ class ExercisesOrUnitScreen(private val unitId: Int? = null) : Screen {
                 exerciseVm.getAllExercises()
                 selectedIndex = 3
             }
+            // Obtener mapeo de ejercicios en tests
+            testVm.getAllExercisesInTests()
         }
 
 
@@ -154,7 +154,6 @@ class ExercisesOrUnitScreen(private val unitId: Int? = null) : Screen {
 
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                unitVm.getAllUnits()
                 ExercisesSection(
                     modifier = Modifier.weight(1f),
                     navigator = navigator,
@@ -162,6 +161,8 @@ class ExercisesOrUnitScreen(private val unitId: Int? = null) : Screen {
                     showUnitHeader = unitId != null,
                     exercises = exerciseUi.exercises,
                     testUnit = testUi.currentTest,
+                    allTestExercises = testUi.allTestExercises,
+                    allTests = testUi.allTests,
                     searchQuery = searchQuery,
                     onSearchQueryChange = { searchQuery = it },
                     onAdd = { dto ->
@@ -193,6 +194,8 @@ fun ExercisesSection(
     actualUnit: UnitDto? = null,
     unitsList: List<UnitDto> = emptyList(),
     testUnit: TestDto? = null,
+    allTestExercises: Map<Int, List<ExerciseDto>> = emptyMap(),
+    allTests: List<TestDto> = emptyList(),
     showUnitHeader: Boolean = false,
     exercises: List<ExerciseDto>,
     searchQuery: String,
@@ -205,6 +208,18 @@ fun ExercisesSection(
 ) {
     val encodeSansFamily = FontFamily(Font(Res.font.encode_sans_variable))
     val jetbrainsMonoFamily = FontFamily(Font(Res.font.jetbrains_mono_regular))
+    
+    // Crear mapeo de exerciseId -> testName
+    val exerciseToTestNameMap = remember(allTestExercises, allTests) {
+        val map = mutableMapOf<Int, String>()
+        allTestExercises.forEach { (testId, exercisesInTest) ->
+            val testName = allTests.find { it.id == testId }?.name ?: ""
+            exercisesInTest.forEach { exercise ->
+                map[exercise.id] = testName
+            }
+        }
+        map
+    }
 
     // Estados para agregar ejercicio
     var isAddingExercise by remember { mutableStateOf(false) }
@@ -225,6 +240,8 @@ fun ExercisesSection(
     var filterUnit by remember { mutableStateOf<UnitDto?>(null) }
     var filterActive by remember { mutableStateOf<Boolean?>(null) }
     var filterActiveExpanded by remember { mutableStateOf(false) }
+    var filterUnitExpanded by remember { mutableStateOf(false) }
+    var skipFirstFilterEffect by remember { mutableStateOf(true) }
 
     // UI estados para el botón
     var textAdd by remember { mutableStateOf("") }
@@ -245,6 +262,27 @@ fun ExercisesSection(
             nameUnit = actualUnit.name
             descriptionUnit = actualUnit.description
             activeUnit = actualUnit.isActive
+            if (showUnitHeader) {
+                // Si la pantalla ya trae unidad, el filtro por unidad queda fijo.
+                filterUnit = actualUnit
+            }
+        }
+    }
+
+    LaunchedEffect(searchQuery, filterActive, filterUnit?.id, isReordering, showUnitHeader, actualUnit?.id) {
+        if (skipFirstFilterEffect) {
+            skipFirstFilterEffect = false
+            return@LaunchedEffect
+        }
+        if (showUnitHeader && actualUnit?.id == null) return@LaunchedEffect
+        if (!isReordering) {
+            onFilter(
+                FilterExercisesDto(
+                    name = searchQuery,
+                    isActive = filterActive,
+                    unitId = if (showUnitHeader) actualUnit?.id else filterUnit?.id
+                )
+            )
         }
     }
 
@@ -545,22 +583,6 @@ fun ExercisesSection(
                                         modifier = Modifier.size(20.dp)
                                     )
                                 },
-                                trailingIcon = {
-                                    IconButton(onClick = {
-                                        onFilter(
-                                            FilterExercisesDto(
-                                                name = searchQuery,
-                                                isActive = filterActive
-                                            )
-                                        )
-                                    }) {
-                                        Icon(
-                                            Icons.AutoMirrored.Filled.Send,
-                                            contentDescription = "Enviar búsqueda",
-                                            tint = Color(0xFF4A4A4A).copy(alpha = 0.5f)
-                                        )
-                                    }
-                                },
                                 singleLine = true,
                                 shape = MaterialTheme.shapes.small,
                                 colors = OutlinedTextFieldDefaults.colors(
@@ -613,6 +635,76 @@ fun ExercisesSection(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
+                                        // Unidad
+                                        Box(Modifier.weight(1f)) {
+                                            if (showUnitHeader) {
+                                                OutlinedTextField(
+                                                    value = actualUnit?.name ?: "Unidad fija",
+                                                    onValueChange = {},
+                                                    readOnly = true,
+                                                    enabled = false,
+                                                    label = { Text("Unidad (bloqueada)", fontSize = 12.sp) },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    colors = OutlinedTextFieldDefaults.colors(
+                                                        disabledContainerColor = Color(0xFFF4F4F4),
+                                                        disabledBorderColor = Color(0xFFDADADA),
+                                                        disabledTextColor = Color(0xFF616161),
+                                                        disabledLabelColor = Color(0xFF757575)
+                                                    )
+                                                )
+                                            } else {
+                                                ExposedDropdownMenuBox(
+                                                    expanded = filterUnitExpanded,
+                                                    onExpandedChange = {
+                                                        filterUnitExpanded = !filterUnitExpanded
+                                                    }
+                                                ) {
+                                                    OutlinedTextField(
+                                                        value = filterUnit?.name ?: "Todas",
+                                                        onValueChange = {},
+                                                        readOnly = true,
+                                                        label = { Text("Unidad", fontSize = 12.sp) },
+                                                        trailingIcon = {
+                                                            ExposedDropdownMenuDefaults.TrailingIcon(
+                                                                expanded = filterUnitExpanded
+                                                            )
+                                                        },
+                                                        modifier = Modifier
+                                                            .menuAnchor(
+                                                                MenuAnchorType.PrimaryNotEditable,
+                                                                enabled = true
+                                                            )
+                                                            .fillMaxWidth(),
+                                                        colors = OutlinedTextFieldDefaults.colors(
+                                                            focusedContainerColor = Color.White,
+                                                            unfocusedContainerColor = Color.White
+                                                        )
+                                                    )
+                                                    ExposedDropdownMenu(
+                                                        expanded = filterUnitExpanded,
+                                                        onDismissRequest = { filterUnitExpanded = false }
+                                                    ) {
+                                                        DropdownMenuItem(
+                                                            text = { Text("Todas") },
+                                                            onClick = {
+                                                                filterUnit = null
+                                                                filterUnitExpanded = false
+                                                            }
+                                                        )
+                                                        unitsList.forEach { unitOption ->
+                                                            DropdownMenuItem(
+                                                                text = { Text(unitOption.name) },
+                                                                onClick = {
+                                                                    filterUnit = unitOption
+                                                                    filterUnitExpanded = false
+                                                                }
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
                                         // Estado
                                         Box(Modifier.weight(1f)) {
                                             ExposedDropdownMenuBox(
@@ -684,27 +776,19 @@ fun ExercisesSection(
                                         horizontalArrangement = Arrangement.End
                                     ) {
                                         TextButton(onClick = {
-                                            filterUnit = null
+                                            if (!showUnitHeader) {
+                                                filterUnit = null
+                                            }
                                             filterActive = null
                                             onSearchQueryChange("")
-                                            onFilter(FilterExercisesDto(null))
+                                            onFilter(
+                                                FilterExercisesDto(
+                                                    name = null,
+                                                    isActive = null,
+                                                    unitId = if (showUnitHeader) actualUnit?.id else null
+                                                )
+                                            )
                                         }) { Text("Limpiar") }
-                                        Spacer(Modifier.width(8.dp))
-                                        androidx.compose.material3.Button(
-                                            onClick = {
-                                                onFilter(
-                                                    FilterExercisesDto(
-                                                        isActive = filterActive
-                                                    )
-                                                )
-                                            },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = Color(
-                                                    0xFF003AB6
-                                                )
-                                            ),
-                                            shape = RoundedCornerShape(8.dp)
-                                        ) { Text("Aplicar") }
                                     }
                                 }
                             }
@@ -976,18 +1060,10 @@ fun ExercisesSection(
                         )
                     }
                 } else {
-                    val filteredList =
-                        if (searchQuery.isBlank()) exercises else exercises.filter {
-                            it.name.contains(
-                                searchQuery,
-                                ignoreCase = true
-                            )
-                        }
-
-
-                    itemsIndexed(filteredList) { _, ex ->
+                    itemsIndexed(exercises) { _, ex ->
                         ExerciseCard(
                             exercises = ex,
+                            testName = exerciseToTestNameMap[ex.id],
                             onExerciseClick = {
                                 navigator.push(
                                     ExercisesDetailsScreen(
@@ -1037,6 +1113,7 @@ fun ExercisesSection(
 @Composable
 fun ExerciseCard(
     exercises: ExerciseDto,
+    testName: String? = null,
     onExerciseClick: () -> Unit = {}
 ) {
     val encodeSansFamily = FontFamily(Font(Res.font.encode_sans_variable))
@@ -1059,7 +1136,7 @@ fun ExerciseCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Contenido principal: emoji a la izquierda, título + badge a la derecha del emoji, descripción debajo
+            // Contenido principal: emoji a la izquierda, título + badges a la derecha
             Row(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.Top
@@ -1076,8 +1153,7 @@ fun ExerciseCard(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
                             modifier = Modifier.weight(1f),
@@ -1089,8 +1165,6 @@ fun ExerciseCard(
                             overflow = TextOverflow.Ellipsis,
                             fontFamily = encodeSansFamily,
                         )
-
-                        Spacer(modifier = Modifier.width(2.dp))
 
                         val (badgeColor, badgeTextColor, badgeLabel) = if (exercises.isActive) {
                             Triple(Color(0xFFB8F4C4), Color(0xFF2D5E3D), "Publicado")
@@ -1104,6 +1178,17 @@ fun ExerciseCard(
                     }
 
                     Spacer(modifier = Modifier.height(6.dp))
+
+                    // Badge del test si existe
+                    if (testName != null) {
+                        Badge(
+                            containerColor = Color(0xFFE3F2FD),
+                            contentColor = Color(0xFF0D47A1)
+                        ) {
+                            Text("Test: $testName", fontSize = 11.sp)
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
 
                     exercises.description?.let {
                         Text(

@@ -31,7 +31,11 @@ data class UnitUiState(
 
     )
 
-class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : ViewModel(),
+class UnitViewModel(
+    private val unitRepo: UnitRepo,
+    val unitId: Int? = null,
+    private val autoLoad: Boolean = true
+) : ViewModel(),
     ScreenModel {
     private val _state = MutableStateFlow(
         UnitUiState(
@@ -54,7 +58,6 @@ class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : V
         launchCatching(
             block = { unitRepo.getAllUnits() },
             onSuccess = { units ->
-
                 _state.value = _state.value.copy(units = units)
             },
             onError = { error ->
@@ -64,7 +67,9 @@ class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : V
     }
 
     init {
-        if (unitId != null) {
+        if (!autoLoad) {
+            _state.value = _state.value.copy(isLoading = false)
+        }else if (unitId != null) {
             getUnitById(unitId)
             _state.value = _state.value.copy(units = emptyList())
         } else {
@@ -120,8 +125,13 @@ class UnitViewModel(private val unitRepo: UnitRepo, val unitId: Int? = null) : V
     }
 
     fun searchUnits(filters: FilterUnitsDto) {
+        val normalized = filters.copy(name = filters.name?.trim()?.takeIf { it.isNotEmpty() })
+        val hasFilters = normalized.name != null || normalized.difficulty != null || normalized.isActive != null
         launchCatching(
-            block = { unitRepo.searchUnits(filters) },
+            block = {
+                if (hasFilters) unitRepo.searchUnits(normalized)
+                else unitRepo.getAllUnits()
+            },
             onSuccess = { units ->
                 _state.value = _state.value.copy(units = units)
             },

@@ -4,6 +4,7 @@ import com.example.dtos.AlternativeDto
 import com.example.dtos.CreateAlternativeDto
 import com.example.dtos.CreateQuestionCompletedDto
 import com.example.dtos.CreateQuestionDto
+import com.example.dtos.FilterQuestionsDto
 import com.example.dtos.QuestionCompletedDto
 import com.example.dtos.QuestionDto
 import com.example.dtos.UpdateAlternativeDto
@@ -17,6 +18,7 @@ class QuestionService(private val repo: QuestionRepository) {
     fun getAllQuestions(): List<QuestionDto> = repo.getAllQuestions()
     fun getQuestionsByExerciseId(contentId: Int): List<QuestionDto> = repo.getQuestionsByExerciseId(contentId)
     fun getQuestionById(id: Int): QuestionDto? = repo.getQuestionById(id)
+    fun searchQuestions(filters: FilterQuestionsDto): List<QuestionDto> = repo.searchQuestions(filters)
 
     fun createQuestion(contentId: Int,dto: CreateQuestionDto): QuestionDto = repo.createQuestion(contentId,dto)
     fun updateQuestion(id: Int, dto: UpdateQuestionDto) = repo.updateQuestion(id, dto)

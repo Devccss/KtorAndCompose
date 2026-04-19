@@ -26,6 +26,7 @@ class UnitRepo(private val httpClient: HttpClient, private val baseUrl: String) 
             url("$baseUrl/api/v1/units/search")
             filterUnits.name?.let { parameter("name", it) }
             filterUnits.difficulty?.let { parameter("difficulty", it) }
+            filterUnits.isActive?.let { parameter("isActive", it) }
         }.parseOrThrow()
     }
 

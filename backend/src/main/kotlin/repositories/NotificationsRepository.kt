@@ -1,6 +1,7 @@
 package repositories
 
 import com.example.dtos.CreateNotificationDto
+import com.example.dtos.FilterNotificationsDto
 import com.example.dtos.NotificationDto
 import com.example.dtos.UpdateNotificationDto
 import io.ktor.server.plugins.BadRequestException
@@ -9,6 +10,8 @@ import models.NotificationType
 
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.like
+import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -36,6 +39,17 @@ class NotificationsRepository {
 
     fun getById(id: Int): NotificationDto? = transaction {
         Notifications.selectAll().where { Notifications.id eq id }.singleOrNull()?.let(::resultRowToNotification)
+    }
+
+    fun searchNotifications(filters: FilterNotificationsDto): List<NotificationDto> = transaction {
+        var query = Notifications.selectAll()
+
+        filters.userId?.let { query = query.andWhere { Notifications.userId eq it } }
+        filters.title?.takeIf { it.isNotBlank() }?.let { query = query.andWhere { Notifications.title like "%$it%" } }
+        filters.notificationType?.let { query = query.andWhere { Notifications.notificationType eq it } }
+        filters.isRead?.let { query = query.andWhere { Notifications.isRead eq it } }
+
+        query.orderBy(Notifications.createdAt).map(::resultRowToNotification)
     }
 
     fun create(dto: CreateNotificationDto): NotificationDto = try {

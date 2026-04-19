@@ -15,7 +15,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Save
@@ -156,6 +155,18 @@ fun UnitsSection(
         }
     }
 
+    LaunchedEffect(searchQuery, filterDifficulty, filterActive, isReordering) {
+        if (!isReordering) {
+            onFilter(
+                FilterUnitsDto(
+                    name = searchQuery,
+                    difficulty = filterDifficulty,
+                    isActive = filterActive
+                )
+            )
+        }
+    }
+
     if (isAddingUnit) {
         textAdd = "Cancelar creación"
         butonAddColor = Color(0xFFFFD4D4)
@@ -188,17 +199,6 @@ fun UnitsSection(
                             contentDescription = "Buscar",
                             modifier = Modifier.size(20.dp)
                         )
-                    },
-                    trailingIcon = {
-                        IconButton(onClick = {
-                            onFilter(FilterUnitsDto(name = searchQuery, difficulty = filterDifficulty, isActive = filterActive))
-                        }) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Send,
-                                contentDescription = "Enviar búsqueda",
-                                tint = Color(0xFF4A4A4A).copy(alpha = 0.5f)
-                            )
-                        }
                     },
                     singleLine = true,
                     shape = MaterialTheme.shapes.small,
@@ -315,14 +315,6 @@ fun UnitsSection(
                                 searchQuery = ""
                                 onFilter(FilterUnitsDto())
                             }) { Text("Limpiar") }
-                            Spacer(Modifier.width(8.dp))
-                            androidx.compose.material3.Button(
-                                onClick = {
-                                    onFilter(FilterUnitsDto(name = searchQuery, difficulty = filterDifficulty, isActive = filterActive))
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF003AB6)),
-                                shape = RoundedCornerShape(8.dp)
-                            ) { Text("Aplicar") }
                         }
                     }
                 }

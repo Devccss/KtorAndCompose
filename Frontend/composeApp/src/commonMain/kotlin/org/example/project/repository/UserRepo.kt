@@ -3,9 +3,11 @@ package org.example.project.repository
 import io.ktor.client.HttpClient
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
+import io.ktor.client.request.url
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import org.example.project.dtos.CreateUserDto
@@ -28,11 +30,16 @@ class UserRepo(private val httpClient: HttpClient, private val baseUrl: String) 
             if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
         }
 
-    suspend fun getFilterUsers(filters:FilterUsersDto): List<UserDto>? =
-        httpClient.post("$baseUrl/api/v1/users/filter") {
-            contentType(io.ktor.http.ContentType.Application.Json)
-            setBody(filters)
+    suspend fun searchUsers(filters: FilterUsersDto): List<UserDto> =
+        httpClient.get {
+            url("$baseUrl/api/v1/users/search")
+            filters.name?.let { parameter("name", it) }
+            filters.unitId?.let { parameter("unitId", it) }
+            filters.role?.let { parameter("role", it.name) }
         }.parseOrThrow()
+
+    suspend fun getFilterUsers(filters: FilterUsersDto): List<UserDto> =
+        searchUsers(filters)
 
     suspend fun getUsersByName(name: String): List<UserDto> =
         httpClient.get("$baseUrl/api/v1/users/name/$name").parseOrThrow()

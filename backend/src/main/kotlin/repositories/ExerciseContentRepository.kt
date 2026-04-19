@@ -1,12 +1,14 @@
 package com.example.repositories
 
 import com.example.dtos.CreateExerciseContentDto
+import com.example.dtos.FilterExerciseContentDto
 import com.example.dtos.ExerciseContentDto
 import com.example.dtos.UpdateExerciseContentDto
 import models.ExerciseContent
-import org.h2.result.Row
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.like
+import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -52,6 +54,17 @@ class ExerciseContentRepository {
         ExerciseContent.selectAll().where { ExerciseContent.exerciseId eq exerciseId }
             .singleOrNull()
             ?.let(::ExerciseContentRow)
+    }
+
+    fun searchExerciseContent(filters: FilterExerciseContentDto): List<ExerciseContentDto> = transaction {
+        var query = ExerciseContent.selectAll()
+
+        filters.exerciseId?.let { query = query.andWhere { ExerciseContent.exerciseId eq it } }
+        filters.contentType?.let { query = query.andWhere { ExerciseContent.contentType eq it } }
+        filters.textContent?.takeIf { it.isNotBlank() }?.let { query = query.andWhere { ExerciseContent.textContent like "%$it%" } }
+        filters.grammarExplanation?.takeIf { it.isNotBlank() }?.let { query = query.andWhere { ExerciseContent.grammarExplanation like "%$it%" } }
+
+        query.map(::ExerciseContentRow)
     }
 
     fun getAllExerciseContent(): List<ExerciseContentDto> = transaction {

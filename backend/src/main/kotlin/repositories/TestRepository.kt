@@ -2,6 +2,7 @@ package repositories
 
 import com.example.dtos.CreateTestCompletedDto
 import com.example.dtos.CreateTestDto
+import com.example.dtos.FilterTestsDto
 import com.example.dtos.TestCompletedDto
 import com.example.dtos.TestDto
 import com.example.dtos.UpdateTestCompletedDto
@@ -94,12 +95,12 @@ class TestRepository {
         Tests.deleteWhere { Tests.id eq id } > 0
     }
 
-    fun filterTests(name: String?, unitId: Int?, isActive: Boolean?): List<TestDto> = transaction {
+    fun filterTests(filters: FilterTestsDto): List<TestDto> = transaction {
         var query = Tests.selectAll()
 
-        name?.let { query = query.where { Tests.name like "%$it%" } }
-        unitId?.let { query = query.andWhere { Tests.unitId eq it } }
-        isActive?.let { query = query.andWhere { Tests.isActive eq it } }
+        filters.name?.takeIf { it.isNotBlank() }?.let { query = query.andWhere { Tests.name like "%$it%" } }
+        filters.unitId?.let { query = query.andWhere { Tests.unitId eq it } }
+        filters.isActive?.let { query = query.andWhere { Tests.isActive eq it } }
 
         query.orderBy(Tests.createdAt).map(::resultRowToTest)
     }

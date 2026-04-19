@@ -48,20 +48,29 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
         println("Mensaje actualizado: $message")
     }
 
-    init {
-        if (unitId != null && exerciseId != null) {
-            getExerciseById(exerciseId)
-
-        }else if(unitId != null && exerciseId == null){
-            getExercisesByUnitId(unitId)
-        }else{
-            getAllExercises()
-        }
-    }
-
     fun searchExercises(filters: FilterExercisesDto){
+        val normalized = filters.copy(name = filters.name?.trim()?.takeIf { it.isNotEmpty() })
+        val hasRealFilter = normalized.name != null || normalized.isActive != null
         launchCatching(
-            block = { repo.searchExercises(filters)},
+            block = {
+                if (unitId != null) {
+                    // En modo unidad: si no hay filtros reales, evitar /search y cargar por endpoint directo.
+                    if (!hasRealFilter) {
+                        repo.getExercisesByUnitId(unitId)
+                    } else {
+                        val newFilter = normalized.copy(unitId = unitId)
+                        repo.searchExercises(newFilter)
+                    }
+                }else{
+                    // En modo global: si no hay filtros reales, usar endpoint directo de todos.
+                    if (!hasRealFilter && normalized.unitId == null) {
+                        repo.getAllExercises()
+                    } else {
+                        repo.searchExercises(normalized)
+                    }
+                }
+
+            },
             onSuccess = { exercise ->
 
                 _state.value = _state.value.copy(exercises = exercise)
@@ -75,9 +84,8 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
     fun getAllExercises() {
         launchCatching(
             block = { repo.getAllExercises()},
-            onSuccess = { exercise ->
-
-                _state.value = _state.value.copy(exercises = exercise)
+            onSuccess = { exercises ->
+                _state.value = _state.value.copy(exercises = exercises)
             },
             onError = { error ->
                 _state.value = _state.value.copy(error = "Error al obtener todos los ejercicios: ${error.message}", exercises = emptyList())
@@ -101,9 +109,8 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
     fun getExercisesByUnitId(unitId: Int) {
         launchCatching(
             block = { repo.getExercisesByUnitId(unitId)},
-            onSuccess = { exercise ->
-
-                _state.value = _state.value.copy(exercises = exercise)
+            onSuccess = { exercises ->
+                _state.value = _state.value.copy(exercises = exercises)
             },
             onError = { error ->
                 _state.value = _state.value.copy(error = "Error al obtener ejercicios por unidad: ${error.message}", exercises = emptyList())

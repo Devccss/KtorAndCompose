@@ -4,6 +4,7 @@ import com.example.dtos.AlternativeDto
 import com.example.dtos.CreateAlternativeDto
 import com.example.dtos.CreateQuestionCompletedDto
 import com.example.dtos.CreateQuestionDto
+import com.example.dtos.FilterQuestionsDto
 import com.example.dtos.QuestionCompletedDto
 import com.example.dtos.QuestionDto
 import com.example.dtos.UpdateAlternativeDto
@@ -15,6 +16,8 @@ import models.Questions
 import models.QuestionsCompleted
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.like
+import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -62,6 +65,16 @@ class QuestionRepository {
 
     fun getQuestionById(id: Int): QuestionDto? = transaction {
         Questions.selectAll().where { Questions.id eq id }.singleOrNull()?.let(::resultRowToQuestion)
+    }
+
+    fun searchQuestions(filters: FilterQuestionsDto): List<QuestionDto> = transaction {
+        var query = Questions.selectAll()
+
+        filters.exerciseContentId?.let { query = query.andWhere { Questions.exerciseContentId eq it } }
+        filters.questionText?.takeIf { it.isNotBlank() }?.let { query = query.andWhere { Questions.questionText like "%$it%" } }
+        filters.isActive?.let { query = query.andWhere { Questions.isActive eq it } }
+
+        query.orderBy(Questions.createdAt).map(::resultRowToQuestion)
     }
 
     fun createQuestion(exerciseContent: Int,dto: CreateQuestionDto): QuestionDto = try {

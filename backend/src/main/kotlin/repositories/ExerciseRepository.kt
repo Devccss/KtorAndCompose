@@ -40,8 +40,7 @@ class ExerciseRepository {
         Exercises.selectAll().orderBy(Exercises.orderExercise).map(::resultRowToExercise)
     }
 
-    fun searchExercises(filters: FilterExercisesDto) {
-        transaction {
+    fun searchExercises(filters: FilterExercisesDto): List<ExerciseDto> = transaction {
             var query = Exercises.selectAll()
 
             filters.name?.let {
@@ -51,10 +50,8 @@ class ExerciseRepository {
                 query = query.andWhere { Exercises.isActive eq it }
             }
 
-            return@transaction query.orderBy(Exercises.orderExercise).map(::resultRowToExercise)
+            query.orderBy(Exercises.orderExercise).map(::resultRowToExercise)
         }
-
-    }
 
     fun getById(id: Int): ExerciseDto? = transaction {
         Exercises.selectAll().where { Exercises.id eq id }.singleOrNull()

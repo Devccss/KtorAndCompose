@@ -62,6 +62,8 @@ import org.example.project.dtos.CreateExerciseCompletedDto
 import org.example.project.dtos.CreateTestCompletedDto
 import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.ExerciseContentDto
+import org.example.project.dtos.FilterExercisesDto
+import org.example.project.dtos.FilterUnitsDto
 import org.example.project.dtos.QuestionDto
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.WordDto
@@ -88,7 +90,7 @@ class StudentWelcomeScreen(val id: Int? = null) : Screen {
             )
         }
         val exercisesVm = rememberScreenModel { ExercisesViewModel(RepositoryProvider.exerciseRepo) }
-        val unitVm = rememberScreenModel { UnitViewModel(RepositoryProvider.unitRepo) }
+        val unitVm = rememberScreenModel { UnitViewModel(RepositoryProvider.unitRepo, autoLoad = false) }
         val userVm = rememberScreenModel { UserViewModel(RepositoryProvider.userRepo, RepositoryProvider.unitRepo) }
 
         val testUi by testVm.state.collectAsState()
@@ -103,8 +105,8 @@ class StudentWelcomeScreen(val id: Int? = null) : Screen {
 
         LaunchedEffect(userId) {
             testVm.getAllWelcomeTests()
-            exercisesVm.getAllExercises()
-            unitVm.getAllUnits()
+            exercisesVm.searchExercises(FilterExercisesDto(isActive = true))
+            unitVm.searchUnits(FilterUnitsDto(isActive = true))
 
             if (userId != null && userId > 0) {
                 testVm.getTestsCompletedByUser(userId)
@@ -132,11 +134,11 @@ class StudentWelcomeScreen(val id: Int? = null) : Screen {
             activeWelcome?.testId?.let { testVm.getExercisesByTestId(it) }
         }
 
-        val unitsOrdered = remember(unitUi.units) { unitUi.units.sortedBy { it.orderUnit } }
+        val unitsOrdered = remember(unitUi.units) { unitUi.units.filter { it.isActive }.sortedBy { it.orderUnit } }
         val progress = remember(unitsOrdered, exercisesUi.exercises, exercisesUi.completedExercises) {
             estimatePlacement(
                 units = unitsOrdered,
-                allExercises = exercisesUi.exercises,
+                allExercises = exercisesUi.exercises.filter { it.isActive },
                 completedExerciseIds = exercisesUi.completedExercises.map { it.exerciseId }.toSet()
             )
         }
@@ -175,7 +177,7 @@ class StudentWelcomeScreen(val id: Int? = null) : Screen {
                 currentUnitName = currentUnitName,
                 progress = progress,
                 welcomeTestPending = activeWelcomePending,
-                welcomeExercises = testUi.testExercises,
+                welcomeExercises = testUi.testExercises.filter { it.isActive },
                 isLoading = testUi.isLoading || exercisesUi.isLoading || unitUi.isLoading,
                 units = unitsOrdered,
                 onFinishWelcome = { resolvedIds, placement ->

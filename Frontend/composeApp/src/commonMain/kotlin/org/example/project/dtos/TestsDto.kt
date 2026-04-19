@@ -50,3 +50,11 @@ data class UpdateTestCompletedDto(
     val score: Int? = null,
     val completedAt: String? = null
 )
+
+@Serializable
+data class FilterTestsDto(
+    val name: String? = null,
+    val unitId: Int? = null,
+    val isActive: Boolean? = null
+)
+

@@ -24,7 +24,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
@@ -156,6 +155,16 @@ class UsersScreen : Screen {
             }
         }
 
+        LaunchedEffect(searchQuery, selectedRole, selectedUnit?.id) {
+            vm.getFilterUsers(
+                FilterUsersDto(
+                    name = searchQuery,
+                    role = selectedRole,
+                    unitId = selectedUnit?.id
+                )
+            )
+        }
+
 
         // Usamos AppLayout que provee card de inicio y bottom bar fijo
         AppLayout(
@@ -211,24 +220,6 @@ class UsersScreen : Screen {
                                 )
                             },
                             singleLine = true,
-                            trailingIcon = {
-                                IconButton(onClick = {
-                                    vm.getFilterUsers(
-                                        FilterUsersDto(
-                                            name = searchQuery,
-                                            role = selectedRole,
-                                            unitId = selectedUnit?.id
-                                        )
-                                    )
-                                }) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.Send,
-                                        modifier = Modifier.size(20.dp),
-                                        contentDescription = "Buscar enviar",
-                                        tint = Color(0xFF4A4A4A).copy(alpha = 0.5f)
-                                    )
-                                }
-                            },
                         )
 
                         // Botón para alternar visibilidad del filtro (Formulario inline)
@@ -385,29 +376,6 @@ class UsersScreen : Screen {
                                         Text("Limpiar filtros")
                                     }
 
-                                    Spacer(Modifier.width(8.dp))
-
-                                    androidx.compose.material3.Button(
-                                        onClick = {
-                                            vm.getFilterUsers(
-                                                FilterUsersDto(
-                                                    name = searchQuery,
-                                                    role = selectedRole,
-                                                    unitId = selectedUnit?.id
-                                                )
-                                            )
-                                            // Opcional: cerrar filtros al aplicar
-                                            // isFiltering = false
-                                        },
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = Color(
-                                                0xFF003AB6
-                                            )
-                                        ),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Text("Aplicar Filtros")
-                                    }
                                 }
                             }
                         }

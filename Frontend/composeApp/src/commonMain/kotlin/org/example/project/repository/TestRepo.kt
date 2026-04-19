@@ -14,6 +14,7 @@ import org.example.project.dtos.CreateTestCompletedDto
 import org.example.project.dtos.CreateTestDto
 import org.example.project.dtos.CreateTestExerciseDto
 import org.example.project.dtos.ExerciseDto
+import org.example.project.dtos.FilterTestsDto
 import org.example.project.dtos.TestCompletedDto
 import org.example.project.dtos.TestDto
 import org.example.project.dtos.TestExerciseDto
@@ -59,12 +60,12 @@ class TestRepo(private val httpClient: HttpClient ,private val baseUrl: String) 
     suspend fun deleteTest(id: Int): Boolean =
         httpClient.delete("$baseUrl/api/v1/tests/$id").ensureSuccessOrThrow()
 
-    suspend fun searchTests(name: String?, unitId: Int?, isActive: Boolean?): List<TestDto> {
+    suspend fun searchTests(filters: FilterTestsDto): List<TestDto> {
         return httpClient.get {
             url("$baseUrl/api/v1/tests/search")
-            name?.let { parameter("name", it) }
-            unitId?.let { parameter("unitId", it) }
-            isActive?.let { parameter("isActive", it) }
+            filters.name?.let { parameter("name", it) }
+            filters.unitId?.let { parameter("unitId", it) }
+            filters.isActive?.let { parameter("isActive", it) }
         }.parseOrThrow()
     }
 

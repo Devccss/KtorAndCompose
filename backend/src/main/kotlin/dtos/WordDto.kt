@@ -31,3 +31,11 @@ data class UpdateWordDto(
     val isActive: Boolean? = null
 )
 
+@Serializable
+data class FilterWordsDto(
+    val english: String? = null,
+    val spanish: String? = null,
+    val phonetic: String? = null,
+    val isActive: Boolean? = null
+)
+

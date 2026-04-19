@@ -49,8 +49,9 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
         launchCatching(
             block = { repo.getQuestionsByExerciseId(exerciseId) },
             onSuccess = { questions ->
-                _state.value = _state.value.copy(selectedQuestions = questions)
-                questions.forEach { getAlternativesByQuestionId(it.id) }
+                val activeQuestions = questions.filter { it.isActive == true }
+                _state.value = _state.value.copy(selectedQuestions = activeQuestions)
+                activeQuestions.forEach { getAlternativesByQuestionId(it.id) }
             },
             onError = { error ->
                 _state.value =

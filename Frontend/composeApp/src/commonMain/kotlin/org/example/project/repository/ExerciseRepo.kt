@@ -28,6 +28,7 @@ class ExerciseRepo(private val httpClient: HttpClient, private val baseUrl: Stri
             url("$baseUrl/api/v1/exercises/search")
             filters.name?.let { parameter("name", it) }
             filters.isActive?.let { parameter("isActive", it) }
+            filters.unitId?.let { parameter("unitId", it) }
         }.parseOrThrow()
     }
 

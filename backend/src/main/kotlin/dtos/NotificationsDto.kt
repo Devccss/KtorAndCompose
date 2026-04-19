@@ -31,3 +31,12 @@ data class UpdateNotificationDto(
     val message: String? = null,
     val isRead: Boolean? = null
 )
+
+@Serializable
+data class FilterNotificationsDto(
+    val userId: Int? = null,
+    val title: String? = null,
+    val notificationType: NotificationType? = null,
+    val isRead: Boolean? = null
+)
+

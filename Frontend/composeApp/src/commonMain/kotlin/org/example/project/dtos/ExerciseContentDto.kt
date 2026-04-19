@@ -29,3 +29,10 @@ data class UpdateExerciseContentDto(
     val grammarExplanation: String? = null,
     val audioUrl: String? = null
 )
+@Serializable
+data class FilterExerciseContentDto(
+    val exerciseId: Int? = null,
+    val contentType: ContentType? = null,
+    val textContent: String? = null,
+    val grammarExplanation: String? = null
+)

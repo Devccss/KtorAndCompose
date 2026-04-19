@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FactCheck
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FilterList
@@ -71,7 +70,7 @@ import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import org.example.project.components.AppLayout
 import org.example.project.dtos.CreateTestDto
 import org.example.project.dtos.ExerciseDto
-import org.example.project.dtos.FilterUnitsDto
+import org.example.project.dtos.FilterTestsDto
 import org.example.project.dtos.TestDto
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.WelcomeTestDto
@@ -152,7 +151,7 @@ class TestScreen : Screen {
                     },
                     onDeleteWelcome = { testVm.deleteWelcomeTest(it) },
                     onNavigate = { navigator.push(it) },
-                    onFilter = { /*TODO*/ },
+                    onFilter = { testVm.searchTests(it) },
                     onError = { testVm.updateMessage(it.message) }
                 )
             }
@@ -174,7 +173,7 @@ fun TestSection(
     onActivateWelcome: (Int) -> Unit,
     onCreateWelcome: (CreateTestDto, List<Int>) -> Unit,
     onDeleteWelcome: (Int) -> Unit,
-    onFilter: (FilterUnitsDto) -> Unit,
+    onFilter: (FilterTestsDto) -> Unit,
     onNavigate: (Screen) -> Unit = {},
     onError: (Error) -> Unit
 ) {
@@ -205,6 +204,15 @@ fun TestSection(
     val exercisesForNewWelcome = allExercises
         .filter { exercise -> exercise.name.contains(searchWelcomeExercise, ignoreCase = true) }
 
+    LaunchedEffect(searchQuery, filterActive) {
+        onFilter(
+            FilterTestsDto(
+                name = searchQuery,
+                isActive = filterActive
+            )
+        )
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -228,15 +236,6 @@ fun TestSection(
                             contentDescription = "Buscar",
                             modifier = Modifier.size(20.dp)
                         )
-                    },
-                    trailingIcon = {
-                        IconButton(onClick = { }) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Send,
-                                contentDescription = "Enviar búsqueda",
-                                tint = Color(0xFF4A4A4A).copy(alpha = 0.5f)
-                            )
-                        }
                     },
                     singleLine = true,
                     shape = MaterialTheme.shapes.small,
@@ -340,52 +339,10 @@ fun TestSection(
                             TextButton(onClick = {
                                 filterActive = null
                                 searchQuery = ""
-                                onFilter(FilterUnitsDto())
+                                onFilter(FilterTestsDto())
                             }) { Text("Limpiar") }
-                            Spacer(Modifier.width(8.dp))
-                            Button(
-                                onClick = {
-                                    onFilter(
-                                        FilterUnitsDto(
-                                            name = searchQuery,
-                                            isActive = filterActive
-                                        )
-                                    )
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(
-                                        0xFF003AB6
-                                    )
-                                ),
-                                shape = RoundedCornerShape(8.dp)
-                            ) { Text("Aplicar") }
                         }
                     }
-                }
-            }
-        }
-
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(
-                    onClick = { isAddingTest = !isAddingTest },
-                    modifier = Modifier.weight(1f).padding(end = 8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isAddingTest) Color(
-                            0xFFE0E0E0
-                        ) else Color(0xFFB8F4C4)
-                    ),
-                    shape = MaterialTheme.shapes.small
-                ) {
-                    Text(
-                        "+ Agregar nuevo test",
-                        color = Color(0xFF2D5E3D),
-                        fontWeight = FontWeight.Medium
-                    )
                 }
             }
         }
@@ -693,6 +650,31 @@ fun TestSection(
                             WelcomeMode.NONE -> Unit
                         }
                     }
+                }
+            }
+        }
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = { isAddingTest = !isAddingTest },
+                    modifier = Modifier.weight(1f).padding(end = 8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isAddingTest) Color(
+                            0xFFE0E0E0
+                        ) else Color(0xFFB8F4C4)
+                    ),
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Text(
+                        "+ Agregar nuevo test",
+                        color = Color(0xFF2D5E3D),
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
         }

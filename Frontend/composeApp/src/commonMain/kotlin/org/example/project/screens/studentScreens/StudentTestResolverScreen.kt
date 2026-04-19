@@ -53,6 +53,7 @@ import org.example.project.components.StudentAppLayout
 import org.example.project.dtos.AlternativesDto
 import org.example.project.dtos.CreateTestCompletedDto
 import org.example.project.dtos.ExerciseContentDto
+import org.example.project.dtos.FilterExercisesDto
 import org.example.project.dtos.QuestionDto
 import org.example.project.dtos.WordDto
 import org.example.project.network.RepositoryProvider
@@ -111,7 +112,7 @@ class StudentTestResolverScreen(
 
         LaunchedEffect(testId) {
             testVm.getExercisesByTestId(testId)
-            exercisesVm.getExercisesByUnitId(unitId)
+            exercisesVm.searchExercises(FilterExercisesDto(unitId = unitId, isActive = true))
             if (userId != null && userId > 0) {
                 testVm.getTestsCompletedByUser(userId)
                 unitVm.getAllUnitsCompletedByUserId(userId)
@@ -131,7 +132,7 @@ class StudentTestResolverScreen(
         }
 
         LaunchedEffect(testUi.testExercises) {
-            val exercises = testUi.testExercises.sortedBy { it.orderExercise }
+            val exercises = testUi.testExercises.filter { it.isActive }.sortedBy { it.orderExercise }
             if (exercises.isEmpty()) {
                 questionsByExercise.clear()
                 alternativesByQuestion.clear()
@@ -194,7 +195,7 @@ class StudentTestResolverScreen(
         }
 
         val orderedExercises = remember(testUi.testExercises) {
-            testUi.testExercises.sortedBy { it.orderExercise }
+            testUi.testExercises.filter { it.isActive }.sortedBy { it.orderExercise }
         }
         val allQuestions = orderedExercises.flatMap { exercise ->
             questionsByExercise[exercise.id].orEmpty()

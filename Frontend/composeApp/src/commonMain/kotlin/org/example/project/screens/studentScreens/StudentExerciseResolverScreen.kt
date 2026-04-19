@@ -50,6 +50,7 @@ import org.example.project.components.ExerciseInfoSections
 import org.example.project.components.StudentAppLayout
 import org.example.project.dtos.AlternativesDto
 import org.example.project.dtos.CreateExerciseCompletedDto
+import org.example.project.dtos.FilterExercisesDto
 import org.example.project.dtos.QuestionDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
@@ -109,7 +110,7 @@ class StudentExerciseResolverScreen(
 
         LaunchedEffect(exerciseId) {
             exerciseVm.getExerciseById(exerciseId)
-            exerciseVm.getExercisesByUnitId(unitId)
+            exerciseVm.searchExercises(FilterExercisesDto(unitId = unitId, isActive = true))
             questionVm.getQuestionsByExerciseId(exerciseId)
             wordVm.getWordsByExerciseId(exerciseId)
             if (userId != null && userId > 0) {
