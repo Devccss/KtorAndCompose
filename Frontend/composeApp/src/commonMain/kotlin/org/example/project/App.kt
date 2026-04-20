@@ -8,12 +8,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import cafe.adriel.voyager.navigator.Navigator
-import org.example.project.dtos.Role
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.createHttpClient
 import org.example.project.screens.LoginScreen
-import org.example.project.screens.admindScreens.AdminDashboard
-import org.example.project.screens.studentScreens.StudentWelcomeScreen
+
 
 
 @Composable
@@ -30,9 +28,7 @@ fun App() {
 
     MaterialTheme {
         if (initialized) {
-            //Navigator(screen = AdminDashboard(1,"Deivid",Role.ADMIN))
-            //Navigator(screen = LoginScreen())
-            Navigator(screen = StudentWelcomeScreen( 4))
+            Navigator(screen = LoginScreen(userId = 1))
         } else {
             // Loader o pantalla de espera
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

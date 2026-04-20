@@ -143,8 +143,6 @@ class ExercisesOrUnitScreen(private val unitId: Int? = null) : Screen {
             actualScreen = "Administrar Ejercicios",
             selectedIndex = selectedIndex,
             onSelect = { idx -> selectedIndex = idx },
-            initialUserName = UserSession.name,
-            role = UserSession.role,
             snackbarHostState = snackbarHostState
         ) { _, _, _ ->
             // ...existing code...

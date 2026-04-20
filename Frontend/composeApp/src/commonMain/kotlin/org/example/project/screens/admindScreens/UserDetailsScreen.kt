@@ -153,8 +153,6 @@ class UserDetailsScreen(private val userId: Int) : Screen {
             actualScreen = "Detalles de Usuario",
             selectedIndex = selectedIndex,
             onSelect = { idx -> selectedIndex = idx },
-            initialUserName = UserSession.name,
-            role = UserSession.role,
             snackbarHostState = snackbarHostState
         ) { _, _, _ ->
 

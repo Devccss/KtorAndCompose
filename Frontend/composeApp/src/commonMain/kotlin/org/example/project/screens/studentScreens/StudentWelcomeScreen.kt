@@ -89,9 +89,16 @@ class StudentWelcomeScreen(val id: Int? = null) : Screen {
                 RepositoryProvider.welcomeTestRepo
             )
         }
-        val exercisesVm = rememberScreenModel { ExercisesViewModel(RepositoryProvider.exerciseRepo) }
-        val unitVm = rememberScreenModel { UnitViewModel(RepositoryProvider.unitRepo, autoLoad = false) }
-        val userVm = rememberScreenModel { UserViewModel(RepositoryProvider.userRepo, RepositoryProvider.unitRepo) }
+        val exercisesVm =
+            rememberScreenModel { ExercisesViewModel(RepositoryProvider.exerciseRepo) }
+        val unitVm =
+            rememberScreenModel { UnitViewModel(RepositoryProvider.unitRepo, autoLoad = false) }
+        val userVm = rememberScreenModel {
+            UserViewModel(
+                RepositoryProvider.userRepo,
+                RepositoryProvider.unitRepo
+            )
+        }
 
         val testUi by testVm.state.collectAsState()
         val exercisesUi by exercisesVm.state.collectAsState()
@@ -115,7 +122,7 @@ class StudentWelcomeScreen(val id: Int? = null) : Screen {
             }
         }
 
-        LaunchedEffect(userUi.currentUser){
+        LaunchedEffect(userUi.currentUser) {
             userUi.currentUser.let {
                 if (it?.id != null) {
                     UserSession.set(
@@ -134,14 +141,17 @@ class StudentWelcomeScreen(val id: Int? = null) : Screen {
             activeWelcome?.testId?.let { testVm.getExercisesByTestId(it) }
         }
 
-        val unitsOrdered = remember(unitUi.units) { unitUi.units.filter { it.isActive }.sortedBy { it.orderUnit } }
-        val progress = remember(unitsOrdered, exercisesUi.exercises, exercisesUi.completedExercises) {
-            estimatePlacement(
-                units = unitsOrdered,
-                allExercises = exercisesUi.exercises.filter { it.isActive },
-                completedExerciseIds = exercisesUi.completedExercises.map { it.exerciseId }.toSet()
-            )
-        }
+        val unitsOrdered =
+            remember(unitUi.units) { unitUi.units.filter { it.isActive }.sortedBy { it.orderUnit } }
+        val progress =
+            remember(unitsOrdered, exercisesUi.exercises, exercisesUi.completedExercises) {
+                estimatePlacement(
+                    units = unitsOrdered,
+                    allExercises = exercisesUi.exercises.filter { it.isActive },
+                    completedExerciseIds = exercisesUi.completedExercises.map { it.exerciseId }
+                        .toSet()
+                )
+            }
 
         // Evitamos recalcular/sobrescribir la unidad actual en Inicio.
         // La unidad debe actualizarse solo al completar Welcome Test o al aprobar flujos de aprendizaje.
@@ -155,8 +165,11 @@ class StudentWelcomeScreen(val id: Int? = null) : Screen {
         }
 
         val completedWelcomeTestIds = testUi.testsCompleted.map { it.testId }.toSet()
-        val activeWelcomePending = activeWelcome?.testId?.let { it !in completedWelcomeTestIds } == true
-        val currentUnitName = unitsOrdered.firstOrNull { it.id == (UserSession.actualUnit ?: progress.currentUnitId) }?.name
+        val activeWelcomePending =
+            activeWelcome?.testId?.let { it !in completedWelcomeTestIds } == true
+        val currentUnitName = unitsOrdered.firstOrNull {
+            it.id == (UserSession.actualUnit ?: progress.currentUnitId)
+        }?.name
 
         StudentAppLayout(
             actualScreen = "Inicio",
@@ -184,7 +197,8 @@ class StudentWelcomeScreen(val id: Int? = null) : Screen {
                     val safeUserId = userId ?: return@StudentDashboardContent
                     val safeTestId = activeWelcome?.testId ?: return@StudentDashboardContent
 
-                    val alreadyCompleted = exercisesUi.completedExercises.map { it.exerciseId }.toSet()
+                    val alreadyCompleted =
+                        exercisesUi.completedExercises.map { it.exerciseId }.toSet()
                     val newResolved = resolvedIds.filterNot { it in alreadyCompleted }
 
                     newResolved.forEach { exerciseId ->
@@ -236,20 +250,20 @@ fun StudentDashboardContent(
 ) {
     var expandedWelcome by remember { mutableStateOf(welcomeTestPending) }
 
-    LazyColumn(
+    Card(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth().shadow(1.dp, RoundedCornerShape(12.dp)),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(bottom = 16.dp)
+        ) {
+            item {
+
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 18.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         text = "Hola, $name",
@@ -267,131 +281,138 @@ fun StudentDashboardContent(
                         color = Color(0xFF6B6B6B)
                     )
                 }
-            }
-        }
 
-        if (welcomeTestPending) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                brush = Brush.horizontalGradient(
-                                    colors = listOf(Color(0xFF003AB6), Color(0xFF48145B))
-                                )
-                            )
-                            .padding(20.dp)
+            }
+
+            if (welcomeTestPending) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    brush = Brush.horizontalGradient(
+                                        colors = listOf(Color(0xFF003AB6), Color(0xFF48145B))
+                                    )
+                                )
+                                .padding(20.dp)
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "WELCOME TEST",
-                                    color = Color.White.copy(alpha = 0.8f),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Test de nivelacion pendiente",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 20.sp
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                LinearProgressIndicator(
-                                    progress = { (progress.progressPercent / 100f).coerceIn(0f, 1f) },
-                                    modifier = Modifier.fillMaxWidth(0.8f).height(6.dp),
-                                    color = Color(0xFFB8F4C4),
-                                    trackColor = Color.White.copy(alpha = 0.3f),
-                                    strokeCap = StrokeCap.Round,
-                                )
-                            }
-                            IconButton(
-                                onClick = { expandedWelcome = !expandedWelcome },
-                                modifier = Modifier
-                                    .size(50.dp)
-                                    .background(Color.White, RoundedCornerShape(50)),
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Flag,
-                                    contentDescription = "Accion principal",
-                                    tint = Color(0xFF003AB6),
-                                    modifier = Modifier.size(28.dp)
-                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "WELCOME TEST",
+                                        color = Color.White.copy(alpha = 0.8f),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Test de nivelacion pendiente",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 20.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    LinearProgressIndicator(
+                                        progress = {
+                                            (progress.progressPercent / 100f).coerceIn(
+                                                0f,
+                                                1f
+                                            )
+                                        },
+                                        modifier = Modifier.fillMaxWidth(0.8f).height(6.dp),
+                                        color = Color(0xFFB8F4C4),
+                                        trackColor = Color.White.copy(alpha = 0.3f),
+                                        strokeCap = StrokeCap.Round,
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { expandedWelcome = !expandedWelcome },
+                                    modifier = Modifier
+                                        .size(50.dp)
+                                        .background(Color.White, RoundedCornerShape(50)),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Flag,
+                                        contentDescription = "Accion principal",
+                                        tint = Color(0xFF003AB6),
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        item {
-            Text(
-                text = "Tu progreso",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF131313)
-            )
-        }
-
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                StatCard(
-                    title = "Completado",
-                    value = "${progress.progressPercent}%",
-                    color = Color(0xFFE0F2F1),
-                    textColor = Color(0xFF00695C),
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    title = "Unidades dominadas",
-                    value = progress.dominatedUnits.toString(),
-                    color = Color(0xFFFFF3E0),
-                    textColor = Color(0xFFEF6C00),
-                    modifier = Modifier.weight(1f)
+            item {
+                Text(
+                    text = "Tu progreso",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF131313)
                 )
             }
-        }
 
-        if (welcomeTestPending) {
             item {
-                WelcomePlacementCard(
-                    expanded = expandedWelcome,
-                    isLoading = isLoading,
-                    welcomeExercises = welcomeExercises,
-                    units = units,
-                    onToggleExpand = { expandedWelcome = !expandedWelcome },
-                    onFinish = { passedExercises, placement ->
-                        onFinishWelcome(passedExercises, placement)
-                        expandedWelcome = false
-                    }
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    StatCard(
+                        title = "Completado",
+                        value = "${progress.progressPercent}%",
+                        color = Color(0xFFE0F2F1),
+                        textColor = Color(0xFF00695C),
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatCard(
+                        title = "Unidades dominadas",
+                        value = progress.dominatedUnits.toString(),
+                        color = Color(0xFFFFF3E0),
+                        textColor = Color(0xFFEF6C00),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
-        }
 
-        if (progress.bonusPointsFromSparseUnits > 0) {
-            item {
-                InfoCard(
-                    icon = Icons.Default.School,
-                    title = "Estimacion aplicada",
-                    description = "Se aplicaron ${progress.bonusPointsFromSparseUnits} punto(s) extra por unidades con pocos ejercicios."
-                )
+            if (welcomeTestPending) {
+                item {
+                    WelcomePlacementCard(
+                        expanded = expandedWelcome,
+                        isLoading = isLoading,
+                        welcomeExercises = welcomeExercises,
+                        units = units,
+                        onToggleExpand = { expandedWelcome = !expandedWelcome },
+                        onFinish = { passedExercises, placement ->
+                            onFinishWelcome(passedExercises, placement)
+                            expandedWelcome = false
+                        }
+                    )
+                }
+            }
+
+            if (progress.bonusPointsFromSparseUnits > 0) {
+                item {
+                    InfoCard(
+                        icon = Icons.Default.School,
+                        title = "Estimacion aplicada",
+                        description = "Se aplicaron ${progress.bonusPointsFromSparseUnits} punto(s) extra por unidades con pocos ejercicios."
+                    )
+                }
             }
         }
     }
+
 }
 
 @Composable
@@ -406,11 +427,15 @@ private fun WelcomePlacementCard(
     val questionRepo = RepositoryProvider.questionRepo
     val exerciseRepo = RepositoryProvider.exerciseRepo
     val wordRepo = RepositoryProvider.wordRepo
-    val questionsByExercise = remember(welcomeExercises) { mutableStateMapOf<Int, List<QuestionDto>>() }
-    val alternativesByQuestion = remember(welcomeExercises) { mutableStateMapOf<Int, List<org.example.project.dtos.AlternativesDto>>() }
-    val contentByExercise = remember(welcomeExercises) { mutableStateMapOf<Int, ExerciseContentDto?>() }
+    val questionsByExercise =
+        remember(welcomeExercises) { mutableStateMapOf<Int, List<QuestionDto>>() }
+    val alternativesByQuestion =
+        remember(welcomeExercises) { mutableStateMapOf<Int, List<org.example.project.dtos.AlternativesDto>>() }
+    val contentByExercise =
+        remember(welcomeExercises) { mutableStateMapOf<Int, ExerciseContentDto?>() }
     val wordsByExercise = remember(welcomeExercises) { mutableStateMapOf<Int, List<WordDto>>() }
-    val vocabularyExpandedByExercise = remember(welcomeExercises) { mutableStateMapOf<Int, Boolean>() }
+    val vocabularyExpandedByExercise =
+        remember(welcomeExercises) { mutableStateMapOf<Int, Boolean>() }
     val selectedAnswers = remember(welcomeExercises) { mutableStateMapOf<Int, Int>() }
 
     var loadingResolver by remember(welcomeExercises) { mutableStateOf(false) }
@@ -441,7 +466,8 @@ private fun WelcomePlacementCard(
                             exerciseRepo.getExerciseContentByExerciseId(exerciseId)
                         }.getOrNull()
 
-                        val questions = questionRepo.getQuestionsByExerciseId(exerciseId).sortedBy { it.orderQuestion }
+                        val questions = questionRepo.getQuestionsByExerciseId(exerciseId)
+                            .sortedBy { it.orderQuestion }
                         questionsByExercise[exerciseId] = questions
 
                         questions.forEach { question ->
@@ -516,7 +542,10 @@ private fun WelcomePlacementCard(
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FBFF))
     ) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth().clickable { onToggleExpand() },
                 verticalAlignment = Alignment.CenterVertically,
@@ -547,8 +576,10 @@ private fun WelcomePlacementCard(
                     Text("Este welcome test aun no tiene ejercicios.", color = Color.Gray)
                 } else {
                     welcomeExercises.sortedBy { it.orderExercise }.forEach { exercise ->
-                        val questions = questionsByExercise[exercise.id].orEmpty().sortedBy { it.orderQuestion }
-                        val unitName = units.firstOrNull { it.id == exercise.unitId }?.name ?: "Unidad ${exercise.unitId}"
+                        val questions =
+                            questionsByExercise[exercise.id].orEmpty().sortedBy { it.orderQuestion }
+                        val unitName = units.firstOrNull { it.id == exercise.unitId }?.name
+                            ?: "Unidad ${exercise.unitId}"
 
                         Card(
                             modifier = Modifier
@@ -562,14 +593,19 @@ private fun WelcomePlacementCard(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(exercise.name, fontWeight = FontWeight.SemiBold)
-                                Text(unitName, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    unitName,
+                                    color = Color.Gray,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
 
                                 ExerciseInfoSections(
                                     content = contentByExercise[exercise.id],
                                     words = wordsByExercise[exercise.id].orEmpty(),
                                     vocabularyExpanded = vocabularyExpandedByExercise[exercise.id] == true,
                                     onToggleVocabulary = {
-                                        vocabularyExpandedByExercise[exercise.id] = !(vocabularyExpandedByExercise[exercise.id] ?: false)
+                                        vocabularyExpandedByExercise[exercise.id] =
+                                            !(vocabularyExpandedByExercise[exercise.id] ?: false)
                                     }
                                 )
 
@@ -581,12 +617,15 @@ private fun WelcomePlacementCard(
                                     )
                                 } else {
                                     questions.forEach { question ->
-                                        val alternatives = alternativesByQuestion[question.id].orEmpty()
+                                        val alternatives =
+                                            alternativesByQuestion[question.id].orEmpty()
                                         WelcomeQuestionCard(
                                             question = question,
                                             alternatives = alternatives,
                                             selectedAlternativeId = selectedAnswers[question.id],
-                                            onSelectAlternative = { selectedAnswers[question.id] = it }
+                                            onSelectAlternative = {
+                                                selectedAnswers[question.id] = it
+                                            }
                                         )
                                     }
                                 }
@@ -604,7 +643,8 @@ private fun WelcomePlacementCard(
                 }
 
                 placementResult?.let { result ->
-                    val unitName = units.firstOrNull { it.id == result.currentUnitId }?.name ?: "Sin unidad"
+                    val unitName =
+                        units.firstOrNull { it.id == result.currentUnitId }?.name ?: "Sin unidad"
                     InfoCard(
                         icon = Icons.Default.Flag,
                         title = "Resultado del Welcome Test",
@@ -811,7 +851,9 @@ private fun WelcomeQuestionCard(
                         .fillMaxWidth()
                         .border(
                             1.dp,
-                            if (selectedAlternativeId == alternative.id) Color(0xFF1565C0) else Color(0xFFE0E0E0),
+                            if (selectedAlternativeId == alternative.id) Color(0xFF1565C0) else Color(
+                                0xFFE0E0E0
+                            ),
                             RoundedCornerShape(10.dp)
                         )
                         .clickable { onSelectAlternative(alternative.id) }

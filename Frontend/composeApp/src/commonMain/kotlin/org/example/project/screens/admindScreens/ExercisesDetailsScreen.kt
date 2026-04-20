@@ -453,8 +453,6 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
             actualScreen = "Detalles del Ejercicio",
             selectedIndex = selectedIndex,
             onSelect = { idx -> selectedIndex = idx },
-            initialUserName = UserSession.name,
-            role = UserSession.role,
             snackbarHostState = snackbarHostState
         ) { _, _, _ ->
 

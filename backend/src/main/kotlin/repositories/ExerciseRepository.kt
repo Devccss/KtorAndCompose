@@ -49,6 +49,9 @@ class ExerciseRepository {
             filters.isActive?.let {
                 query = query.andWhere { Exercises.isActive eq it }
             }
+            filters.unitId?.let {
+                query = query.andWhere { Exercises.unitId eq it }
+            }
 
             query.orderBy(Exercises.orderExercise).map(::resultRowToExercise)
         }

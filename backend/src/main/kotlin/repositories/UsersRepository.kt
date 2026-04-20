@@ -49,6 +49,7 @@ class UsersRepository {
 
         filters.name?.takeIf { it.isNotBlank() }?.let { name -> query = query.andWhere { Users.name like "%$name%" } }
         filters.role?.let { query = query.andWhere { Users.role eq it } }
+        filters.unitId?.let { query = query.andWhere { Users.currentUnitId eq it } }
 
         query.orderBy(Users.createdAt).map(::resultRowToUser)
     }
@@ -117,7 +118,7 @@ class UsersRepository {
 
     fun login(email: String, password: String): UserDto = transaction {
         val row = Users.selectAll().where { Users.email eq email }.singleOrNull()
-            ?: throw BadRequestException("Email o contraseña inválidos.")
+            ?: throw BadRequestException("Email inválido.")
 
         val hashed = row[Users.password]
         if (!BCrypt.checkpw(password, hashed)) {

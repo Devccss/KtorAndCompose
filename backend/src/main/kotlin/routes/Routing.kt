@@ -104,7 +104,7 @@ fun Application.configureRouting() {
 
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("Invalid ID")
+                        ?: throw BadRequestException("Invalid ID in get user")
                     val user = userService.getUserById(id)
                     if (user != null) {
                         call.respond(user)
@@ -128,17 +128,17 @@ fun Application.configureRouting() {
                     val users = userService.getUsersByName(name)
                     call.respond(users)
                 }
-                get("filter") {
+                get("/filter") {
                     val filters = call.receive<FilterUsersDto>()
                     val users = userService.getFilterUsers(filters)
                     call.respond(users)
                 }
-                post("login") {
+                post("/login") {
                     val dto = call.receive<LoginDto>()
                     val user = userService.initSesion(dto)
                     call.respond(user)
                 }
-                post("register") {
+                post("/register") {
                     val dto = call.receive<CreateUserDto>()
                     val user = userService.createUser(dto)
                     call.respond(HttpStatusCode.Created, user)
@@ -146,14 +146,14 @@ fun Application.configureRouting() {
 
                 put("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("Invalid ID")
+                        ?: throw BadRequestException("Invalid ID in put user")
                     val dto = call.receive<UpdateUserDto>()
                     val updatedUser = userService.updateUser(id, dto)
                     call.respond(updatedUser)
                 }
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("Invalid ID")
+                        ?: throw BadRequestException("Invalid ID in delete user")
                     val success = userService.deleteUser(id)
                     call.respond(success)
                 }
@@ -166,7 +166,7 @@ fun Application.configureRouting() {
                 }
                 get("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("Invalid ID")
+                        ?: throw BadRequestException("Invalid ID in get unit")
                     val item =
                         unitService.getUnitById(id) ?: throw NotFoundException("Unit not found")
                     call.respond(item)
@@ -201,7 +201,7 @@ fun Application.configureRouting() {
                 }
                 put("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("Invalid ID")
+                        ?: throw BadRequestException("Invalid ID in put unit")
                     val dto = call.receive<UpdateUnitDto>()
                     unitService.updateUnit(id, dto)
                     call.respond(HttpStatusCode.OK)
@@ -215,7 +215,7 @@ fun Application.configureRouting() {
 
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("Invalid ID")
+                        ?: throw BadRequestException("Invalid ID in delete unit")
                     call.respond(unitService.deleteUnit(id))
                 }
             }
@@ -232,6 +232,7 @@ fun Application.configureRouting() {
                 }
                 get("/search") {
                     val name = call.request.queryParameters["name"]
+                    val unitId = call.request.queryParameters["unitId"]?.toIntOrNull()
                     val isActiveParam = call.request.queryParameters["isActive"]
                     val isActive = isActiveParam?.let {
                         when (it.lowercase()) {
@@ -240,7 +241,7 @@ fun Application.configureRouting() {
                             else -> null
                         }
                     }
-                    val filters = FilterExercisesDto(name = name, isActive = isActive)
+                    val filters = FilterExercisesDto(name = name, isActive = isActive, unitId = unitId)
                     val results = exerciseService.searchExercises(filters)
                     call.respond(results)
                 }

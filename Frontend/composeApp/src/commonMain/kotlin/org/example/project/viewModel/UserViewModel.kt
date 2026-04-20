@@ -78,11 +78,11 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
 
     fun getFilterUsers(filters: FilterUsersDto) {
         val normalized = filters.copy(name = filters.name?.trim()?.takeIf { it.isNotEmpty() })
-        val hasFilters = normalized.name != null || normalized.unitId != null || normalized.role != null
+        filters.role?.let { filters.copy(role = it) }
+        filters.unitId?.let { filters.copy(unitId = it) }
         launchCatching(
             block = {
-                if (hasFilters) repo.searchUsers(normalized)
-                else repo.getAllUsers()
+                repo.getFilterUsers(normalized)
             },
             onSuccess = { users ->
                 if (users.isNotEmpty()) {
@@ -110,16 +110,7 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
             block = { repo.getUserById(id) },
             onSuccess = { user ->
                 if (user != null) {
-                    _state.value = _state.value.copy(
-                        users = _state.value.users + UserDto(
-                            id = user.id,
-                            name = user.name,
-                            email = user.email,
-                            password = user.password,
-                            currentUnitId = user.currentUnitId,
-                            createdAt = user.createdAt
-                        )
-                    )
+
                     _state.value = _state.value.copy(
                         currentUser = user,
                     )
@@ -277,6 +268,12 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
     }
 
     fun logout() {
+        UserSession.set(
+            id = -1,
+            name = null,
+            actualUnit = null,
+            role = null
+        )
         _state.value = _state.value.copy(currentUser = null)
     }
 

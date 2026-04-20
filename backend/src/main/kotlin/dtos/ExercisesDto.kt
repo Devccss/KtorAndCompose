@@ -34,7 +34,8 @@ data class UpdateExerciseDto(
 @Serializable
 data class FilterExercisesDto(
     val name: String? = null,
-    val isActive: Boolean? = null
+    val isActive: Boolean? = null,
+    val unitId: Int? = null
 )
 
 @Serializable

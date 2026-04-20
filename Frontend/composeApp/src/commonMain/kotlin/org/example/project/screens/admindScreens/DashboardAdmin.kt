@@ -32,6 +32,7 @@ import org.example.project.components.AppLayout
 import org.example.project.dtos.Role
 import org.example.project.dtos.UserDto
 import org.example.project.network.RepositoryProvider
+import org.example.project.network.UserSession
 import org.example.project.viewModel.ExercisesViewModel
 import org.example.project.viewModel.UnitViewModel
 import org.example.project.viewModel.UserViewModel
@@ -51,7 +52,7 @@ enum class UnitStatus {
     DRAFT, PUBLISHED
 }
 
-class AdminDashboard(private val id: Int? = null ,private val adminName: String, private val rolAdmin:Role) : Screen {
+class AdminDashboard(private val id: Int? = null ) : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -77,6 +78,12 @@ class AdminDashboard(private val id: Int? = null ,private val adminName: String,
             totalUsers = userUi.users.size
             totalExercises = exerciseUi.exercises.size
         }
+        LaunchedEffect(id){
+            id?.let {
+                userVm.getUserById(it)
+            }
+        }
+
 
 
         // Usar AppLayout que provee la card principal (bienvenida) y la bottom bar fija
@@ -84,12 +91,9 @@ class AdminDashboard(private val id: Int? = null ,private val adminName: String,
             actualScreen = null,
             selectedIndex = selectedIndex,
             onSelect = { idx -> selectedIndex = idx },
-            initialUserName = adminName,
-            role = rolAdmin,
-            id = id
         ) { _,_,_ ->
 
-            if (rolAdmin != Role.ADMIN) {
+            if (UserSession.role != Role.ADMIN) {
                 Column(modifier = Modifier
                     .fillMaxSize()
                 ) {
@@ -103,7 +107,7 @@ class AdminDashboard(private val id: Int? = null ,private val adminName: String,
 
             // Llamamos al contenido del dashboard, pasando padding desde el layout
             AdminDashboardContent(
-                adminName = adminName,
+                adminName = UserSession.name?: "Unknown",
                 totalUnits = totalUnits,
                 totalUsers = totalUsers,
                 totalExercises = totalExercises,

@@ -9,7 +9,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -36,26 +35,15 @@ fun AppLayout(
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier.fillMaxSize(),
-    initialUserName: String? = null,
-    role: Role? = null,
-    id: Int? = null,
     snackbarHostState: SnackbarHostState? = null,
     content: @Composable (paddingValues: PaddingValues, userName: String, role: Role) -> Unit
 ) {
     val sessionId = UserSession.idUser
     val sessionName = UserSession.name
     val sessionRole = UserSession.role
-    val userName = remember(initialUserName, sessionName) { initialUserName ?: sessionName ?: "" }
-    val userRole = remember(role, sessionRole) { role ?: sessionRole ?: Role.STUDENT }
+    val userName = remember( sessionName) { sessionName ?: "Nombre" }
+    val userRole = remember( sessionRole) { sessionRole ?: Role.STUDENT }
     val navigator = LocalNavigator.current
-
-    LaunchedEffect(initialUserName, role) {
-        if (!initialUserName.isNullOrBlank() || role != null) {
-            UserSession.set(
-                sessionId ?: id ?: -1, initialUserName ?: sessionName, role ?: sessionRole, actualUnit = null
-            )
-        }
-    }
 
     val snackbarHost = rememberUpdatedState(snackbarHostState)
 
@@ -148,7 +136,7 @@ fun AppLayout(
                     ) {
                         IconButton(
                             onClick = {
-                                if (sessionId != -1 && sessionId != null) {
+                                if (sessionId != null) {
                                     navigator?.push(UserDetailsScreen(sessionId))
 
                                 }

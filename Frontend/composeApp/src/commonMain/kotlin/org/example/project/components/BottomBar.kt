@@ -1,20 +1,11 @@
 package org.example.project.components
 
-// ...existing imports...
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.Surface
@@ -25,7 +16,6 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -33,9 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import org.example.project.dtos.Role
@@ -45,7 +33,6 @@ import org.example.project.screens.admindScreens.UnitsScreen
 import org.example.project.network.UserSession
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Check
 import org.example.project.screens.admindScreens.ExercisesOrUnitScreen
 import org.example.project.screens.admindScreens.TestScreen
 
@@ -74,23 +61,10 @@ fun ReusableBottomBar(
     val sessionName = UserSession.name
     val sessionRole = UserSession.role
 
-    var rememberId by rememberSaveable { mutableStateOf(sessionId ?: -1) }
+    var rememberId by rememberSaveable { mutableStateOf(sessionId) }
     var rememberedUserName by rememberSaveable { mutableStateOf(initialUserName ?: sessionName ?: "") }
-    var rememberedRoleName by rememberSaveable { mutableStateOf(role?.name ?: sessionRole?.name ?: Role.STUDENT.name) }
-
-    if (!initialUserName.isNullOrBlank() || role != null) {
-        remember(initialUserName, role) {
-            UserSession.set(sessionId?: -1,initialUserName ?: sessionName, role ?: sessionRole, actualUnit = null)
-        }
-    }
 
     val navigator = LocalNavigator.currentOrThrow
-
-    val rememberUserRole: Role = try {
-        Role.valueOf(rememberedRoleName)
-    } catch (e: Exception) {
-        Role.STUDENT
-    }
 
     Surface(
         modifier = modifier .padding(0.dp),
@@ -141,11 +115,8 @@ fun ReusableBottomBar(
                         when (index) {
                             0 -> {
                                 navigator.push(
-                                    AdminDashboard(
-                                        rememberId,
-                                        nameToUse.ifBlank { "Usuario" },
-                                        rememberUserRole
-                                    ))
+                                    AdminDashboard(rememberId)
+                                )
                             }
                             1 -> {
                                 navigator.push(UsersScreen())

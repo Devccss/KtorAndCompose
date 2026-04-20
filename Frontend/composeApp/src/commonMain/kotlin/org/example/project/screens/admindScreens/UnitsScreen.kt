@@ -86,8 +86,6 @@ class UnitsScreen : Screen {
             actualScreen = "Administrar Unidades",
             selectedIndex = selectedIndex,
             onSelect = { idx -> selectedIndex = idx },
-            initialUserName = UserSession.name,
-            role = UserSession.role,
             snackbarHostState = snackbarHostState
         ) { _, _, _ ->
 

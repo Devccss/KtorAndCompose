@@ -122,8 +122,6 @@ class TestScreen : Screen {
             actualScreen = "Administrar Tests",
             selectedIndex = selectedIndex,
             onSelect = { idx -> selectedIndex = idx },
-            initialUserName = UserSession.name,
-            role = UserSession.role,
             snackbarHostState = snackbarHostState
         ) { _, _, _ ->
             Card(

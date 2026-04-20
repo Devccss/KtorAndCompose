@@ -27,6 +27,7 @@ object UserSession {
     private val reviewUnitCompletionEvents = mutableSetOf<Int>()
 
     fun set(id: Int,name: String?, role: Role?, actualUnit: Int?) {
+
         this.idUser = id
         this.name = name
         this.role = role

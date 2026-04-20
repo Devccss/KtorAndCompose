@@ -29,7 +29,7 @@ import org.example.project.screens.admindScreens.AdminDashboard
 import org.example.project.screens.admindScreens.RegisterScreen
 import org.example.project.screens.studentScreens.StudentWelcomeScreen
 
-class LoginScreen(private val logout: Boolean? = false) : Screen {
+class LoginScreen(private val logout: Boolean? = false, private val userId: Int? = null) : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -42,6 +42,7 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
         var password by remember { mutableStateOf("") }
         var showPassword by remember { mutableStateOf(false) }
         var showError by remember { mutableStateOf(false) }
+        var autoLoginRequested by remember { mutableStateOf(false) }
 
         // Gradientes
         val backgroundGradient = Brush.linearGradient(
@@ -223,6 +224,7 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
                                     password = password
                                 )
                                 userViewModel.login(loginUser)
+
                                 showError = false
                             },
                             modifier = Modifier
@@ -260,35 +262,54 @@ class LoginScreen(private val logout: Boolean? = false) : Screen {
                         }
 
 
+                        LaunchedEffect(userId) {
+                            if (userId != null && !autoLoginRequested) {
+                                autoLoginRequested = true
+                                userViewModel.getUserById(userId)
+                            }
+                        }
+
                         LaunchedEffect(uiState.currentUser) {
-                            if (uiState.currentUser?.role == Role.STUDENT && uiState.currentUser?.id != null) {
-                                //Estudiante
+                            val currentUser = uiState.currentUser
+                            val currentUserId = currentUser?.id
+
+                            if (currentUser?.role == Role.STUDENT && currentUserId != null) {
                                 UserSession.set(
-                                    uiState.currentUser?.id?: -1,
-                                    uiState.currentUser?.name,
-                                    uiState.currentUser?.role,
-                                    actualUnit = uiState.currentUser?.currentUnitId
+                                    currentUserId,
+                                    currentUser.name,
+                                    currentUser.role,
+                                    actualUnit = currentUser.currentUnitId
                                 )
                                 navigator.push(StudentWelcomeScreen())
                             }
-                            else if (uiState.currentUser?.role == Role.ADMIN && uiState.currentUser?.id != null) {
-                                navigator.push(AdminDashboard(
-                                    adminName = uiState.currentUser?.name ?: "Administrador",
-                                    rolAdmin = uiState.currentUser?.role?: Role.STUDENT
-                                ))
+                            else if (currentUser?.role == Role.ADMIN && currentUserId != null) {
+                                UserSession.set(
+                                    currentUserId,
+                                    currentUser.name,
+                                    currentUser.role,
+                                    actualUnit = currentUser.currentUnitId
+                                )
+                                navigator.push(AdminDashboard(currentUserId))
                             }
-                            else if (uiState.currentUser?.role == Role.CONTENT_EDITOR && uiState.currentUser?.id != null) {
-                                //Editor de contenido
+                            else if (currentUser?.role == Role.CONTENT_EDITOR && currentUserId != null) {
+                                UserSession.set(
+                                    currentUserId,
+                                    currentUser.name,
+                                    currentUser.role,
+                                    actualUnit = currentUser.currentUnitId
+                                )
+
                             }
                         }
                         LaunchedEffect(logout){
                             if (logout == true) {
                                 userViewModel.logout()
+                                UserSession.clear()
                                 email = ""
                                 password = ""
                                 showPassword = false
                                 showError = false
-                                navigator.push(LoginScreen(logout=false))
+                                navigator.push(LoginScreen(logout = false, userId = null))
                             }
                         }
 

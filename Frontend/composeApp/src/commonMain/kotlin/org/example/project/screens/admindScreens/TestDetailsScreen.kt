@@ -93,8 +93,6 @@ class TestDetailsScreen(private val testId: Int) : Screen {
 
         AppLayout(
             actualScreen = "Detalle del Test",
-            initialUserName = UserSession.name,
-            role = UserSession.role,
             snackbarHostState = snackbarHostState,
             selectedIndex = selectedIndex,
             onSelect = { idx -> selectedIndex = idx },

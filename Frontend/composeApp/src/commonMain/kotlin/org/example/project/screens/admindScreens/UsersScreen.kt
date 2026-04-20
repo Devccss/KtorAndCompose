@@ -151,7 +151,7 @@ class UsersScreen : Screen {
         LaunchedEffect(ui.error) {
             ui.error?.let {
                 snackbarHostState.showSnackbar(it)
-                println(it)
+                println("Error en UsersScreen: $it") // Log para debugging
             }
         }
 
@@ -171,8 +171,6 @@ class UsersScreen : Screen {
             actualScreen = "Administrar Usuarios",
             selectedIndex = selectedIndex,
             onSelect = { idx -> selectedIndex = idx },
-            initialUserName = UserSession.name,
-            role = UserSession.role,
             snackbarHostState = snackbarHostState
         ) { _, _, _ ->
 
@@ -352,8 +350,8 @@ class UsersScreen : Screen {
                                                     DropdownMenuItem(
                                                         text = { Text(unit.name) },
                                                         onClick = {
-                                                            selectedUnit = unit; unitExpanded =
-                                                            false
+                                                            selectedUnit = unit
+                                                            unitExpanded = false
                                                         }
                                                     )
                                                 }
