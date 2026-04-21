@@ -1,6 +1,5 @@
 package org.example.project.screens.admindScreens
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,19 +20,16 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgeDefaults
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -50,8 +45,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -71,7 +64,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.model.rememberScreenModel
@@ -83,12 +75,11 @@ import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import kotlinx.coroutines.launch
 import org.example.project.components.AppLayout
-import org.example.project.components.ReusableBottomBar
 import org.example.project.dtos.Role
-import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UserDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
+import org.example.project.screens.LoginScreen
 import org.example.project.viewModel.UserViewModel
 import org.jetbrains.compose.resources.Font
 
@@ -109,8 +100,6 @@ class UserDetailsScreen(private val userId: Int) : Screen {
         val jetbrainsMonoFamily = FontFamily(Font(Res.font.jetbrains_mono_regular))
 
         var confirmDelete by remember { mutableStateOf<UserDto?>(null) }
-        var selectedIndex by remember { mutableStateOf(1) }
-
         // Estado de Edición Inline
         var isEditing by remember { mutableStateOf(false) }
 
@@ -124,6 +113,7 @@ class UserDetailsScreen(private val userId: Int) : Screen {
         // Logica para Dropdowns
         var roleMenuExpanded by remember { mutableStateOf(false) }
         var unitMenuExpanded by remember { mutableStateOf(false) }
+        val isOwnProfile = UserSession.idUser == userId && userId > 0
 
         LaunchedEffect(ui.error) {
             ui.error?.let {
@@ -151,8 +141,8 @@ class UserDetailsScreen(private val userId: Int) : Screen {
 
         AppLayout(
             actualScreen = "Detalles de Usuario",
-            selectedIndex = selectedIndex,
-            onSelect = { idx -> selectedIndex = idx },
+            selectedIndex = -1,
+            onSelect = { },
             snackbarHostState = snackbarHostState
         ) { _, _, _ ->
 
@@ -338,6 +328,25 @@ class UserDetailsScreen(private val userId: Int) : Screen {
 
                             // Columna Derecha: Botones
                             Column(horizontalAlignment = Alignment.End) {
+                                if (isOwnProfile) {
+                                    IconButton(
+                                        onClick = {
+                                            vm.logout()
+                                            UserSession.clear()
+                                            navigator.replaceAll(LoginScreen(logout = true))
+                                        },
+                                        modifier = Modifier.size(36.dp).background(Color(0xFFFFEFEF), CircleShape)
+                                    ) {
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.ExitToApp,
+                                            "Deslogearse",
+                                            tint = Color(0xFFB00020),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    Spacer(Modifier.height(8.dp))
+                                }
+
                                 if (isEditing) {
                                     // Botón Guardar
                                     IconButton(

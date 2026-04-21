@@ -9,6 +9,8 @@ class ExerciseContentService(private val repo: ExerciseContentRepository) {
     fun createExerciseContent(exerciseId: Int, dto: CreateExerciseContentDto) = repo.createExerciseContent(exerciseId, dto)
     fun getByExerciseId(exerciseId: Int) = repo.getByExerciseId(exerciseId)
     fun getAllExerciseContent() = repo.getAllExerciseContent()
+
+    fun getById(id: Int) = repo.getById(id)
     fun searchExerciseContent(filters: FilterExerciseContentDto) = repo.searchExerciseContent(filters)
     fun updateContentByExerciseId(exerciseId: Int, dto: UpdateExerciseContentDto) = repo.updateContentByExerciseId(exerciseId, dto)
     fun deleteByExerciseId(exerciseId: Int) = repo.deleteByExerciseId(exerciseId)

@@ -55,6 +55,11 @@ class ExerciseContentRepository {
             .singleOrNull()
             ?.let(::ExerciseContentRow)
     }
+    fun getById(id: Int): ExerciseContentDto? = transaction {
+        ExerciseContent.selectAll().where { ExerciseContent.id eq id }
+            .singleOrNull()
+            ?.let(::ExerciseContentRow)
+    }
 
     fun searchExerciseContent(filters: FilterExerciseContentDto): List<ExerciseContentDto> = transaction {
         var query = ExerciseContent.selectAll()

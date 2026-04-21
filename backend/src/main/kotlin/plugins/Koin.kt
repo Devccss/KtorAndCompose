@@ -6,6 +6,7 @@ import com.example.services.ExerciseWordService
 import com.example.services.ExerciseOnHoldService
 import com.example.services.ExerciseService
 import com.example.services.NotificationsService
+import com.example.services.QuestionAIClientService
 import com.example.services.QuestionService
 import com.example.services.TestExerciseService
 import com.example.services.TestService
@@ -45,9 +46,10 @@ val repositoryModule = module {
     single { ExerciseWordsRepository()}
     single { WelcomeTestRepo() }
 
+
 }
 
-val serviceModule = module {
+fun serviceModule(stringApiKey: String, baseUrlIa: String, longTimeoutMs: Long) = module {
 
     single { UserService(get()) }
     single { UnitService(get()) }
@@ -61,14 +63,27 @@ val serviceModule = module {
     single { ExerciseOnHoldService(get()) }
     single { ExerciseWordService(get()) }
     single { WelcomeTestService(get()) }
+    single { QuestionAIClientService(
+        baseUrl = baseUrlIa,
+        apiKey = stringApiKey,
+        timeoutMs = longTimeoutMs
+    ) }
 }
 
 fun Application.configureKoin() {
+    val apiKey = environment.config.property("ai.python.apiKey").getString()
+    val timeoutMs = environment.config
+        .propertyOrNull("ai.python.timeoutMs")
+        ?.getString()
+        ?.toLong()
+        ?: 30000L
+    val baseurlIa = environment.config.property("ai.python.baseUrl").getString()
+
     install(Koin) {
         slf4jLogger()
         modules(
             repositoryModule,
-            serviceModule
+            serviceModule(apiKey,baseurlIa, timeoutMs)
         )
     }
 }

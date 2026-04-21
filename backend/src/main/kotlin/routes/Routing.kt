@@ -24,6 +24,7 @@ import models.NotificationType
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.koin.ktor.ext.get
 import services.UnitService
+import kotlin.text.get
 
 
 @Serializable
@@ -58,6 +59,7 @@ fun Application.configureRouting() {
     val exerciseOnHoldService = get<ExerciseOnHoldService>()
     val notificationsService = get<NotificationsService>()
     val welcomeTestService = get<WelcomeTestService>()
+    val aiQuestionGenerationService = get<AiQuestionGenerationService>()
 
     routing {
 
@@ -95,6 +97,17 @@ fun Application.configureRouting() {
             }
         }
         route("/api/v1") {
+
+            route("/ai/questions") {
+                post("generate/{contentId}") {
+                    val contentId = call.parameters["contentId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid contentId")
+                    val dto = call.receive<GenerateQuestionsFromAiRequestDto>()
+                    val result = aiQuestionGenerationService.generateForContent(contentId, dto)
+                    call.respond(HttpStatusCode.Created, result)
+                }
+            }
+
 
             route("/users") {
                 get {

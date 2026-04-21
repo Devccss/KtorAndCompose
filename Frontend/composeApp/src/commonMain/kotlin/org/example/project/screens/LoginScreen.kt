@@ -270,6 +270,7 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
                         }
 
                         LaunchedEffect(uiState.currentUser) {
+                            if (logout == true) return@LaunchedEffect
                             val currentUser = uiState.currentUser
                             val currentUserId = currentUser?.id
 
@@ -309,7 +310,7 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
                                 password = ""
                                 showPassword = false
                                 showError = false
-                                navigator.push(LoginScreen(logout = false, userId = null))
+                                navigator.replaceAll(LoginScreen(logout = false, userId = null))
                             }
                         }
 

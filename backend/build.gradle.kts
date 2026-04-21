@@ -25,6 +25,7 @@ dependencies {
     implementation(libs.koin.logger.slf4j)
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.exposed.core)
     implementation(libs.exposed.jdbc)

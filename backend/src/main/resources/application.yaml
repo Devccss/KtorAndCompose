@@ -6,6 +6,12 @@ ktor:
         port: 443
 
 
+ai:
+  python:
+    baseUrl: "http://localhost:8001"
+    apiKey: ""
+    timeoutMs: 15000
+
 
 jwt:
   domain: "https://jwt-provider-domain/"
