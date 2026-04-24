@@ -106,6 +106,14 @@ fun Application.configureRouting() {
                     val result = aiQuestionGenerationService.generateForContent(contentId, dto)
                     call.respond(HttpStatusCode.Created, result)
                 }
+
+                post("confirm/{contentId}") {
+                    val contentId = call.parameters["contentId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid contentId")
+                    val dto = call.receive<ConfirmAiQuestionRequestDto>()
+                    val result = aiQuestionGenerationService.confirmForContent(contentId, dto)
+                    call.respond(HttpStatusCode.Created, result)
+                }
             }
 
 

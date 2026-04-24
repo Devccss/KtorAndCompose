@@ -1,0 +1,29 @@
+meta {
+  name: Directo to IA
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{IABaseUrl}}v1/questions/generate
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "schemaVersion": "1.0",
+    "contentId": 1,
+    "exerciseId": 1,
+    "textContent": "Maria is a doctor and she works in a hospital every day. She helps people and she is very kind with her patients. Juan is a teacher and he teaches English in a school. He loves his job and he works with many students every week.",
+    "grammarExplanation": "El presente simple se utiliza para describir rutinas diarias y hábitos. En tercera persona singular (she, he, it) el verbo generalmente termina en \"s\", como en \"works\" o \"helps\". En presente simple, la tercera persona del singular agrega \"s\" o \"es\" al verbo. Además, se usa para expresar acciones habituales como \"teaches\" o \"works\".",
+    "questionCount": 1,
+    "language": "es",
+    "difficulty": "A1"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

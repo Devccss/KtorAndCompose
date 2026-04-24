@@ -1,0 +1,23 @@
+meta {
+  name: Backend post to IA
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{BackendKtor}}/ai/questions/generate/1
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "questionCount": 1,
+    "language": "es"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

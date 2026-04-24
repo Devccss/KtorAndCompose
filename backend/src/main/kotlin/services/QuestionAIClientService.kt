@@ -1,20 +1,19 @@
 package com.example.services
 
-import com.example.dtos.AiGenerationRequestDto
-import com.example.dtos.AiGenerationResponseDto
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
-
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 
 
 class QuestionAIClientService(
@@ -22,8 +21,13 @@ class QuestionAIClientService(
     private val apiKey: String?,
     timeoutMs: Long
 ) {
+    private val jsonParser = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
+
     private val client = HttpClient {
-        install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+        install(ContentNegotiation) { json(jsonParser) }
         install(HttpTimeout) {
             requestTimeoutMillis = timeoutMs
             connectTimeoutMillis = timeoutMs
@@ -31,13 +35,15 @@ class QuestionAIClientService(
         }
     }
 
-    suspend fun generateQuestions(request: AiGenerationRequestDto): AiGenerationResponseDto {
-        return client.post("$baseUrl/v1/questions/generate") {
+    suspend fun generateQuestions(requestPayload: JsonObject): JsonObject {
+        val rawResponse = client.post("$baseUrl/v1/questions/generate") {
             contentType(ContentType.Application.Json)
             if (!apiKey.isNullOrBlank()) {
                 header(HttpHeaders.Authorization, "Bearer $apiKey")
             }
-            setBody(request)
-        }.body()
+            setBody(requestPayload)
+        }.bodyAsText()
+
+        return jsonParser.decodeFromString(JsonObject.serializer(), rawResponse)
     }
 }

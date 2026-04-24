@@ -1,6 +1,7 @@
 package com.example.plugins
 import com.example.repositories.ExerciseContentRepository
 import com.example.repositories.WelcomeTestRepo
+import com.example.services.AiQuestionGenerationService
 import com.example.services.ExerciseContentService
 import com.example.services.ExerciseWordService
 import com.example.services.ExerciseOnHoldService
@@ -68,6 +69,8 @@ fun serviceModule(stringApiKey: String, baseUrlIa: String, longTimeoutMs: Long) 
         apiKey = stringApiKey,
         timeoutMs = longTimeoutMs
     ) }
+    single { AiQuestionGenerationService(get(), get(), get()) }
+
 }
 
 fun Application.configureKoin() {

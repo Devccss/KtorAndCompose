@@ -14,7 +14,7 @@ data class GenerateQuestionsFromAiResponseDto(
     val contentId: Int,
     val accepted: Int,
     val rejected: List<RejectedAiQuestionDto>,
-    val createdQuestions: List<QuestionWithAlternativesDto>
+    val suggestedQuestions: List<AiGeneratedQuestionDto>
 )
 
 @Serializable
@@ -24,10 +24,18 @@ data class RejectedAiQuestionDto(
 )
 
 @Serializable
-data class QuestionWithAlternativesDto(
+data class ConfirmAiQuestionRequestDto(
+    val questionText: String,
+    val alternatives: List<AiGeneratedAlternativeDto>,
+    val isActive: Boolean = true
+)
+
+@Serializable
+data class ConfirmAiQuestionResponseDto(
     val question: QuestionDto,
     val alternatives: List<AlternativeDto>
 )
+
 
 // Payload que Ktor envia a Python
 @Serializable
