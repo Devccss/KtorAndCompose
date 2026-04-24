@@ -2,6 +2,7 @@ package org.example.project.network
 
 import io.ktor.client.HttpClient
 import org.example.project.repository.ExerciseRepo
+import org.example.project.repository.AiQuestionGenerationRepo
 import org.example.project.repository.QuestionsRepo
 import org.example.project.repository.TestRepo
 import org.example.project.repository.UnitRepo
@@ -56,6 +57,12 @@ object RepositoryProvider {
             "RepositoryProvider.welcomeTestRepo not initialized. Call RepositoryProvider.init(httpClient, baseUrl) before using repositories."
         )
 
+    private var _aiQuestionGenerationRepo: AiQuestionGenerationRepo? = null
+    val aiQuestionGenerationRepo: AiQuestionGenerationRepo
+        get() = _aiQuestionGenerationRepo ?: throw IllegalStateException(
+            "RepositoryProvider.aiQuestionGenerationRepo not initialized. Call RepositoryProvider.init(httpClient, baseUrl) before using repositories."
+        )
+
 
     fun init(httpClient: HttpClient, baseUrl: String) {
         if (initialized) return
@@ -67,6 +74,7 @@ object RepositoryProvider {
         _testRepo = TestRepo(httpClient, baseUrl)
         _wordRepo = WordRepository(httpClient, baseUrl)
         _welcomeTestRepo = WelcomeTestRepo(httpClient, baseUrl)
+        _aiQuestionGenerationRepo = AiQuestionGenerationRepo(httpClient, baseUrl)
 
         initialized = true
     }
@@ -81,6 +89,7 @@ object RepositoryProvider {
         _testRepo = null
         _wordRepo = null
         _welcomeTestRepo = null
+        _aiQuestionGenerationRepo = null
     }
 
     fun checkInitialized() {

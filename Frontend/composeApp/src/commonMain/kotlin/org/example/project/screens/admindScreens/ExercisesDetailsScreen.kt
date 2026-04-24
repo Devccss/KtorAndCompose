@@ -95,9 +95,12 @@ import org.example.project.dtos.UpdateExerciseContentDto
 import org.example.project.dtos.UpdateExerciseDto
 import org.example.project.dtos.UpdateQuestionDto
 import org.example.project.dtos.UpdateWordDto
+import org.example.project.dtos.Role
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
+import org.example.project.service.AiQuestionGenerationService
 import org.example.project.viewModel.ExercisesViewModel
+import org.example.project.viewModel.AiQuestionGenerationViewModel
 import org.example.project.viewModel.QuestionViewModel
 import org.example.project.viewModel.WordViewModel
 import org.jetbrains.compose.resources.Font
@@ -173,9 +176,15 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
         }
         val questionVm =
             rememberScreenModel { QuestionViewModel(RepositoryProvider.questionRepo, exerciseId) }
+        val aiQuestionVm = rememberScreenModel {
+            AiQuestionGenerationViewModel(
+                AiQuestionGenerationService(RepositoryProvider.aiQuestionGenerationRepo)
+            )
+        }
         val wordsVm = rememberScreenModel { WordViewModel(RepositoryProvider.wordRepo) }
         val exerciseUi by exerciseVm.state.collectAsState()
         val questionUi by questionVm.state.collectAsState()
+        val aiUi by aiQuestionVm.state.collectAsState()
         val wordsUi by wordsVm.state.collectAsState()
 
         var selectedIndex by remember { mutableStateOf(3) }
@@ -268,6 +277,9 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
         LaunchedEffect(questionUi.error) {
             questionUi.error?.let { snackbarHostState.showSnackbar(it) }
             println("Question UI Error: ${questionUi.error}") // Debug log
+        }
+        LaunchedEffect(aiUi.error) {
+            aiUi.error?.let { snackbarHostState.showSnackbar(it) }
         }
         LaunchedEffect(wordsUi.error){
             wordsUi.error?.let { snackbarHostState.showSnackbar(it) }
@@ -998,6 +1010,17 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                         }
                                     )
                                 }
+                            }
+
+
+                            if (UserSession.role == Role.ADMIN && exerciseUi.selectedContent != null) {
+                                AiQuestionGenerationSection(
+                                    contentId = exerciseUi.selectedContent?.id,
+                                    aiVm = aiQuestionVm,
+                                    onQuestionConfirmed = {
+                                        questionVm.getQuestionsByExerciseId(exerciseId)
+                                    }
+                                )
                             }
 
 
