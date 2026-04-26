@@ -12,11 +12,10 @@ import kotlinx.coroutines.launch
 import org.example.project.dtos.CreateExerciseWordDto
 import org.example.project.dtos.CreateWordDto
 import org.example.project.dtos.ExerciseWordDto
+import org.example.project.dtos.FilterWordsDto
 import org.example.project.dtos.UpdateExerciseWordDto
 import org.example.project.dtos.UpdateWordDto
 import org.example.project.dtos.WordDto
-import org.example.project.repository.UnitRepo
-import org.example.project.repository.UserRepo
 import org.example.project.repository.WordRepository
 
 data class WordUiState(
@@ -37,6 +36,7 @@ class WordViewModel(private val repo: WordRepository) : ViewModel(), ScreenModel
     val state : StateFlow<WordUiState> = _state
 
     var generalMessage by mutableStateOf<String?>(null)
+    private var scopedExerciseId: Int? = null
 
     fun updateMessage(message: String?) {
         generalMessage = message
@@ -47,6 +47,7 @@ class WordViewModel(private val repo: WordRepository) : ViewModel(), ScreenModel
     }
 
     fun getAllWords() {
+        scopedExerciseId = null
         launchCatching(
             block = { repo.getAllWords() },
             onSuccess = { words ->
@@ -69,7 +70,20 @@ class WordViewModel(private val repo: WordRepository) : ViewModel(), ScreenModel
             }
         )
     }
+    fun searchWords(filterWordsDto: FilterWordsDto){
+        scopedExerciseId = filterWordsDto.exerciseId
+        launchCatching(
+            block = { repo.searchWords(filterWordsDto) },
+            onSuccess = { words ->
+                _state.value = _state.value.copy(words = words, error = null)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = error.message, words = emptyList())
+            }
+        )
+    }
     fun getWordsByExerciseId(exerciseId: Int) {
+        scopedExerciseId = exerciseId
         launchCatching(
             block = { repo.getExerciseWordsByExerciseId(exerciseId) },
             onSuccess = { exerciseWords ->
@@ -78,9 +92,7 @@ class WordViewModel(private val repo: WordRepository) : ViewModel(), ScreenModel
                     launchCatching(
                         block = { repo.getWordById(it.wordId) },
                         onSuccess = { word ->
-                            if (word.isActive == true) {
                                 _state.value = _state.value.copy(words = _state.value.words + word)
-                            }
                         },
                         onError = {}
                     )
@@ -115,7 +127,22 @@ class WordViewModel(private val repo: WordRepository) : ViewModel(), ScreenModel
             block = { repo.updateWord(idWord, dto) },
             onSuccess = { success ->
                 if (success) {
-                    getAllWords()
+                    _state.value = _state.value.copy(
+                        words = _state.value.words.map { word ->
+                            if (word.id == idWord) {
+                                word.copy(
+                                    english = dto.english ?: word.english,
+                                    spanish = dto.spanish ?: word.spanish,
+                                    phonetic = dto.phonetic ?: word.phonetic,
+                                    description = dto.description ?: word.description,
+                                    isActive = dto.isActive ?: word.isActive
+                                )
+                            } else {
+                                word
+                            }
+                        },
+                        error = null
+                    )
                 } else {
                     _state.value = _state.value.copy(error = "Failed to update Word")
                 }
@@ -130,7 +157,10 @@ class WordViewModel(private val repo: WordRepository) : ViewModel(), ScreenModel
             block = { repo.deleteWord(idWord) },
             onSuccess = { success ->
                 if (success) {
-                    getAllWords()
+                    _state.value = _state.value.copy(
+                        words = _state.value.words.filterNot { it.id == idWord },
+                        error = null
+                    )
                 } else {
                     _state.value = _state.value.copy(error = "Failed to delete Word")
                 }

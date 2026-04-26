@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -41,9 +40,9 @@ import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -81,15 +80,16 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.example.project.components.AppLayout
 import org.example.project.components.CustomTextField
 import org.example.project.dtos.ContentType
 import org.example.project.dtos.CreateAlternativeDto
 import org.example.project.dtos.CreateExerciseContentDto
-import org.example.project.dtos.CreateExerciseWordDto
 import org.example.project.dtos.CreateQuestionDto
 import org.example.project.dtos.CreateWordDto
+import org.example.project.dtos.FilterWordsDto
 import org.example.project.dtos.UpdateAlternativeDto
 import org.example.project.dtos.UpdateExerciseContentDto
 import org.example.project.dtos.UpdateExerciseDto
@@ -249,8 +249,6 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
         val questionDrafts = remember { mutableStateMapOf<Int, QuestionDraftState>() }
 
 
-        // Estados para dropdowns de exercise
-        var statusMenuExpanded by remember { mutableStateOf(false) }
 
         fun startSectionEdit(section: String) {
             isEditingExercise = section == "exercise"
@@ -263,7 +261,6 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
             exerciseVm.getExerciseById(exerciseId)
             questionVm.getQuestionsByExerciseId(exerciseId)
             wordsVm.getWordsByExerciseId(exerciseId)
-
         }
 
         // --- ERROR / SNACKBAR SYNC ---
@@ -536,68 +533,13 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                         )
                                     }
 
-                                    // Badge & Status Dropdown
-                                    Box {
-                                        val isActive = draftActive
-                                        val badgeColor =
-                                            if (isActive) Color(0xFFB8F4C4) else Color(0xFFFFD4D4)
-                                        val textColor =
-                                            if (isActive) Color(0xFF2D5E3D) else Color(0xFF8B0000)
-
-                                        if (!isEditingExercise) {
-                                            Badge(
-                                                containerColor = badgeColor,
-                                                contentColor = textColor
-                                            ) {
-                                                Text(
-                                                    if (isActive) "Publicado" else "Borrador",
-                                                    fontSize = 12.sp
-                                                )
-                                            }
-                                        } else {
-                                            Row(
-                                                modifier = Modifier
-                                                    .background(
-                                                        badgeColor,
-                                                        RoundedCornerShape(16.dp)
-                                                    )
-                                                    .clickable { statusMenuExpanded = true }
-                                                    .padding(horizontal = 8.dp, vertical = 2.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Text(
-                                                    if (isActive) "Publicado" else "Borrador",
-                                                    fontSize = 12.sp,
-                                                    color = textColor
-                                                )
-                                                Icon(
-                                                    Icons.Default.ExpandMore,
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(16.dp),
-                                                    tint = textColor
-                                                )
-                                            }
-                                            DropdownMenu(
-                                                expanded = statusMenuExpanded,
-                                                onDismissRequest = { statusMenuExpanded = false }
-                                            ) {
-                                                DropdownMenuItem(
-                                                    text = { Text("Publicado") },
-                                                    onClick = {
-                                                        draftActive = true
-                                                        statusMenuExpanded = false
-                                                    }
-                                                )
-                                                DropdownMenuItem(
-                                                    text = { Text("Borrador") },
-                                                    onClick = {
-                                                        draftActive = false
-                                                        statusMenuExpanded = false
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
+                                    ActiveDraftBadge(
+                                        isActive = draftActive,
+                                        activeLabel = "Publicado",
+                                        draftLabel = "Borrador",
+                                        clickable = isEditingExercise,
+                                        onToggle = { draftActive = !draftActive }
+                                    )
                                 }
 
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -710,12 +652,12 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                                     Text("Marca la casilla y acepta para eliminar este ejercicio.")
                                                     Spacer(modifier = Modifier.height(8.dp))
                                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        androidx.compose.material3.Checkbox(
+                                                        Checkbox(
                                                             checked = confirmChecked.value,
                                                             onCheckedChange = {
                                                                 confirmChecked.value = it
                                                             },
-                                                            colors = androidx.compose.material3.CheckboxDefaults.colors(
+                                                            colors = CheckboxDefaults.colors(
                                                                 checkedColor = Color(0xFF2D5E3D)
                                                             )
                                                         )
@@ -1070,7 +1012,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                         ),
                                         jetbrainsMonoFamily = jetbrainsMonoFamily,
                                         onDeleteQuestion = {
-                                            questionVm.deleteQuestion(question.id)
+                                            questionVm.deleteQuestionAndAlternatives(question.id)
                                             questionDrafts.remove(question.id)
                                         }
                                     )
@@ -1522,68 +1464,56 @@ fun WordEditableRegion(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFA))
     ) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .animateContentSize()
-                .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(8.dp))
-                .padding(16.dp)
+                .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(10.dp))
+                .padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier.weight(1f, fill = false)
-                ){
-                    if(isEditing){
+                if (isEditing) {
+                    Box(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                         CustomTextField(
                             value = draft.english,
-                            label = "Inglés",
+                            label = "Ingles",
                             onValueChange = { draft.english = it },
                             modifier = Modifier.fillMaxWidth(),
                             textStyle = TextStyle(
                                 fontFamily = jetbrainsMonoFamily,
-                                fontSize = 16.sp,
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Medium
                             ),
-                            placeholderText = "Ingles"
-                        )
-                    }else{
-                        Text(
-                            text = "Ingles: ${draft.english.ifBlank { "-" }}",
-                            fontFamily = jetbrainsMonoFamily,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = if (draft.isActive) Color(0xFF131313) else Color(0xFF003AB6)
+                            placeholderText = "Palabra en ingles"
                         )
                     }
-                }
-                Spacer(modifier = Modifier.width(4.dp))
-                Row(
-                    modifier = Modifier
-                        .background(
-                            if (draft.isActive) Color(0xFFB8F4C4) else Color(0xFFFFD4D4),
-                            RoundedCornerShape(16.dp)
-                        )
-                        .clickable(enabled = isEditing) { draft.isActive = !draft.isActive }
-                        .padding(horizontal = 8.dp, vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-
+                } else {
                     Text(
-                        if (draft.isActive) "Activa" else "Borrador",
-                        fontSize = 12.sp,
-                        color = if (draft.isActive) Color(0xFF2D5E3D) else Color(0xFF8B0000)
+                        modifier = Modifier.weight(1f),
+                        text = draft.english.ifBlank { "(Sin palabra)" },
+                        fontFamily = jetbrainsMonoFamily,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (draft.isActive) Color(0xFF131313) else Color(0xFF4B5563)
                     )
                 }
 
-                IconButton(onClick = onToggleExpanded) {
+                ActiveDraftBadge(
+                    isActive = draft.isActive,
+                    activeLabel = "Activa",
+                    draftLabel = "Borrador",
+                    clickable = isEditing,
+                    onToggle = { draft.isActive = !draft.isActive }
+                )
+
+                IconButton(onClick = onToggleExpanded, modifier = Modifier.size(22.dp)) {
                     Icon(
                         imageVector = if (showDetails) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                         contentDescription = if (showDetails) "Contraer" else "Expandir",
@@ -1591,9 +1521,9 @@ fun WordEditableRegion(
                         modifier = Modifier.size(18.dp)
                     )
                 }
+
                 if (isEditing && onDelete != null) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    IconButton(onClick = onDelete) {
+                    IconButton(onClick = onDelete, modifier = Modifier.size(22.dp)) {
                         Icon(
                             Icons.Default.Delete,
                             contentDescription = "Eliminar palabra",
@@ -1607,46 +1537,41 @@ fun WordEditableRegion(
             if (showDetails && isEditing) {
                 CustomTextField(
                     value = draft.spanish,
-                    label = "Español",
+                    label = "Espanol",
                     onValueChange = { draft.spanish = it },
                     modifier = Modifier.fillMaxWidth(),
-                    textStyle = TextStyle(
-                        fontFamily = jetbrainsMonoFamily,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    ),
-                    placeholderText = "Español"
+                    singleLine = true,
+                    placeholderText = "Significado en espanol"
                 )
                 CustomTextField(
                     value = draft.phonetic ?: "",
-                    label = "Fonética (opcional)",
+                    label = "Fonetica (opcional)",
                     onValueChange = { draft.phonetic = it },
                     modifier = Modifier.fillMaxWidth(),
-                    textStyle = TextStyle(
-                        fontFamily = jetbrainsMonoFamily,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    ),
-                    placeholderText = "Fonética (opcional)"
+                    singleLine = true,
+                    placeholderText = "Ej: /nɜːs/"
                 )
                 CustomTextField(
                     value = draft.description ?: "",
-                    label = "Descripción (opcional)",
+                    label = "Descripcion (opcional)",
                     onValueChange = { draft.description = it },
                     modifier = Modifier.fillMaxWidth(),
-                    textStyle = TextStyle(
-                        fontFamily = jetbrainsMonoFamily,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    ),
-                    placeholderText = "Descripción (opcional)"
+                    singleLine = false,
+                    maxLines = 3,
+                    placeholderText = "Uso o contexto"
                 )
             } else if (showDetails) {
-                Text(
-                    text = "Español: ${draft.spanish.ifBlank { "-" }} | Ingles: ${draft.english.ifBlank { "-" }} | Fonetica: ${draft.phonetic?.ifBlank { "Sin fonetica" } ?: "Sin fonetica"} | Descripcion: ${draft.description?.ifBlank { "Sin descripcion" } ?: "Sin descripcion"}",
-                    fontFamily = jetbrainsMonoFamily,
-                    fontSize = 14.sp,
-                    color = if (draft.isActive) Color(0xFF131313) else Color.Gray
+                HorizontalDivider(color = Color(0xFFEEEEEE))
+                WordDetailRow("Espanol", draft.spanish.ifBlank { "-" }, jetbrainsMonoFamily)
+                WordDetailRow(
+                    "Fonetica",
+                    draft.phonetic?.ifBlank { "Sin fonetica" } ?: "Sin fonetica",
+                    jetbrainsMonoFamily
+                )
+                WordDetailRow(
+                    "Descripcion",
+                    draft.description?.ifBlank { "Sin descripcion" } ?: "Sin descripcion",
+                    jetbrainsMonoFamily
                 )
             }
         }
@@ -1663,7 +1588,6 @@ fun QuestionEditableRegion(
     onDeleteQuestion: (() -> Unit)? = null,
 ) {
     var newAltText by remember { mutableStateOf("") }
-    var statusMenuExpanded by remember { mutableStateOf(false) }
 
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -1674,91 +1598,66 @@ fun QuestionEditableRegion(
             .padding(16.dp)
     ) {
 
-        if (isEditing) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .padding(end = 8.dp)
             ) {
-                Box(
-                    modifier = Modifier.weight(1f, fill = false)
-                        .padding(end = 8.dp)
-                ) {
-                    CustomTextField(
+                if (isEditing) {
+                    BasicTextField(
                         value = draft.questionText,
                         onValueChange = { draft.questionText = it },
-                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = false,
                         textStyle = TextStyle(
                             fontFamily = jetbrainsMonoFamily,
                             fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            color = if (draft.isActive) Color(0xFF131313) else Color.Gray
                         ),
+                        decorationBox = { innerTextField ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFFF4F6F8), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                            ) {
+                                if (draft.questionText.isBlank()) {
+                                    Text(
+                                        text = "Texto de la pregunta",
+                                        fontFamily = jetbrainsMonoFamily,
+                                        fontSize = 16.sp,
+                                        color = Color.Gray
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    Text(
+                        draft.questionText,
+                        fontFamily = jetbrainsMonoFamily,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (draft.isActive) Color(0xFF131313) else Color.Gray
                     )
                 }
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                ActiveDraftBadge(
+                    isActive = draft.isActive,
+                    activeLabel = "Activa",
+                    draftLabel = "Borrador",
+                    clickable = isEditing,
+                    onToggle = { draft.isActive = !draft.isActive }
+                )
 
-                //modificar badge
-                Box {
-                    val isActive = draft.isActive
-                    val badgeColor =
-                        if (isActive) Color(0xFFB8F4C4) else Color(0xFFFFD4D4)
-                    val textColor =
-                        if (isActive) Color(0xFF2D5E3D) else Color(0xFF8B0000)
-
-                    if (!isEditing) {
-                        Badge(
-                            containerColor = badgeColor,
-                            contentColor = textColor
-                        ) {
-                            Text(
-                                if (isActive) "Activa" else "Borrador",
-                                fontSize = 12.sp
-                            )
-                        }
-                    } else {
-                        Row(
-                            modifier = Modifier
-                                .background(
-                                    badgeColor,
-                                    RoundedCornerShape(16.dp)
-                                )
-                                .clickable { statusMenuExpanded = true }
-                                .padding(horizontal = 8.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                if (isActive) "Activa" else "Borrador",
-                                fontSize = 12.sp,
-                                color = textColor
-                            )
-                            Icon(
-                                Icons.Default.ExpandMore,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = textColor
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = statusMenuExpanded,
-                            onDismissRequest = { statusMenuExpanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Publicado") },
-                                onClick = {
-                                    draft.isActive = true
-                                    statusMenuExpanded = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Borrador") },
-                                onClick = {
-                                    draft.isActive = false
-                                    statusMenuExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                if (onDeleteQuestion != null) {
+                if (isEditing && onDeleteQuestion != null) {
                     Spacer(modifier = Modifier.width(8.dp))
                     IconButton(onClick = onDeleteQuestion) {
                         Icon(
@@ -1770,75 +1669,12 @@ fun QuestionEditableRegion(
                     }
                 }
             }
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier.weight(1f, fill = false)
-                        .padding(end = 8.dp)
-                ) {
-                    Text(
-                        draft.questionText,
-                        fontFamily = jetbrainsMonoFamily,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (draft.isActive) Color(0xFF131313) else Color.Gray
-                    )
-                }
 
-                Badge(
-                    modifier = Modifier.padding(4.dp),
-                    containerColor = if (draft.isActive) Color(0xFFB8F4C4) else Color(0xFFFFD4D4),
-                    contentColor = if (draft.isActive) Color(0xFF2D5E3D) else Color(0xFF8B0000)
-                ) {
-                    Text(
-                        if (draft.isActive) "Activa" else "Borrador",
-                        fontSize = 12.sp
-                    )
-                }
-
-            }
         }
 
         // --- 4. Alternatives Area ---
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (isEditing) {
-                // Input para nueva alternativa
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CustomTextField(
-                        value = newAltText,
-                        onValueChange = { newAltText = it },
-                        placeholderText = "Texto de nueva alternativa",
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                    )
-                    IconButton(
-                        onClick = {
-                            if (newAltText.isNotBlank()) {
-                                // Agregar al mapa del draft directamente
-                                val isCorrect = draft.alternatives.isEmpty()
-                                val newDraftAlt = DraftAlternative(
-                                    id = null, // Marca como nuevo
-                                    text = newAltText,
-                                    isCorrect = isCorrect
-                                )
-                                draft.alternatives[newDraftAlt.tempId] = newDraftAlt
-                                newAltText = ""
-                            }
-                        },
-                        enabled = newAltText.isNotBlank(),
-                        colors = IconButtonDefaults.iconButtonColors(disabledContentColor = Color.Gray)
-                    ) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = "Agregar",
-                            tint = Color(0xFF003AB6)
-                        )
-                    }
-                }
-
                 // Renderizar alternativas del Draft
                 draft.alternatives.values.forEach { alt ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1878,6 +1714,43 @@ fun QuestionEditableRegion(
                         }
                     }
                 }
+                // Input para nueva alternativa
+                if(draft.alternatives.size <= 5){
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.padding(12.dp)){}
+                        CustomTextField(
+                            value = newAltText,
+                            onValueChange = { newAltText = it },
+                            placeholderText = "Texto de nueva alternativa",
+                            singleLine = true,
+                        )
+                        IconButton(
+                            onClick = {
+                                if (newAltText.isNotBlank()) {
+                                    // Agregar al mapa del draft directamente
+                                    val isCorrect = draft.alternatives.isEmpty()
+                                    val newDraftAlt = DraftAlternative(
+                                        id = null, // Marca como nuevo
+                                        text = newAltText,
+                                        isCorrect = isCorrect
+                                    )
+                                    draft.alternatives[newDraftAlt.tempId] = newDraftAlt
+                                    newAltText = ""
+                                }
+                            },
+                            enabled = newAltText.isNotBlank(),
+                            colors = IconButtonDefaults.iconButtonColors(disabledContentColor = Color.Gray)
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "Agregar",
+                                tint = Color(0xFF003AB6)
+                            )
+                        }
+                    }
+                }
+
+
             } else {
                 // Read Mode
                 draft.alternatives.values.forEach { alt ->
@@ -1902,6 +1775,52 @@ fun QuestionEditableRegion(
             }
         }
 
+    }
+}
+
+@Composable
+fun ActiveDraftBadge(
+    isActive: Boolean,
+    activeLabel: String,
+    draftLabel: String,
+    clickable: Boolean = false,
+    onToggle: () -> Unit = {},
+) {
+    val badgeColor = if (isActive) Color(0xFFB8F4C4) else Color(0xFFFFD4D4)
+    val textColor = if (isActive) Color(0xFF2D5E3D) else Color(0xFF8B0000)
+
+    Badge(
+        modifier = Modifier
+            .padding(horizontal = 4.dp)
+            .clickable(enabled = clickable, onClick = onToggle),
+        containerColor = badgeColor,
+        contentColor = textColor
+    ) {
+        Text(if (isActive) activeLabel else draftLabel, fontSize = 12.sp)
+    }
+}
+
+@Composable
+fun WordDetailRow(
+    label: String,
+    value: String,
+    jetbrainsMonoFamily: FontFamily,
+) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Text(
+            text = "$label:",
+            fontSize = 12.sp,
+            color = Color(0xFF6B7280),
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.width(92.dp)
+        )
+        Text(
+            text = value,
+            fontFamily = jetbrainsMonoFamily,
+            fontSize = 13.sp,
+            color = Color(0xFF131313),
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 

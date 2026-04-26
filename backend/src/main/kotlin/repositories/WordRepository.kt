@@ -5,6 +5,7 @@ import com.example.dtos.FilterWordsDto
 import com.example.dtos.UpdateWordDto
 import com.example.dtos.WordDto
 import io.ktor.server.plugins.BadRequestException
+import models.ExerciseWords
 import models.Words
 
 import org.jetbrains.exposed.v1.core.ResultRow
@@ -12,6 +13,7 @@ import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
@@ -42,6 +44,11 @@ class WordRepository {
     fun searchWords(filters: FilterWordsDto): List<WordDto> = transaction {
         var query = Words.selectAll()
 
+        filters.exerciseId?.let { query = query
+            .andWhere { Words.id inSubQuery ExerciseWords
+            .select(ExerciseWords.wordId)
+            .where { ExerciseWords.exerciseId eq it } }
+        }
         filters.english?.takeIf { it.isNotBlank() }?.let { query = query.andWhere { Words.english like "%$it%" } }
         filters.spanish?.takeIf { it.isNotBlank() }?.let { query = query.andWhere { Words.spanish like "%$it%" } }
         filters.phonetic?.takeIf { it.isNotBlank() }?.let { query = query.andWhere { Words.phonetic like "%$it%" } }

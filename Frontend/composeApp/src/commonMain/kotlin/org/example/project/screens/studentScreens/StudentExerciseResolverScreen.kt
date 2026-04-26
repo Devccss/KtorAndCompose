@@ -60,6 +60,7 @@ import org.example.project.viewModel.TestViewModel
 import org.example.project.viewModel.UnitViewModel
 import org.example.project.viewModel.WordViewModel
 import org.example.project.dtos.CreateUnitCompletedDto
+import org.example.project.dtos.FilterWordsDto
 
 private const val EXERCISE_PASS_THRESHOLD = 0.8f
 
@@ -112,7 +113,10 @@ class StudentExerciseResolverScreen(
             exerciseVm.getExerciseById(exerciseId)
             exerciseVm.searchExercises(FilterExercisesDto(unitId = unitId, isActive = true))
             questionVm.getQuestionsByExerciseId(exerciseId)
-            wordVm.getWordsByExerciseId(exerciseId)
+            wordVm.searchWords(filterWordsDto = FilterWordsDto(
+                exerciseId = exerciseId,
+                isActive = true
+            ))
             if (userId != null && userId > 0) {
                 exerciseVm.getExercisesCompletedByUserId(userId)
                 unitVm.getAllUnitsCompletedByUserId(userId)

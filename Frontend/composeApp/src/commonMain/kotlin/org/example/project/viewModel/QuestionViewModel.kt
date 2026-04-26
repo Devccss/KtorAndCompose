@@ -6,7 +6,6 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cafe.adriel.voyager.core.model.ScreenModel
-import cafe.adriel.voyager.core.model.screenModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -108,6 +107,29 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
     fun deleteQuestion(questionId: Int) {
         launchCatching(
             block = { repo.deleteQuestion(questionId) },
+            onSuccess = {
+                _state.update { currentState ->
+                    currentState.copy(
+                        selectedQuestions = currentState.selectedQuestions.filterNot { it.id == questionId },
+                        alternatives = currentState.alternatives - questionId
+                    )
+                }
+            },
+            onError = { error ->
+                _state.update { it.copy(error = "Error al eliminar la pregunta: ${error.message}") }
+            }
+        )
+    }
+
+    fun deleteQuestionAndAlternatives(questionId: Int) {
+        launchCatching(
+            block = {
+                val alternativesToDelete = _state.value.alternatives[questionId].orEmpty().map { it.id }
+                alternativesToDelete.forEach { alternativeId ->
+                    repo.deleteAlternative(alternativeId)
+                }
+                repo.deleteQuestion(questionId)
+            },
             onSuccess = {
                 _state.update { currentState ->
                     currentState.copy(

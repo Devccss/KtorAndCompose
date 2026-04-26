@@ -33,6 +33,7 @@ data class UpdateWordDto(
 
 @Serializable
 data class FilterWordsDto(
+    val exerciseId : Int? = null,
     val english: String? = null,
     val spanish: String? = null,
     val phonetic: String? = null,

@@ -434,6 +434,7 @@ fun Application.configureRouting() {
             route("/words") {
                 get { call.respond(wordService.getAll()) }
                 get("/search") {
+                    val exerciseId = call.request.queryParameters["exerciseId"]?.toIntOrNull()
                     val english = call.request.queryParameters["english"]
                     val spanish = call.request.queryParameters["spanish"]
                     val phonetic = call.request.queryParameters["phonetic"]
@@ -446,6 +447,7 @@ fun Application.configureRouting() {
                         }
                     }
                     val filters = FilterWordsDto(
+                        exerciseId = exerciseId,
                         english = english,
                         spanish = spanish,
                         phonetic = phonetic,

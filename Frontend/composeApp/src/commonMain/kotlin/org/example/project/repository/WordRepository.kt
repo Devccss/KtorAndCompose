@@ -7,6 +7,7 @@ import io.ktor.http.contentType
 import org.example.project.dtos.CreateExerciseWordDto
 import org.example.project.dtos.CreateWordDto
 import org.example.project.dtos.ExerciseWordDto
+import org.example.project.dtos.FilterWordsDto
 import org.example.project.dtos.WordDto
 import org.example.project.dtos.UpdateExerciseWordDto
 import org.example.project.dtos.UpdateWordDto
@@ -16,6 +17,11 @@ class WordRepository(private val httpClient: HttpClient, private val baseUrl: St
     suspend fun getAllWords(): List<WordDto> =
         httpClient.get("$baseUrl/api/v1/words").parseOrThrow()
 
+    suspend fun searchWords(filterWordsDto: FilterWordsDto): List<WordDto> =
+        httpClient.post("$baseUrl/api/v1/words/search") {
+            contentType(ContentType.Application.Json)
+            setBody(filterWordsDto)
+        }.parseOrThrow()
     suspend fun getWordById(id: Int): WordDto =
         httpClient.get("$baseUrl/api/v1/words/$id").parseOrThrow()
 
