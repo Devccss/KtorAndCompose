@@ -22,6 +22,9 @@ object UserSession {
     var actualUnit: Int? by mutableStateOf(null)
         private set
 
+    var sessionLogId: Int? by mutableStateOf(null)
+        private set
+
     private val unitReviewCheckpoints = mutableMapOf<Int, Int>()
     private val reviewedExercisesByUnit = mutableMapOf<Int, MutableSet<Int>>()
     private val reviewUnitCompletionEvents = mutableSetOf<Int>()
@@ -32,6 +35,10 @@ object UserSession {
         this.name = name
         this.role = role
         this.actualUnit = actualUnit
+    }
+
+    fun updateSessionLogId(logId: Int?) {
+        sessionLogId = logId
     }
 
     fun markUnitRequiresReview(unitId: Int, completedUnitsCount: Int) {
@@ -83,6 +90,7 @@ object UserSession {
         name = null
         role = null
         actualUnit = null
+        sessionLogId = null
         unitReviewCheckpoints.clear()
         reviewedExercisesByUnit.clear()
         reviewUnitCompletionEvents.clear()

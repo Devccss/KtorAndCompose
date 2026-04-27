@@ -1,0 +1,26 @@
+meta {
+  name: Filter Session Logs
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{BackendKtor}}/session-logs/filter
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "userId": 2,
+    "fromDate": "2026-04-01T00:00:00",
+    "toDate": "2026-04-30T23:59:59",
+    "onlyOpen": false
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

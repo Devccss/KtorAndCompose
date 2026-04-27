@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import org.example.project.repository.ExerciseRepo
 import org.example.project.repository.AiQuestionGenerationRepo
 import org.example.project.repository.QuestionsRepo
+import org.example.project.repository.SessionLogRepo
 import org.example.project.repository.TestRepo
 import org.example.project.repository.UnitRepo
 import org.example.project.repository.UserRepo
@@ -63,6 +64,12 @@ object RepositoryProvider {
             "RepositoryProvider.aiQuestionGenerationRepo not initialized. Call RepositoryProvider.init(httpClient, baseUrl) before using repositories."
         )
 
+    private var _sessionLogRepo: SessionLogRepo? = null
+    val sessionLogRepo: SessionLogRepo
+        get() = _sessionLogRepo ?: throw IllegalStateException(
+            "RepositoryProvider.sessionLogRepo not initialized. Call RepositoryProvider.init(httpClient, baseUrl) before using repositories."
+        )
+
 
     fun init(httpClient: HttpClient, baseUrl: String) {
         if (initialized) return
@@ -75,6 +82,7 @@ object RepositoryProvider {
         _wordRepo = WordRepository(httpClient, baseUrl)
         _welcomeTestRepo = WelcomeTestRepo(httpClient, baseUrl)
         _aiQuestionGenerationRepo = AiQuestionGenerationRepo(httpClient, baseUrl)
+        _sessionLogRepo = SessionLogRepo(httpClient, baseUrl)
 
         initialized = true
     }
@@ -90,6 +98,7 @@ object RepositoryProvider {
         _wordRepo = null
         _welcomeTestRepo = null
         _aiQuestionGenerationRepo = null
+        _sessionLogRepo = null
     }
 
     fun checkInitialized() {

@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.example.project.dtos.AiGeneratedQuestionDto
+import org.example.project.dtos.ConfirmAiQuestionResponseDto
 import org.example.project.dtos.GenerateQuestionsFromAiResponseDto
 import org.example.project.service.AiQuestionGenerationService
 
@@ -17,6 +18,9 @@ data class AiQuestionGenerationUiState(
     val difficulty: String = "",
     val lastResponse: GenerateQuestionsFromAiResponseDto? = null,
     val generatedQuestions: List<AiGeneratedQuestionDto> = emptyList(),
+    val rejectedSuggestions: List<AiGeneratedQuestionDto> = emptyList(),
+    val acceptedCount: Int = 0,
+    val rejectedCount: Int = 0,
     val error: String? = null,
     val isLoading: Boolean = false
 )
@@ -45,6 +49,20 @@ class AiQuestionGenerationViewModel(
             it.copy(
                 lastResponse = null,
                 generatedQuestions = emptyList(),
+                rejectedSuggestions = emptyList(),
+                acceptedCount = 0,
+                rejectedCount = 0,
+                error = null
+            )
+        }
+    }
+
+    fun rejectQuestion(question: AiGeneratedQuestionDto) {
+        _state.update { currentState ->
+            currentState.copy(
+                generatedQuestions = currentState.generatedQuestions - question,
+                rejectedSuggestions = currentState.rejectedSuggestions + question,
+                rejectedCount = currentState.rejectedCount + 1,
                 error = null
             )
         }
@@ -65,10 +83,13 @@ class AiQuestionGenerationViewModel(
                 )
             },
             onSuccess = { response ->
-                _state.update {
-                    it.copy(
+                _state.update { currentState ->
+                    val autoRejected = currentState.generatedQuestions
+                    currentState.copy(
                         lastResponse = response,
                         generatedQuestions = response.suggestedQuestions,
+                        rejectedSuggestions = currentState.rejectedSuggestions + autoRejected,
+                        rejectedCount = currentState.rejectedCount + autoRejected.size + response.rejected.size,
                         error = null
                     )
                 }
@@ -88,7 +109,7 @@ class AiQuestionGenerationViewModel(
     fun confirmQuestion(
         contentId: Int,
         question: AiGeneratedQuestionDto,
-        onSuccess: () -> Unit = {}
+        onSuccess: (ConfirmAiQuestionResponseDto) -> Unit = {}
     ) {
         launchCatching(
             block = {
@@ -99,14 +120,15 @@ class AiQuestionGenerationViewModel(
                     isActive = true
                 )
             },
-            onSuccess = {
+            onSuccess = { response ->
                 _state.update { currentState ->
                     currentState.copy(
                         generatedQuestions = currentState.generatedQuestions - question,
+                        acceptedCount = currentState.acceptedCount + 1,
                         error = null
                     )
                 }
-                onSuccess()
+                onSuccess(response)
             },
             onError = { error ->
                 _state.update { it.copy(error = "Error al confirmar la pregunta: ${error.message}") }

@@ -1,0 +1,23 @@
+meta {
+  name: Close Open Session by UserId
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{BackendKtor}}/session-logs/user/2/close-open
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "endReason": "APP_CLOSED"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

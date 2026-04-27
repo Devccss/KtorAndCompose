@@ -276,7 +276,8 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
             println("Question UI Error: ${questionUi.error}") // Debug log
         }
         LaunchedEffect(aiUi.error) {
-            aiUi.error?.let { snackbarHostState.showSnackbar(it) }
+            aiUi.error?.let { snackbarHostState.showSnackbar(it)
+            println("AI Question UI Error: ${aiUi.error}") }
         }
         LaunchedEffect(wordsUi.error){
             wordsUi.error?.let { snackbarHostState.showSnackbar(it) }
@@ -959,8 +960,11 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                 AiQuestionGenerationSection(
                                     contentId = exerciseUi.selectedContent?.id,
                                     aiVm = aiQuestionVm,
-                                    onQuestionConfirmed = {
-                                        questionVm.getQuestionsByExerciseId(exerciseId)
+                                    onQuestionConfirmed = { confirmResponse ->
+                                        questionVm.addConfirmedAiQuestion(
+                                            question = confirmResponse.question,
+                                            alternatives = confirmResponse.alternatives
+                                        )
                                     }
                                 )
                             }

@@ -11,5 +11,6 @@ class TestExerciseService(private val repo: TestExerciseRepository) {
     fun searchByIds(testId: Int? = null, exerciseId: Int? = null): List<TestExerciseDto> = repo.searchByIds(testId, exerciseId)
     fun create(dto: CreateTestExerciseDto): TestExerciseDto = repo.create(dto)
     fun update(id: Int, dto: UpdateTestExerciseDto) = repo.update(id, dto)
-    fun delete(id: Int): Boolean = repo.delete(id)
+    fun deleteByTestId(testId: Int): Boolean = repo.deleteByTestId(testId)
+    fun deleteByExerciseId(exerciseId: Int): Boolean = repo.deleteByExerciseId(exerciseId)
 }

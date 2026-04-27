@@ -10,10 +10,13 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.plugins.BadRequestException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlin.jvm.Throws
 
 
 class QuestionAIClientService(
@@ -42,8 +45,12 @@ class QuestionAIClientService(
                 header(HttpHeaders.Authorization, "Bearer $apiKey")
             }
             setBody(requestPayload)
-        }.bodyAsText()
+        }
+        val success = rawResponse.status.isSuccess()
+        if (!success) throw BadRequestException("Error o IA no disponible")
 
-        return jsonParser.decodeFromString(JsonObject.serializer(), rawResponse)
+
+
+        return jsonParser.decodeFromString(JsonObject.serializer(), rawResponse.bodyAsText())
     }
 }

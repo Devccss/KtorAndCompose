@@ -76,6 +76,22 @@ class QuestionViewModel(private val repo: QuestionsRepo, private val exerciseId:
         )
     }
 
+    fun addConfirmedAiQuestion(question: QuestionDto, alternatives: List<AlternativesDto>) {
+        _state.update { currentState ->
+            val updatedQuestions =
+                if (currentState.selectedQuestions.any { it.id == question.id }) {
+                    currentState.selectedQuestions.map { if (it.id == question.id) question else it }
+                } else {
+                    currentState.selectedQuestions + question
+                }
+
+            currentState.copy(
+                selectedQuestions = updatedQuestions,
+                alternatives = currentState.alternatives + (question.id to alternatives)
+            )
+        }
+    }
+
     fun updateQuestion(questionId: Int, updatedQuestion: UpdateQuestionDto) {
         launchCatching(
             block = { repo.updateQuestion(questionId, updatedQuestion) },

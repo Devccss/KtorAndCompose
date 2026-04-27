@@ -1,0 +1,23 @@
+meta {
+  name: Close Session by Id
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{BackendKtor}}/session-logs/1/close
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "endReason": "LOGOUT"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

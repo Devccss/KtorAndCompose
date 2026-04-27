@@ -24,6 +24,7 @@ import cafe.adriel.voyager.core.model.rememberScreenModel
 import org.example.project.dtos.LoginDto
 import org.example.project.dtos.Role
 import org.example.project.network.RepositoryProvider
+import org.example.project.network.SessionLogTracker
 import org.example.project.network.UserSession
 import org.example.project.screens.admindScreens.AdminDashboard
 import org.example.project.screens.admindScreens.RegisterScreen
@@ -275,6 +276,7 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
                             val currentUserId = currentUser?.id
 
                             if (currentUser?.role == Role.STUDENT && currentUserId != null) {
+                                SessionLogTracker.onUserLoggedIn(currentUserId)
                                 UserSession.set(
                                     currentUserId,
                                     currentUser.name,
@@ -284,6 +286,7 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
                                 navigator.push(StudentWelcomeScreen())
                             }
                             else if (currentUser?.role == Role.ADMIN && currentUserId != null) {
+                                SessionLogTracker.onUserLoggedIn(currentUserId)
                                 UserSession.set(
                                     currentUserId,
                                     currentUser.name,
@@ -293,6 +296,7 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
                                 navigator.push(AdminDashboard(currentUserId))
                             }
                             else if (currentUser?.role == Role.CONTENT_EDITOR && currentUserId != null) {
+                                SessionLogTracker.onUserLoggedIn(currentUserId)
                                 UserSession.set(
                                     currentUserId,
                                     currentUser.name,
@@ -304,6 +308,7 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
                         }
                         LaunchedEffect(logout){
                             if (logout == true) {
+                                SessionLogTracker.closeForLogout(UserSession.idUser)
                                 userViewModel.logout()
                                 UserSession.clear()
                                 email = ""

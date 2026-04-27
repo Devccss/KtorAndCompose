@@ -8,6 +8,7 @@ import models.TestExercises
 
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -34,8 +35,8 @@ class TestExerciseRepository {
 
     fun searchByIds(testId: Int? = null, exerciseId: Int? = null): List<TestExerciseDto> = transaction {
         var query = TestExercises.selectAll()
-        testId?.let { query = query.where { TestExercises.testId eq it } }
-        exerciseId?.let { query = query.where { TestExercises.exerciseId eq it } }
+        testId?.let { query = query.andWhere { TestExercises.testId eq it } }
+        exerciseId?.let { query = query.andWhere { TestExercises.exerciseId eq it } }
         query.map(::resultRowToTestExercise)
     }
 
@@ -62,11 +63,15 @@ class TestExerciseRepository {
         }
     }
 
-    fun delete(id: Int): Boolean = transaction {
-        val testExerciseId = searchByIds(exerciseId = id)
-        testExerciseId.forEach { testExId->
-            TestExercises.deleteWhere { TestExercises.id eq testExId.id }
-        }
-         true
+    fun deleteByExerciseId(id: Int): Boolean = transaction {
+        TestExercises.deleteWhere { TestExercises.id eq id }
+        true
     }
+
+    fun deleteByTestId(id: Int): Boolean = transaction {
+        TestExercises.deleteWhere { TestExercises.testId eq id }
+        true
+    }
+
+
 }

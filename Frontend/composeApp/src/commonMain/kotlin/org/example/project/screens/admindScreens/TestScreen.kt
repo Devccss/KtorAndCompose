@@ -724,7 +724,8 @@ fun TestSection(
                                 modifier = Modifier.menuAnchor(
                                     MenuAnchorType.PrimaryNotEditable,
                                     enabled = true
-                                ).fillMaxWidth()
+                                ).fillMaxWidth(),
+                                isError = selectedUnit == null
                             )
                             ExposedDropdownMenu(
                                 expanded = unitMenu,
@@ -757,8 +758,8 @@ fun TestSection(
 
                             Button(
                                 onClick = {
-                                    if (nameTest.isBlank() || descriptionTest.isBlank()) {
-                                        onError(Error("El nombre y la descripción son obligatorios"))
+                                    if (nameTest.isBlank() || descriptionTest.isBlank() || selectedUnit == null) {
+                                        onError(Error("El nombre, descripción y unidad son obligatorios"))
                                         return@Button
                                     }
 

@@ -21,19 +21,18 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.core.model.rememberScreenModel
+import cafe.adriel.voyager.core.screen.Screen
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_bold
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import org.example.project.components.AppLayout
 import org.example.project.dtos.Role
-import org.example.project.dtos.UserDto
+import org.example.project.dtos.WeeklySessionMetricDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
 import org.example.project.viewModel.ExercisesViewModel
+import org.example.project.viewModel.SessionLogViewModel
 import org.example.project.viewModel.UnitViewModel
 import org.example.project.viewModel.UserViewModel
 import org.jetbrains.compose.resources.Font
@@ -55,16 +54,16 @@ enum class UnitStatus {
 class AdminDashboard(private val id: Int? = null ) : Screen {
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
-        val scope = rememberCoroutineScope()
         // Obtener ViewModels para mostrar datos reales
         val unitVm = rememberScreenModel { UnitViewModel(RepositoryProvider.unitRepo) }
         val userVm = rememberScreenModel { UserViewModel(RepositoryProvider.userRepo, RepositoryProvider.unitRepo) }
         val exerciseVm = rememberScreenModel { ExercisesViewModel(RepositoryProvider.exerciseRepo) }
+        val sessionLogVm = rememberScreenModel { SessionLogViewModel(RepositoryProvider.sessionLogRepo) }
 
         val unitUi by unitVm.state.collectAsState()
         val userUi by userVm.state.collectAsState()
         val exerciseUi by exerciseVm.state.collectAsState()
+        val sessionUi by sessionLogVm.state.collectAsState()
 
         // estado para navegación inferior
         var selectedIndex by remember { mutableStateOf(0) }
@@ -111,6 +110,10 @@ class AdminDashboard(private val id: Int? = null ) : Screen {
                 totalUnits = totalUnits,
                 totalUsers = totalUsers,
                 totalExercises = totalExercises,
+                weeklyMetrics = sessionUi.weeklyMetrics,
+                sessionMetricsLoading = sessionUi.isLoading,
+                sessionMetricsError = sessionUi.error,
+                onRetryLoadMetrics = { sessionLogVm.loadWeeklyMetrics() }
             )
         }
     }
@@ -122,21 +125,22 @@ fun AdminDashboardContent(
     adminName: String,
     totalUnits: Int,
     totalUsers: Int,
-    totalExercises: Int
+    totalExercises: Int,
+    weeklyMetrics: List<WeeklySessionMetricDto>,
+    sessionMetricsLoading: Boolean,
+    sessionMetricsError: String?,
+    onRetryLoadMetrics: () -> Unit
 ) {
-    val weeklyData = listOf(
-        WeeklyStats("Lunes", 420, 340),
-        WeeklyStats("Martes", 380, 420),
-        WeeklyStats("Miércoles", 450, 380),
-        WeeklyStats("Jueves", 390, 450),
-        WeeklyStats("Viernes", 410, 520),
-        WeeklyStats("Sábado", 360, 290),
-        WeeklyStats("Domingo", 340, 250)
-    )
-
-    var selectedTab by remember { mutableStateOf(1) } // 0: semana, 1: mes, 2: año
-    var selectedSection by remember { mutableStateOf(0) } // 0: Análisis, 1: Unidades, 2: Usuarios
-    var searchQuery by remember { mutableStateOf("") }
+    val chartData = remember(weeklyMetrics) {
+        weeklyMetrics.map { (it.averageDurationSeconds.toFloat() / 60f).coerceAtLeast(0f) }
+    }
+    val chartLabels = remember(weeklyMetrics) {
+        weeklyMetrics.map {
+            val date = it.weekStart.take(10)
+            if (date.length >= 10) date.substring(5, 10) else date
+        }
+    }
+    val latestMetric = weeklyMetrics.lastOrNull()
 
     Column(
         modifier = modifier
@@ -160,7 +164,7 @@ fun AdminDashboardContent(
                     .padding(horizontal = 12.dp, vertical = 20.dp)
             ) {
                 Text(
-                    text = "Frecuencia de usuarios activos en la app",
+                    text = "Duracion promedio semanal de sesiones (min)",
                     style = MaterialTheme.typography.titleMedium,
                     color = Color(0xFF2D2D2D),
                     fontFamily = FontFamily(Font(Res.font.encode_sans_bold, weight = FontWeight.Bold))
@@ -168,14 +172,63 @@ fun AdminDashboardContent(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Aquí podrías dibujar un gráfico real usando datos reales
-                // por ahora dejamos un placeholder visual
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Gráfico (datos reales)", color = Color.Gray)
+                when {
+                    sessionMetricsLoading -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = Color(0xFFFF6B6B))
+                        }
+                    }
+
+                    !sessionMetricsError.isNullOrBlank() -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = sessionMetricsError,
+                                color = Color(0xFFB00020),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            TextButton(onClick = onRetryLoadMetrics) {
+                                Text("Reintentar")
+                            }
+                        }
+                    }
+
+                    chartData.isEmpty() -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Sin datos de sesiones", color = Color.Gray)
+                        }
+                    }
+
+                    else -> {
+                        LineChart(
+                            data = chartData,
+                            labels = chartLabels,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        latestMetric?.let { metric ->
+                            StatRow("Usuarios activos (ultima semana)", metric.activeUsers.toString())
+                            StatRow("Sesiones (ultima semana)", metric.totalSessions.toString())
+                            StatRow("Duracion total (ultima semana)", "${metric.totalDurationSeconds / 60} min")
+                        }
+                    }
                 }
             }
         }
@@ -310,11 +363,14 @@ fun LineChart(
     labels: List<String>,
     modifier: Modifier = Modifier
 ) {
+    val maxDataValue = data.maxOrNull()?.coerceAtLeast(1f) ?: 1f
     Canvas(modifier = modifier) {
         val width = size.width
         val height = size.height
-        val spacing = width / (data.size - 1)
-        val maxValue = 600f
+        if (data.isEmpty()) return@Canvas
+
+        val spacing = if (data.size > 1) width / (data.size - 1) else 0f
+        val maxValue = maxDataValue * 1.15f
         val minValue = 0f
 
         // Dibujar líneas de la cuadrícula
@@ -332,7 +388,7 @@ fun LineChart(
         // Dibujar línea de datos
         val path = Path()
         val points = data.mapIndexed { index, value ->
-            val x = index * spacing
+            val x = if (data.size == 1) width / 2f else index * spacing
             val normalizedValue = (value - minValue) / (maxValue - minValue)
             val y = height - (normalizedValue * height * 0.8f) - (height * 0.1f)
             Offset(x, y)

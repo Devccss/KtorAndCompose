@@ -331,8 +331,6 @@ class UserDetailsScreen(private val userId: Int) : Screen {
                                 if (isOwnProfile) {
                                     IconButton(
                                         onClick = {
-                                            vm.logout()
-                                            UserSession.clear()
                                             navigator.replaceAll(LoginScreen(logout = true))
                                         },
                                         modifier = Modifier.size(36.dp).background(Color(0xFFFFEFEF), CircleShape)

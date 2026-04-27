@@ -1,0 +1,17 @@
+meta {
+  name: Sessions by UserId
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{BackendKtor}}/session-logs/user/2
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

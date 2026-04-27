@@ -1,0 +1,17 @@
+meta {
+  name: Weekly Metrics
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{BackendKtor}}/session-logs/metrics/weekly?fromDate=2026-04-01&toDate=2026-04-30
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+

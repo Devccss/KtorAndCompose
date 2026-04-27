@@ -9,7 +9,9 @@ import kotlinx.serialization.json.Json
 
 actual fun createHttpClient(): HttpClient = HttpClient(OkHttp) {
     install(HttpTimeout) {
-        requestTimeoutMillis = 120_000
+        requestTimeoutMillis = 520_000
+        connectTimeoutMillis = 520_000
+        socketTimeoutMillis = 520_000
     }
     install(ContentNegotiation) {
         json(Json {

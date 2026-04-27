@@ -13,6 +13,7 @@ import com.example.services.TestExerciseService
 import com.example.services.TestService
 import services.UnitService
 import com.example.services.UserService
+import com.example.services.UserSessionLogsService
 import com.example.services.WelcomeTestService
 import com.example.services.WordService
 import io.ktor.server.application.Application
@@ -29,12 +30,14 @@ import repositories.TestExerciseRepository
 import repositories.TestRepository
 import repositories.UnitRepository
 import repositories.UsersRepository
+import repositories.UserSessionLogsRepository
 import repositories.WordRepository
 
 
 val repositoryModule = module {
 
     single { UsersRepository() }
+    single { UserSessionLogsRepository() }
     single { UnitRepository() }
     single { WordRepository() }
     single { TestRepository() }
@@ -53,6 +56,7 @@ val repositoryModule = module {
 fun serviceModule(stringApiKey: String, baseUrlIa: String, longTimeoutMs: Long) = module {
 
     single { UserService(get()) }
+    single { UserSessionLogsService(get()) }
     single { UnitService(get()) }
     single { WordService(get()) }
     single { TestService(get()) }

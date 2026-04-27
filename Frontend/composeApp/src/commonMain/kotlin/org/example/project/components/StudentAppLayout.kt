@@ -74,8 +74,7 @@ fun StudentAppLayout(
                         0 -> navigator.replaceAll(StudentWelcomeScreen(userId))
                         1 -> navigator.replaceAll(StudentLearnScreen(userId, userName))
                         2 -> {
-                            UserSession.clear()
-                            navigator.replaceAll(LoginScreen())
+                            navigator.replaceAll(LoginScreen(logout = true))
                         }
                     }
                 }

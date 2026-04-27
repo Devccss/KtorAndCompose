@@ -121,7 +121,9 @@ class TestDetailsScreen(private val testId: Int) : Screen {
                              test = testData,
                              onEdit = { dto -> testVm.updateTest(testId, dto) },
                              unit = unitUi.actualUnit,
-                             onDelete = { testVm.deleteTest(testId) }
+                             onDelete = { testVm.deleteTest(testId)
+                                 navigator.pop()
+                             }
                          )
                      }
                     }

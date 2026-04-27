@@ -20,11 +20,13 @@ import io.ktor.server.routing.routing
 import kotlinx.serialization.Serializable
 import models.ContentType
 import models.DifficultyLevel
+import models.NotificationCategory
+import models.NotificationStatus
+import models.NotificationSubCategory
 import models.NotificationType
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.koin.ktor.ext.get
 import services.UnitService
-import kotlin.text.get
 
 
 @Serializable
@@ -34,14 +36,33 @@ data class DatabaseTestResult(
     val database: String
 )
 
+private fun resolveErrorMessage(cause: Exception, fallback: String): String {
+    // Prioriza el mensaje que el desarrollador escribió al hacer throw.
+    if (!cause.message.isNullOrBlank()) return cause.message!!
+
+    var nested = cause.cause
+    while (nested != null) {
+        if (!nested.message.isNullOrBlank()) return nested.message!!
+        nested = nested.cause
+    }
+
+    return fallback
+}
+
 fun Application.configureRouting() {
 
     install(StatusPages) {
         exception<NotFoundException> { call, cause ->
-            call.respond(HttpStatusCode.NotFound, mapOf("error" to cause.message))
+            call.respond(
+                HttpStatusCode.NotFound,
+                mapOf("error" to resolveErrorMessage(cause, "Recurso no encontrado"))
+            )
         }
         exception<BadRequestException> { call, cause ->
-            call.respond(HttpStatusCode.BadRequest, mapOf("error" to cause.message))
+            call.respond(
+                HttpStatusCode.BadRequest,
+                mapOf("error" to resolveErrorMessage(cause, "Solicitud inválida"))
+            )
         }
     }
 
@@ -60,6 +81,7 @@ fun Application.configureRouting() {
     val notificationsService = get<NotificationsService>()
     val welcomeTestService = get<WelcomeTestService>()
     val aiQuestionGenerationService = get<AiQuestionGenerationService>()
+    val userSessionLogsService = get<UserSessionLogsService>()
 
     routing {
 
@@ -97,6 +119,66 @@ fun Application.configureRouting() {
             }
         }
         route("/api/v1") {
+
+            route("/session-logs") {
+                post("/start") {
+                    val dto = call.receive<CreateUserSessionLogDto>()
+                    val created = userSessionLogsService.startSession(dto)
+                    call.respond(HttpStatusCode.Created, created)
+                }
+
+                put("/{id}/close") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid session ID")
+                    val dto = call.receive<CloseUserSessionLogDto>()
+                    val closed = userSessionLogsService.closeSessionById(id, dto)
+                    call.respond(closed)
+                }
+
+                put("/user/{userId}/close-open") {
+                    val userId = call.parameters["userId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid user ID")
+                    val dto = call.receive<CloseUserSessionLogDto>()
+                    val closed = userSessionLogsService.closeOpenSessionByUserId(userId, dto)
+                    call.respond(closed)
+                }
+
+                get("/{id}") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid session ID")
+                    val session = userSessionLogsService.getSessionById(id)
+                        ?: throw NotFoundException("Session log not found")
+                    call.respond(session)
+                }
+
+                get("/user/{userId}") {
+                    val userId = call.parameters["userId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid user ID")
+                    val sessions = userSessionLogsService.getSessionsByUserId(userId)
+                    call.respond(sessions)
+                }
+
+                get("/user/{userId}/open") {
+                    val userId = call.parameters["userId"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid user ID")
+                    val session = userSessionLogsService.getOpenSessionByUserId(userId)
+                        ?: throw NotFoundException("No hay sesion abierta para este usuario")
+                    call.respond(session)
+                }
+
+                post("/filter") {
+                    val filters = call.receive<FilterUserSessionLogsDto>()
+                    val sessions = userSessionLogsService.filter(filters)
+                    call.respond(sessions)
+                }
+
+                get("/metrics/weekly") {
+                    val fromDate = call.request.queryParameters["fromDate"]
+                    val toDate = call.request.queryParameters["toDate"]
+                    val metrics = userSessionLogsService.getWeeklyMetrics(fromDate, toDate)
+                    call.respond(metrics)
+                }
+            }
 
             route("/ai/questions") {
                 post("generate/{contentId}") {
@@ -649,14 +731,10 @@ fun Application.configureRouting() {
                     testService.update(id, dto)
                     call.respond(HttpStatusCode.OK)
                 }
-                delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull()
+                delete("{testId}") {
+                    val id = call.parameters["testId"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
-                    val testExercise = testExerciseService.searchByIds(testId = id)
-                    testExercise.forEach { item ->
-                        testExerciseService.delete(item.id)
-                    }
-
+                        testExerciseService.deleteByTestId(id)
                     call.respond(testService.delete(id))
                 }
             }
@@ -703,7 +781,7 @@ fun Application.configureRouting() {
                 delete("{exerciseId}") {
                     val id = call.parameters["exerciseId"]?.toIntOrNull()
                         ?: throw BadRequestException("Invalid ID")
-                    call.respond(testExerciseService.delete(id))
+                    call.respond(testExerciseService.deleteByExerciseId(id))
                 }
             }
 
@@ -795,10 +873,18 @@ fun Application.configureRouting() {
                 }
                 post {
                     val dto = call.receive<CreateUnitCompletedDto>()
-                    unitService.createUnitCompleted(dto)
-                    val unit = unitService.getUnitById(dto.unitId)
-                        ?: throw NotFoundException("Unit with ID ${dto.unitId} not found")
-                    call.respond(HttpStatusCode.Created, unit)
+                    val created = unitService.createUnitCompleted(dto)
+
+                    val totalUnits = unitService.getAllUnits().size
+                    val completedUnits = unitService.getUnitsCompletedByUser(dto.userId)
+                        .map { it.id }
+                        .toSet()
+                        .size
+                    val remainingUnits = (totalUnits - completedUnits).coerceAtLeast(0)
+
+                    notificationsService.notifyIfUserIsCloseToFinishUnits(dto.userId, remainingUnits)
+
+                    call.respond(HttpStatusCode.Created, created)
                 }
                 put("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
@@ -920,19 +1006,16 @@ fun Application.configureRouting() {
                     val userId = call.request.queryParameters["userId"]?.toIntOrNull()
                     val title = call.request.queryParameters["title"]
                     val notificationType = call.request.queryParameters["notificationType"]?.let { NotificationType.valueOf(it) }
-                    val isReadParam = call.request.queryParameters["isRead"]
-                    val isRead = isReadParam?.let {
-                        when (it.lowercase()) {
-                            "true", "1", "yes" -> true
-                            "false", "0", "no" -> false
-                            else -> null
-                        }
-                    }
+                    val category = call.request.queryParameters["category"]?.let { NotificationCategory.valueOf(it) }
+                    val subCategory = call.request.queryParameters["subCategory"]?.let { NotificationSubCategory.valueOf(it) }
+                    val status = call.request.queryParameters["status"]?.let { NotificationStatus.valueOf(it) }
                     val filters = FilterNotificationsDto(
                         userId = userId,
                         title = title,
                         notificationType = notificationType,
-                        isRead = isRead
+                        category = category,
+                        subCategory = subCategory,
+                        status = status
                     )
                     call.respond(notificationsService.searchNotifications(filters))
                 }
@@ -954,6 +1037,18 @@ fun Application.configureRouting() {
                     val dto = call.receive<UpdateNotificationDto>()
                     notificationsService.update(id, dto)
                     call.respond(HttpStatusCode.OK)
+                }
+                put("{id}/read") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val updated = notificationsService.markAsRead(id)
+                    call.respond(updated)
+                }
+                put("{id}/unread") {
+                    val id = call.parameters["id"]?.toIntOrNull()
+                        ?: throw BadRequestException("Invalid ID")
+                    val updated = notificationsService.markAsUnread(id)
+                    call.respond(updated)
                 }
                 delete("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()

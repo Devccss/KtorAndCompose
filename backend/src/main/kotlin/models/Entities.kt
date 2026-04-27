@@ -22,13 +22,21 @@ object Users : IntIdTable() {
 
 enum class NotificationType { INFO, WARNING, ALERT }
 
+enum class NotificationStatus { UNREAD, READ, WAITING }
+enum class NotificationCategory { PROGRESS, REMINDER, SYSTEM }
+enum class NotificationSubCategory {
+    UNIT_COMPLETED, EXERCISE_FAILED, TEST_REMINDER, SYSTEM_MAINTENANCE, OTHER
+}
+
 object Notifications : IntIdTable() {
     val userId = integer("user_id").references(Users.id)
     val title = varchar("title", 150)
     val notificationType =
         enumerationByName<NotificationType>("notification_type", 10).default(NotificationType.INFO)
+    val category = enumerationByName<NotificationCategory>("category", 20).default(NotificationCategory.PROGRESS)
+    val subCategory = enumerationByName<NotificationSubCategory>("sub_category", 30).default(NotificationSubCategory.OTHER)
     val message = text("message")
-    val isRead = bool("is_read").default(false)
+    val isRead = enumerationByName<NotificationStatus>( "status", 10).default(NotificationStatus.UNREAD)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 }
 
@@ -75,6 +83,22 @@ object Words : IntIdTable() {
     val description = text("description").nullable()
     val isActive = bool("is_active").default(false)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
+}
+
+enum class SessionEndReason { LOGOUT, APP_CLOSED, TIMEOUT, UNKNOWN }
+
+object UserSessionLogs : IntIdTable() {
+    val userId = integer("user_id").references(Users.id)
+    val loginAt = datetime("login_at").clientDefault { LocalDateTime.now() }
+    val logoutAt = datetime("logout_at").nullable()
+    val endReason = enumerationByName<SessionEndReason>("end_reason", 20).nullable()
+    val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
+
+    init {
+        index(false, userId)
+        index(false, loginAt)
+        index(false, logoutAt)
+    }
 }
 
 object Questions : IntIdTable() {

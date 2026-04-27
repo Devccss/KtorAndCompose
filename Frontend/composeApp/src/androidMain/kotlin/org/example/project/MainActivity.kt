@@ -4,8 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
+import kotlinx.coroutines.runBlocking
+import org.example.project.network.SessionLogTracker
+import org.example.project.network.UserSession
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -15,5 +16,14 @@ class MainActivity : ComponentActivity() {
         setContent {
             App()
         }
+    }
+
+    override fun onDestroy() {
+        if (isFinishing) {
+            runBlocking {
+                SessionLogTracker.closeForAppClosed(UserSession.idUser)
+            }
+        }
+        super.onDestroy()
     }
 }

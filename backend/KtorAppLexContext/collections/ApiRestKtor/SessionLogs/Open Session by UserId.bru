@@ -1,0 +1,17 @@
+meta {
+  name: Open Session by UserId
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{BackendKtor}}/session-logs/user/2/open
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
