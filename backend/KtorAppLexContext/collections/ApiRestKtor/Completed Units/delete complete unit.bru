@@ -1,0 +1,23 @@
+meta {
+  name: delete complete unit
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{BackendKtor}}/unitsCompleted/1
+  body: none
+  auth: inherit
+}
+
+body:json {
+  {
+    "userId": 2,
+    "unitId": 1
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

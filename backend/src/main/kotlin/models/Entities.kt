@@ -63,7 +63,7 @@ object Exercises : IntIdTable() {
 
 enum class ContentType { READING, LISTENING }
 object ExerciseContent : IntIdTable() {
-    val exerciseId = integer("exercise_id").references(Exercises.id)
+    val exerciseId = integer("exercise_id").references(Exercises.id).uniqueIndex()
     val contentType = enumerationByName<ContentType>("content_type", 20).default(ContentType.READING)
     val textContent = text("text_content")
     val grammarExplanation = text("grammar_explanation")
@@ -132,12 +132,6 @@ object WelcomeTests : IntIdTable() {
     val testId = integer("test_id").references(Tests.id)
     val isActive = bool("is_active").default(false)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
-}
-
-object ExercisesOnHold : IntIdTable() {
-    val exerciseId = integer("exercise_id").references(Exercises.id)
-    val userId = integer("user_id").references(Users.id)
-    val failureDate = datetime("failure_date").clientDefault { LocalDateTime.now() }
 }
 
 object UnitsCompleted : IntIdTable() {

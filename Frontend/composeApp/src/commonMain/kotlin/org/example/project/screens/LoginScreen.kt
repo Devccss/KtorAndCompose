@@ -29,6 +29,7 @@ import org.example.project.network.UserSession
 import org.example.project.screens.admindScreens.AdminDashboard
 import org.example.project.screens.admindScreens.RegisterScreen
 import org.example.project.screens.studentScreens.StudentWelcomeScreen
+import org.example.project.service.NotificationService
 
 class LoginScreen(private val logout: Boolean? = false, private val userId: Int? = null) : Screen {
     @Composable
@@ -283,6 +284,7 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
                                     currentUser.role,
                                     actualUnit = currentUser.currentUnitId
                                 )
+                                NotificationService.startNotificationPolling()
                                 navigator.push(StudentWelcomeScreen())
                             }
                             else if (currentUser?.role == Role.ADMIN && currentUserId != null) {
@@ -293,6 +295,7 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
                                     currentUser.role,
                                     actualUnit = currentUser.currentUnitId
                                 )
+                                NotificationService.startNotificationPolling()
                                 navigator.push(AdminDashboard(currentUserId))
                             }
                             else if (currentUser?.role == Role.CONTENT_EDITOR && currentUserId != null) {
@@ -303,6 +306,7 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
                                     currentUser.role,
                                     actualUnit = currentUser.currentUnitId
                                 )
+                                NotificationService.startNotificationPolling()
 
                             }
                         }

@@ -1,18 +1,19 @@
 meta {
-  name: Start Session
+  name: complete unit
   type: http
-  seq: 1
+  seq: 2
 }
 
 post {
-  url: {{BackendKtor}}/session-logs/start
+  url: {{BackendKtor}}/unitsCompleted
   body: json
   auth: inherit
 }
 
 body:json {
   {
-    "userId": 2
+    "userId": 2,
+    "unitId": 1
   }
 }
 

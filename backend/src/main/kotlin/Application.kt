@@ -4,9 +4,9 @@ import com.example.config.Limits.configureAdministration
 import com.example.config.configureSecurity
 import com.example.config.configureSerialization
 import config.configureDatabases
-import configureHTTP
 import com.example.plugins.configureKoin
 import com.example.routes.configureRouting
+import config.configureHTTP
 import io.ktor.server.application.Application
 
 

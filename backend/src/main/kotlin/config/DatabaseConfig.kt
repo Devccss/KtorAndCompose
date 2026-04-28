@@ -9,7 +9,6 @@ import models.ExerciseContent
 import models.Units
 import models.Users
 import models.Exercises
-import models.ExercisesOnHold
 import models.Notifications
 import models.ExerciseWords
 import models.Questions
@@ -47,7 +46,6 @@ fun configureDatabases() {
             Units,
             Exercises,
             ExerciseContent,
-            ExercisesOnHold,
             ExerciseCompleted,
             Notifications,
             Words,

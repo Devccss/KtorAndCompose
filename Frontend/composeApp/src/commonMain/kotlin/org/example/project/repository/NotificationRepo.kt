@@ -23,6 +23,17 @@ class NotificationRepo(
     suspend fun getAllNotifications(): List<NotificationDto> =
         httpClient.get("$baseUrl/api/v1/notifications").parseOrThrow()
 
+    suspend fun getNotificationsByUser(userId: Int): List<NotificationDto> =
+        searchNotifications(FilterNotificationsDto(userId = userId))
+
+    suspend fun getUnreadNotificationsByUser(userId: Int): List<NotificationDto> =
+        searchNotifications(
+            FilterNotificationsDto(
+                userId = userId,
+                status = org.example.project.dtos.NotificationStatus.UNREAD
+            )
+        )
+
     suspend fun searchNotifications(filters: FilterNotificationsDto): List<NotificationDto> {
         return httpClient.get {
             url("$baseUrl/api/v1/notifications/search")

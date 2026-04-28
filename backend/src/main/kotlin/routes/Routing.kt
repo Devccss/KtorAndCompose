@@ -17,6 +17,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
+import kotlinx.coroutines.isActive
 import kotlinx.serialization.Serializable
 import models.ContentType
 import models.DifficultyLevel
@@ -77,7 +78,6 @@ fun Application.configureRouting() {
     val questionService = get<QuestionService>()
     val testService = get<TestService>()
     val testExerciseService = get<TestExerciseService>()
-    val exerciseOnHoldService = get<ExerciseOnHoldService>()
     val notificationsService = get<NotificationsService>()
     val welcomeTestService = get<WelcomeTestService>()
     val aiQuestionGenerationService = get<AiQuestionGenerationService>()
@@ -825,35 +825,6 @@ fun Application.configureRouting() {
                 }
             }
 
-            // ExercisesOnHold
-            route("/exercises-on-hold") {
-                get { call.respond(exerciseOnHoldService.getAll()) }
-                get("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("Invalid ID")
-                    val item = exerciseOnHoldService.getById(id)
-                        ?: throw NotFoundException("ExerciseOnHold not found")
-                    call.respond(item)
-                }
-                post {
-                    val dto = call.receive<CreateExerciseOnHoldDto>()
-                    val created = exerciseOnHoldService.create(dto)
-                    call.respond(HttpStatusCode.Created, created)
-                }
-                put("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("Invalid ID")
-                    val dto = call.receive<UpdateExerciseOnHoldDto>()
-                    exerciseOnHoldService.update(id, dto)
-                    call.respond(HttpStatusCode.OK)
-                }
-                delete("{id}") {
-                    val id = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("Invalid ID")
-                    call.respond(exerciseOnHoldService.delete(id))
-                }
-            }
-
             // UnitsCompleted
             route("/unitsCompleted") {
                 get { call.respond(unitService.getAllUnitsCompleted()) }
@@ -875,7 +846,7 @@ fun Application.configureRouting() {
                     val dto = call.receive<CreateUnitCompletedDto>()
                     val created = unitService.createUnitCompleted(dto)
 
-                    val totalUnits = unitService.getAllUnits().size
+                    val totalUnits = unitService.searchUnits(FilterUnitsDto(isActive = true)).size
                     val completedUnits = unitService.getUnitsCompletedByUser(dto.userId)
                         .map { it.id }
                         .toSet()
@@ -884,7 +855,10 @@ fun Application.configureRouting() {
 
                     notificationsService.notifyIfUserIsCloseToFinishUnits(dto.userId, remainingUnits)
 
-                    call.respond(HttpStatusCode.Created, created)
+                    val unit = unitService.getUnitById(created.unitId)
+
+
+                    call.respond(HttpStatusCode.Created, unit?: throw NotFoundException("Error al completar la unidad con ID ${created.unitId}"))
                 }
                 put("{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()

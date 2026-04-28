@@ -268,12 +268,7 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
     }
 
     fun logout() {
-        UserSession.set(
-            id = -1,
-            name = null,
-            actualUnit = null,
-            role = null
-        )
+        UserSession.clear()
         _state.value = _state.value.copy(currentUser = null)
     }
 

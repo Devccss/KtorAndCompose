@@ -62,6 +62,10 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
         }
+
+        androidMain.dependencies {
+            implementation(libs.androidx.work.runtime)
+        }
         commonMain.dependencies {
             implementation(libs.voyager.navigator)
             implementation(compose.runtime)

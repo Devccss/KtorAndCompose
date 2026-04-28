@@ -8,10 +8,18 @@ import org.example.project.env.Env
  */
 private var envLoaded = false
 
+private fun defaultBaseUrlForCurrentPlatform(): String {
+    return if (getPlatform().name.startsWith("Android")) {
+        "http://10.0.2.2:8000"
+    } else {
+        "http://127.0.0.1:8000"
+    }
+}
+
 suspend fun getBaseUrl(): String {
     if (!envLoaded) {
         Env.loadEnvFile() // intenta cargar ".env" en el working directory (silencioso si no existe)
         envLoaded = true
     }
-    return Env.get("BASE_URL", "http://10.0.2.2:443")
+    return Env.get("BASE_URL", defaultBaseUrlForCurrentPlatform())
 }

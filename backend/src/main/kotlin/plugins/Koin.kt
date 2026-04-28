@@ -4,7 +4,6 @@ import com.example.repositories.WelcomeTestRepo
 import com.example.services.AiQuestionGenerationService
 import com.example.services.ExerciseContentService
 import com.example.services.ExerciseWordService
-import com.example.services.ExerciseOnHoldService
 import com.example.services.ExerciseService
 import com.example.services.NotificationsService
 import com.example.services.QuestionAIClientService
@@ -22,7 +21,6 @@ import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
 import repositories.ExerciseWordsRepository
-import repositories.ExerciseOnHoldRepository
 import repositories.ExerciseRepository
 import repositories.NotificationsRepository
 import repositories.QuestionRepository
@@ -46,7 +44,6 @@ val repositoryModule = module {
     single { NotificationsRepository() }
     single { ExerciseRepository() }
     single { ExerciseContentRepository() }
-    single { ExerciseOnHoldRepository() }
     single { ExerciseWordsRepository()}
     single { WelcomeTestRepo() }
 
@@ -65,7 +62,6 @@ fun serviceModule(stringApiKey: String, baseUrlIa: String, longTimeoutMs: Long) 
     single { NotificationsService(get()) }
     single { ExerciseService(get()) }
     single { ExerciseContentService(get()) }
-    single { ExerciseOnHoldService(get()) }
     single { ExerciseWordService(get()) }
     single { WelcomeTestService(get()) }
     single { QuestionAIClientService(
