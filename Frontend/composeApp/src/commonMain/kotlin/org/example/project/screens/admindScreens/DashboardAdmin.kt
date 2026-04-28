@@ -78,8 +78,10 @@ class AdminDashboard(private val id: Int? = null ) : Screen {
             totalExercises = exerciseUi.exercises.size
         }
         LaunchedEffect(id){
-            id?.let {
-                userVm.getUserById(it)
+            id?.let { userId ->
+                if (userId > 0) {
+                    userVm.getUserById(userId)
+                }
             }
         }
 

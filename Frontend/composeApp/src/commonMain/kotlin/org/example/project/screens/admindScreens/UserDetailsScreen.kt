@@ -123,7 +123,9 @@ class UserDetailsScreen(private val userId: Int) : Screen {
 
         // Sincronizar estados locales con el usuario cargado
         LaunchedEffect(userId) {
-            vm.getUserById(userId)
+            if (userId > 0 ) {
+                vm.getUserById(userId)
+            }
         }
 
         // NUEVO: Actualizar el estado local cuando llega el usuario del VM

@@ -32,7 +32,7 @@ class UserRepo(private val httpClient: HttpClient, private val baseUrl: String) 
 
     suspend fun searchUsers(filters: FilterUsersDto): List<UserDto> =
         httpClient.get {
-            url("$baseUrl/api/v1/users/search")
+            url("$baseUrl/api/v1/users/filter")
             filters.name?.let { parameter("name", it) }
             filters.unitId?.let { parameter("unitId", it) }
             filters.role?.let { parameter("role", it.name) }

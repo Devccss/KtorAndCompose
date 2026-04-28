@@ -265,7 +265,7 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
 
 
                         LaunchedEffect(userId) {
-                            if (userId != null && !autoLoginRequested) {
+                            if (userId != null && userId > 0 && !autoLoginRequested) {
                                 autoLoginRequested = true
                                 userViewModel.getUserById(userId)
                             }

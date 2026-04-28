@@ -232,8 +232,14 @@ fun Application.configureRouting() {
                     call.respond(users)
                 }
                 get("/filter") {
-                    val filters = call.receive<FilterUsersDto>()
-                    val users = userService.getFilterUsers(filters)
+                    val name = call.request.queryParameters["name"]?.takeIf { it.isNotBlank() }
+                    val unitId = call.request.queryParameters["unitId"]?.toIntOrNull()
+                    val role = call.request.queryParameters["role"]?.let { models.Role.valueOf(it) }
+                    val users = userService.getFilterUsers(FilterUsersDto(
+                        name = name,
+                        unitId = unitId,
+                        role = role
+                    ))
                     call.respond(users)
                 }
                 post("/login") {
