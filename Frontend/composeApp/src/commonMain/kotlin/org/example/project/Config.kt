@@ -9,12 +9,13 @@ import org.example.project.env.Env
 private var envLoaded = false
 
 private fun defaultBaseUrlForCurrentPlatform(): String {
-    return if (getPlatform().name.startsWith("Android")) {
-        "http://10.0.2.2:8000"
-    } else {
-        "http://127.0.0.1:8000"
+    return when {
+        getPlatform().name.contains("Emulator", ignoreCase = true) -> "http://10.0.2.2:8000"
+        getPlatform().name.startsWith("Android") -> "http://192.168.1.6:8000"
+        else -> "http://127.0.0.1:8000"
     }
 }
+
 
 suspend fun getBaseUrl(): String {
     if (!envLoaded) {

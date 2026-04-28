@@ -19,6 +19,7 @@ fun Application.configureHTTP() {
         allowHeader("MyCustomHeader")
         allowHost("localhost", schemes = listOf("http", "https"))
         allowHost("127.0.0.1", schemes = listOf("http", "https"))
+        allowHost("192.168.1.6", schemes = listOf("http", "https"))
         allowOrigins { origin ->
             // Allow all origins for development, but you should restrict this in production
             true
