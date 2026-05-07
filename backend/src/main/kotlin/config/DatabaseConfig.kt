@@ -1,5 +1,6 @@
 package config
 
+import com.example.dtos.UnitDto
 import com.example.dtos.UserDto
 import io.github.cdimascio.dotenv.dotenv
 import models.Alternatives
@@ -29,7 +30,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mindrot.jbcrypt.BCrypt
 import java.time.LocalDateTime
 
-fun configureDatabases() {
+fun configureDatabase() {
 
     val dotenv = dotenv()
     val dbUrl = dotenv["DB_URL"]
@@ -41,6 +42,27 @@ fun configureDatabases() {
     )
 
     transaction {
+
+        //Eliminar todas las tablas antes de crearlo
+        /*SchemaUtils.drop(
+            Users,
+            Units,
+            Exercises,
+            ExerciseContent,
+            ExerciseCompleted,
+            Notifications,
+            Words,
+            Questions,
+            Tests,
+            TestExercises,
+            UnitsCompleted,
+            TestCompleted,
+            UserSessionLogs,
+            ExerciseWords,
+            Alternatives,
+            WelcomeTests
+        )*/
+
         SchemaUtils.create(
             Users,
             Units,
@@ -153,11 +175,63 @@ fun createAdminUserIfNotExists() {
             createdAt = LocalDateTime.now().toString(),
             role = Role.CONTENT_EDITOR,
         )
+
+        val new2 = Units.insert {
+            it[difficulty] = models.DifficultyLevel.A1
+            it[name] = "Unidad 1"
+            it[description] = "Descripción de la unidad 1"
+            it[orderUnit] = 1
+            it[isActive] = true
+        }[Units.id]
+        UnitDto(
+            id = new2.value,
+            difficulty = models.DifficultyLevel.A1,
+            name = "Unidad 1",
+            description = "Descripción de la unidad 1",
+            orderUnit = 1,
+            isActive = true,
+            createdAt = LocalDateTime.now().toString()
+        )
     }
 }
 
 fun createExercises() {
     transaction {
+
+        fun ensureUnit(
+            orderUnit: Int,
+            difficulty: models.DifficultyLevel,
+            name: String,
+            description: String,
+        ): Int {
+            val existing = Units.selectAll().where { Units.orderUnit eq orderUnit }.firstOrNull()
+            return existing?.get(Units.id)?.value ?: Units.insert {
+                it[this.difficulty] = difficulty
+                it[this.name] = name
+                it[this.description] = description
+                it[this.orderUnit] = orderUnit
+                it[this.isActive] = true
+            }[Units.id].value
+        }
+
+        val unit1Id = ensureUnit(
+            orderUnit = 1,
+            difficulty = models.DifficultyLevel.A1,
+            name = "Unidad 1",
+            description = "Descripción de la unidad 1"
+        )
+        val unit2Id = ensureUnit(
+            orderUnit = 2,
+            difficulty = models.DifficultyLevel.A2,
+            name = "Unidad 2",
+            description = "Descripción de la unidad 2"
+        )
+        val unit3Id = ensureUnit(
+            orderUnit = 3,
+            difficulty = models.DifficultyLevel.B1,
+            name = "Unidad 3",
+            description = "Descripción de la unidad 2"
+        )
 
         if (Exercises.selectAll().count() > 0L) {
             return@transaction
@@ -185,19 +259,29 @@ fun createExercises() {
         val seeds = listOf(
             ExSeed(
                 "Verbo To Be básico",
-                1,
+                unit1Id,
                 "Uso básico del verbo to be con pronombres",
                 "Maria is a nurse. Luis and I are Mexican.",
                 "El verbo to be se utiliza para expresar identidad o estado. En presente simple se conjuga como am, is o are dependiendo del pronombre personal. El verbo to be cambia según el sujeto. Cuando el sujeto es plural como \"Luis and I\", se utiliza \"are\" y el pronombre correspondiente es \"we\".",
                 listOf(
                     QSeed(
-                        "¿Como quedaría la siguiente oración utilizando un pronombre personal?: Maria is a nurse",
-                        listOf("He is a nurse", "She is a nurse", "They is a nurse", "We are a nurse"),
+                        "How would the following sentence look using a personal pronoun?: Maria is a nurse",
+                        listOf(
+                            "He is a nurse",
+                            "She is a nurse",
+                            "They is a nurse",
+                            "We are a nurse"
+                        ),
                         "She is a nurse"
                     ),
                     QSeed(
-                        "¿Como quedaría la siguiente oración utilizando un pronombre personal?: Luis and I are Mexican",
-                        listOf("We are Mexican", "They is Mexican", "He are Mexican", "I is Mexican"),
+                        "How would the following sentence look using a personal pronoun?: Luis and I are Mexican",
+                        listOf(
+                            "We are Mexican",
+                            "They is Mexican",
+                            "He are Mexican",
+                            "I is Mexican"
+                        ),
                         "We are Mexican"
                     )
                 ),
@@ -208,18 +292,18 @@ fun createExercises() {
             ),
             ExSeed(
                 "Verbo To Be negativo",
-                1,
+                unit1Id,
                 "Uso del verbo to be en forma negativa",
                 "We are not singers. He is not my brother.",
                 "Para formar la forma negativa del verbo to be se agrega la palabra \"not\" después del verbo. También existen contracciones como \"aren't\". En la tercera persona del singular (he, she, it) se utiliza \"is\" y en negativo \"is not\" o su contracción \"isn't\".",
                 listOf(
                     QSeed(
-                        "Completa la siguiente frase en forma negativa: We ____ singers",
+                        "Complete the sentence in negative form: We ____ singers",
                         listOf("are not", "is not", "am not", "be not"),
                         "are not"
                     ),
                     QSeed(
-                        "Completa la siguiente frase en forma negativa: He ____ my brother",
+                        "Complete the sentence in negative form: He ____ my brother",
                         listOf("is not", "are not", "am not", "be not"),
                         "is not"
                     )
@@ -231,13 +315,13 @@ fun createExercises() {
             ),
             ExSeed(
                 "Verbo To Be interrogativo",
-                1,
+                unit1Id,
                 "Formación de preguntas con el verbo to be",
                 "They are my parents.",
                 "La forma interrogativa del verbo to be se forma colocando el verbo antes del sujeto.",
                 listOf(
                     QSeed(
-                        "Ordena las siguientes palabras para formar la oración correcta: are / they / my / parents / ?",
+                        "Order the words to form the correct sentence: are / they / my / parents / ?",
                         listOf(
                             "Are they my parents ?",
                             "They are my parents ?",
@@ -253,18 +337,18 @@ fun createExercises() {
             ),
             ExSeed(
                 "Rutinas diarias en contexto",
-                3,
+                unit2Id,
                 "Uso del presente simple en historias más completas",
                 "Maria is a doctor and she works in a hospital every day. She helps people and she is very kind with her patients. Juan is a teacher and he teaches English in a school. He loves his job and he works with many students every week.",
                 "El presente simple se utiliza para describir rutinas diarias y hábitos. En tercera persona singular (she, he, it) el verbo generalmente termina en \"s\", como en \"works\" o \"helps\". En presente simple, la tercera persona del singular agrega \"s\" o \"es\" al verbo. Además, se usa para expresar acciones habituales como \"teaches\" o \"works\".",
                 listOf(
                     QSeed(
-                        "Selecciona la opción correcta: She ____ in a hospital every day",
+                        "Choose the correct option: She ____ in a hospital every day",
                         listOf("work", "works", "working", "worked"),
                         "works"
                     ),
                     QSeed(
-                        "Completa la oración: He ____ English in a school",
+                        "Complete the sentence: He ____ English in a school",
                         listOf("teach", "teaches", "teaching", "teached"),
                         "teaches"
                     )
@@ -284,18 +368,18 @@ fun createExercises() {
             ),
             ExSeed(
                 "Vida diaria en familia",
-                3,
+                unit2Id,
                 "Uso del presente simple con diferentes sujetos",
                 "Ana and Luis are siblings and they live in a big house. They eat dinner together and they watch TV every night. I am a student and I study every day. I have classes in the morning and I do homework in the afternoon.",
                 "El presente simple también se usa con sujetos en plural (they, we, you), donde el verbo no cambia y se usa en su forma base, como \"eat\" o \"watch\". El presente simple se usa con \"I\" en su forma base del verbo. Expresa rutinas como \"study\", \"have\" o \"do\". ",
                 listOf(
                     QSeed(
-                        "Selecciona la opción correcta: They ____ dinner together",
+                        "Choose the correct option: They ____ dinner together",
                         listOf("eat", "eats", "eating", "ate"),
                         "eat"
                     ),
                     QSeed(
-                        "Completa la oración: I ____ every day",
+                        "Complete the sentence: I ____ every day",
                         listOf("study", "studies", "studying", "studied"),
                         "study"
                     )
@@ -315,13 +399,13 @@ fun createExercises() {
             ),
             ExSeed(
                 "Rutinas y hábitos",
-                3,
+                unit3Id,
                 "Uso del presente simple en diferentes contextos",
                 "My parents work in an office and they travel to the city every week. They like their jobs and they are very responsible.",
                 "El presente simple describe hábitos y rutinas. Con sujetos en plural como \"they\", el verbo se mantiene en su forma base como \"work\" o \"travel\". ",
                 listOf(
                     QSeed(
-                        "Selecciona la opción correcta: They ____ to the city every week",
+                        "Choose the correct option: They ____ to the city every week",
                         listOf("travel", "travels", "traveling", "traveled"),
                         "travel"
                     )

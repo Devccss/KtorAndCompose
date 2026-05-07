@@ -8,6 +8,7 @@ data class UserDto(
     val email: String,
     val name: String,
     val password: String? = null,
+    val token: String? = null,
     val provider: String? = null,
     val preferences: String? = null,
     val activeNow: Boolean? = false,

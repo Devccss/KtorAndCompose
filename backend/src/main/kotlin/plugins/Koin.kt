@@ -1,4 +1,4 @@
-package com.example.plugins
+package plugins
 import com.example.repositories.ExerciseContentRepository
 import com.example.repositories.WelcomeTestRepo
 import com.example.services.AiQuestionGenerationService
@@ -15,6 +15,7 @@ import com.example.services.UserService
 import com.example.services.UserSessionLogsService
 import com.example.services.WelcomeTestService
 import com.example.services.WordService
+import config.TokenManager
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import org.koin.dsl.module
@@ -50,9 +51,9 @@ val repositoryModule = module {
 
 }
 
-fun serviceModule(stringApiKey: String, baseUrlIa: String, longTimeoutMs: Long) = module {
+fun serviceModule(stringApiKey: String, baseUrlIa: String, longTimeoutMs: Long, tokenManager: TokenManager) = module {
 
-    single { UserService(get()) }
+    single { UserService(get(), tokenManager) }
     single { UserSessionLogsService(get()) }
     single { UnitService(get()) }
     single { WordService(get()) }
@@ -82,11 +83,16 @@ fun Application.configureKoin() {
         ?: 30000L
     val baseurlIa = environment.config.property("ai.python.baseUrl").getString()
 
+    val jwtSecret = environment.config.property("jwt.secret").getString()
+    val jwtIssuer = environment.config.property("jwt.issuer").getString()
+    val jwtAudience = environment.config.property("jwt.audience").getString()
+    val tokenManager = TokenManager(jwtSecret, jwtIssuer, jwtAudience)
+
     install(Koin) {
         slf4jLogger()
         modules(
             repositoryModule,
-            serviceModule(apiKey,baseurlIa, timeoutMs)
+            serviceModule(apiKey, baseurlIa, timeoutMs, tokenManager)
         )
     }
 }

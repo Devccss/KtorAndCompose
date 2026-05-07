@@ -6,6 +6,7 @@ import com.example.dtos.FilterUserSessionLogsDto
 import com.example.dtos.UserSessionLogDto
 import com.example.dtos.WeeklySessionMetricDto
 import io.ktor.server.plugins.BadRequestException
+import models.Role
 import models.UserSessionLogs
 import models.Users
 import org.jetbrains.exposed.v1.core.ResultRow
@@ -146,12 +147,16 @@ class UserSessionLogsRepository {
         query.orderBy(UserSessionLogs.loginAt).map(::mapToDto)
     }
 
-    fun weeklyMetrics(fromDate: String?, toDate: String?): List<WeeklySessionMetricDto> = transaction {
+    fun weeklyMetrics(studentId: Boolean? = true, fromDate: String?, toDate: String?): List<WeeklySessionMetricDto> = transaction {
         val from = fromDate?.let { LocalDate.parse(it).atStartOfDay() }
         val to = toDate?.let { LocalDate.parse(it).atTime(23, 59, 59) }
 
         var query = UserSessionLogs.selectAll().where { UserSessionLogs.logoutAt.isNotNull() }
 
+        studentId?.let {
+            val userIds = Users.selectAll().where { Users.role eq Role.STUDENT }.map { it[Users.id].value }
+            query = query.andWhere { UserSessionLogs.userId inList userIds }
+        }
         from?.let { query = query.andWhere { UserSessionLogs.loginAt greaterEq it } }
         to?.let { query = query.andWhere { UserSessionLogs.loginAt lessEq it } }
 

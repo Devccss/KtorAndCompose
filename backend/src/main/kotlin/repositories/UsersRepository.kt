@@ -7,15 +7,12 @@ import com.example.dtos.UserDto
 import io.ktor.server.plugins.BadRequestException
 import models.Role
 import models.Users
-
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.mindrot.jbcrypt.BCrypt
@@ -72,7 +69,7 @@ class UsersRepository {
                 it[preferences] = dto.preferences
                 it[provider] = dto.provider
                 it[currentUnitId] = dto.currentUnitId
-                it[role] = dto.role ?: models.Role.STUDENT
+                it[role] = dto.role ?: Role.STUDENT
             }[Users.id]
 
             UserDto(
@@ -84,7 +81,7 @@ class UsersRepository {
                 provider = dto.provider,
                 currentUnitId = dto.currentUnitId,
                 activeNow = false,
-                role = dto.role ?: models.Role.STUDENT,
+                role = dto.role ?: Role.STUDENT,
                 createdAt = LocalDateTime.now().toString(),
             )
         }

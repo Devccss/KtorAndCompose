@@ -7,7 +7,11 @@ meta {
 delete {
   url: {{BackendKtor}}/users/2
   body: none
-  auth: inherit
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJrdG9yLWF1ZGllbmNlIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDAwIiwidXNlcm5hbWUiOiJhZG1pbkAyMDI2Iiwicm9sZSI6IkFETUlOIiwiZXhwIjoxNzc4MDM3MDIzfQ.w8dmi6ONiuV8neCFg7Qx4ZEh9Nn48-OTBFJGhDBfk4w
 }
 
 settings {

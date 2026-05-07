@@ -7,7 +7,11 @@ meta {
 get {
   url: {{BackendKtor}}/users
   body: none
-  auth: inherit
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJrdG9yLWF1ZGllbmNlIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDAwIiwiaWQiOjEsInVzZXJuYW1lIjoiYWRtaW5AMjAyNiIsInJvbGUiOiJBRE1JTiIsImV4cCI6MTc3ODAzNjQwNn0.I-2QtV_1_ZwS9y7zoEyJ58bY75TwunWSLxHP2Mv9tzc
 }
 
 settings {

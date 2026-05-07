@@ -25,7 +25,7 @@ class UserSessionLogsService(private val repository: UserSessionLogsRepository) 
 
     fun filter(dto: FilterUserSessionLogsDto): List<UserSessionLogDto> = repository.filter(dto)
 
-    fun getWeeklyMetrics(fromDate: String?, toDate: String?): List<WeeklySessionMetricDto> =
-        repository.weeklyMetrics(fromDate, toDate)
+    fun getWeeklyMetrics(studentId: Boolean? = true, fromDate: String?, toDate: String?): List<WeeklySessionMetricDto> =
+        repository.weeklyMetrics(studentId,fromDate, toDate)
 }
 

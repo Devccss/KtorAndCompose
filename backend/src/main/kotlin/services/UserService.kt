@@ -6,11 +6,17 @@ import com.example.dtos.LoginDto
 
 import com.example.dtos.UpdateUserDto
 import com.example.dtos.UserDto
+import config.TokenManager
 import repositories.UsersRepository
 
-class UserService(private val userRepository: UsersRepository) {
-    fun initSesion(dto: LoginDto): UserDto {
-        return userRepository.login(dto.email,dto.password)
+class UserService(
+    private val userRepository: UsersRepository,
+    private val tokenManager: TokenManager
+) {
+    fun initSession(dto: LoginDto): UserDto {
+        val user = userRepository.login(dto.email, dto.password)
+        val token = tokenManager.generateToken(user.id ,user.email, user.role.name)
+        return user.copy(token = token)
     }
 
     fun createUser(dto: CreateUserDto): UserDto {

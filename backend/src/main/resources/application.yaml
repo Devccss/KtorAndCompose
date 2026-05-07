@@ -5,15 +5,33 @@ ktor:
     deployment:
         port: 8000
 
+jwt:
+  secret: "tUYN6S1dvjtOSnpCBFjyb4MoYvDwGUAsENfIAxA9Shg="
+  issuer: "http://localhost:8000"
+  audience: "ktor-audience"
+  realm: "ktor-realm"
+
+app:
+  DB_URL: "jdbc:postgresql://localhost:5432/ktorDatabase"
+  DB_USER: "Deivid_user"
+  DB_PASSWORD: "-Ducli123"
+
+  ADMIN_NAME: "admin2026"
+  ADMIN_EMAIL: "admin@2026"
+  ADMIN_PASSWORD: "admin"
+
+  STUDENT_NAME: "student2026"
+  STUDENT_EMAIL: "student@2026"
+  STUDENT_PASSWORD: "student"
+
+  EDITOR_NAME: "editor2026"
+  EDITOR_EMAIL: "editor@2026"
+  EDITOR_PASSWORD: "editor"
 
 ai:
   python:
     baseUrl: "http://localhost:8090"
     apiKey: ""
-    timeoutMs: 515000
+    timeoutMs: 5000
 
 
-jwt:
-  domain: "https://jwt-provider-domain/"
-  audience: "jwt-audience"
-  realm: "ktor sample app"

@@ -5,9 +5,13 @@ meta {
 }
 
 get {
-  url: {{BackendKtor}}/users/1
+  url: {{BackendKtor}}/users/3
   body: none
-  auth: inherit
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJrdG9yLWF1ZGllbmNlIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDAwIiwiaWQiOjIsInVzZXJuYW1lIjoic3R1ZGVudEAyMDI2Iiwicm9sZSI6IlNUVURFTlQiLCJleHAiOjE3NzgwMzY4NDl9.IqapMEQx7S0dIcgIGPeeK33rCz0-zNWOtP2-Pu0pIkk
 }
 
 settings {

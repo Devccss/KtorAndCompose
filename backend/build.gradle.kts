@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.plugin.serialization)
 }
 
+
 group = "com.example"
 version = "0.0.1"
 
