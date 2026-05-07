@@ -261,8 +261,6 @@ class StudentTestResolverScreen(
                         )
                         UserSession.set(
                             id = safeUserId,
-                            name = studentName,
-                            role = currentUser.role,
                             actualUnit = nextUnitId
                         )
                     }

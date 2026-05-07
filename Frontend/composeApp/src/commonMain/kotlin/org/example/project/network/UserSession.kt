@@ -16,6 +16,9 @@ object UserSession {
     var name: String? by mutableStateOf(null)
         private set
 
+    var token: String? by mutableStateOf(null)
+        private set
+
     var role: Role? by mutableStateOf(null)
         private set
 
@@ -29,12 +32,12 @@ object UserSession {
     private val reviewedExercisesByUnit = mutableMapOf<Int, MutableSet<Int>>()
     private val reviewUnitCompletionEvents = mutableSetOf<Int>()
 
-    fun set(id: Int,name: String?, role: Role?, actualUnit: Int?) {
-
-        this.idUser = id
-        this.name = name
-        this.role = role
-        this.actualUnit = actualUnit
+    fun set(id: Int? = null, name: String? = null, role: Role? = null, token: String? = null, actualUnit: Int? = null) {
+        if (id != null) this.idUser = id
+        if (name != null) this.name = name
+        if (role != null) this.role = role
+        if (token != null) this.token = token
+        if (actualUnit != null) this.actualUnit = actualUnit
     }
 
     fun updateSessionLogId(logId: Int?) {
@@ -91,6 +94,7 @@ object UserSession {
         role = null
         actualUnit = null
         sessionLogId = null
+        token = null
         unitReviewCheckpoints.clear()
         reviewedExercisesByUnit.clear()
         reviewUnitCompletionEvents.clear()

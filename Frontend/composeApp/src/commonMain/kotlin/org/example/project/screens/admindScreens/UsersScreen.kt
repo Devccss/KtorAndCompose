@@ -5,7 +5,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -43,7 +41,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHostState
@@ -61,7 +58,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -79,7 +75,6 @@ import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UserDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.viewModel.UserViewModel
-import org.example.project.network.UserSession
 
 class UsersScreen : Screen {
     override val key = uniqueScreenKey
@@ -96,7 +91,6 @@ class UsersScreen : Screen {
 
         val snackbarHostState = remember { SnackbarHostState() }
         val navigator = LocalNavigator.currentOrThrow
-        val focusManager = LocalFocusManager.current
 
         var editing by remember { mutableStateOf<UserDto?>(null) }
         var confirmDelete by remember { mutableStateOf<UserDto?>(null) }
@@ -114,8 +108,6 @@ class UsersScreen : Screen {
         var roleMenuExpanded by remember { mutableStateOf(false) }
         var unitMenuExpanded by remember { mutableStateOf(false) }
 
-        var showFilterOpcions by remember { mutableStateOf(false) }
-        var filterUser by remember { mutableStateOf<FilterUsersDto?>(null) }
 
         var searchQuery by remember { mutableStateOf("") }
         var selectedIndex by remember { mutableStateOf(1) } // index in bottom bar
@@ -130,9 +122,6 @@ class UsersScreen : Screen {
         // Variable para mostrar/ocultar formulario de filtro
         var isFiltering by remember { mutableStateOf(false) }
 
-        var textSearch by remember { mutableStateOf("") }
-        var searchUsers by remember { mutableStateOf(false) }
-
         // UI Text variables
         var textAdd by remember { mutableStateOf("") }
         var butonAddColor by remember { mutableStateOf(Color(0xFFB8F4C4)) }
@@ -145,8 +134,9 @@ class UsersScreen : Screen {
             butonAddColor = Color(0xFFB8F4C4)
         }
 
-        // usa la variable showFilterOpcions para abrir/cerrar el DropdownMenu
-        var filterMenuExpanded by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            vm.loadUsers()
+        }
 
         LaunchedEffect(ui.error) {
             ui.error?.let {

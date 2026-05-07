@@ -1,6 +1,5 @@
 package org.example.project.screens.studentScreens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -269,7 +268,6 @@ class StudentMeUserScreen(
                                 UserSession.set(
                                     id = safeId,
                                     name = name.trim(),
-                                    role = safeUser.role,
                                     actualUnit = safeUser.currentUnitId
                                 )
                                 newPassword = ""

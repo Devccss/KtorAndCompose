@@ -11,13 +11,13 @@ private var envLoaded = false
 private fun defaultBaseUrlForCurrentPlatform(): String {
     return when {
         getPlatform().name.contains("Emulator", ignoreCase = true) -> "http://10.0.2.2:8000"
-        getPlatform().name.startsWith("Android") -> "http://192.168.1.6:8000"
+        getPlatform().name.startsWith("Android") -> "http://10.0.2.2:8000" //"http://192.168.1.6:8000"
         else -> "http://127.0.0.1:8000"
     }
 }
 
 
-suspend fun getBaseUrl(): String {
+fun getBaseUrl(): String {
     if (!envLoaded) {
         Env.loadEnvFile() // intenta cargar ".env" en el working directory (silencioso si no existe)
         envLoaded = true

@@ -1,4 +1,4 @@
-package org.example.project.screens.admindScreens
+package org.example.project.screens.editorScreens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -6,9 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,28 +34,16 @@ import org.example.project.viewModel.UnitViewModel
 import org.example.project.viewModel.UserViewModel
 import org.jetbrains.compose.resources.Font
 
-data class WeeklyStats(val day: String, val users: Int, val lessons: Int)
-data class PopularContent(val title: String, val completions: Int, val category: String)
-data class LessonUnit(
-    val id: Int,
-    val title: String,
-    val description: String,
-    val status: UnitStatus,
-    val emoji: String
-)
 
-enum class UnitStatus {
-    DRAFT, PUBLISHED
-}
 
-class AdminDashboard(private val id: Int? = null ) : Screen {
+class EditorDashboard(private val id: Int? = null ) : Screen {
     @Composable
     override fun Content() {
         // Obtener ViewModels para mostrar datos reales
         val unitVm = rememberScreenModel { UnitViewModel(RepositoryProvider.unitRepo) }
         val userVm = rememberScreenModel { UserViewModel(RepositoryProvider.userRepo, RepositoryProvider.unitRepo) }
         val exerciseVm = rememberScreenModel { ExercisesViewModel(RepositoryProvider.exerciseRepo) }
-        val sessionLogVm = rememberScreenModel { SessionLogViewModel(RepositoryProvider.sessionLogRepo,false) }
+        val sessionLogVm = rememberScreenModel { SessionLogViewModel(RepositoryProvider.sessionLogRepo,true) }
 
         val unitUi by unitVm.state.collectAsState()
         val userUi by userVm.state.collectAsState()
@@ -107,8 +92,8 @@ class AdminDashboard(private val id: Int? = null ) : Screen {
 
 
             // Llamamos al contenido del dashboard, pasando padding desde el layout
-            AdminDashboardContent(
-                adminName = UserSession.name?: "Unknown",
+            EditorDashboardContent(
+                editirName = UserSession.name?: "Unknown",
                 totalUnits = totalUnits,
                 totalUsers = totalUsers,
                 totalExercises = totalExercises,
@@ -122,9 +107,9 @@ class AdminDashboard(private val id: Int? = null ) : Screen {
 }
 
 @Composable
-fun AdminDashboardContent(
+fun EditorDashboardContent(
     modifier: Modifier = Modifier,
-    adminName: String,
+    editirName: String,
     totalUnits: Int,
     totalUsers: Int,
     totalExercises: Int,
@@ -344,20 +329,6 @@ fun ExerciseSection(exercises: Int) {
     StatRow("Alumnos totales", "$exercises")
 }
 
-@Composable
-fun TabButton(text: String, isSelected: Boolean, onClick: () -> Unit) {
-    TextButton(
-        onClick = onClick,
-        colors = ButtonDefaults.textButtonColors(
-            contentColor = if (isSelected) Color(0xFFFF6B6B) else Color.Gray
-        )
-    ) {
-        Text(
-            text = text,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-        )
-    }
-}
 
 @Composable
 fun LineChart(
@@ -457,37 +428,4 @@ fun StatRow(label: String, value: String) {
         )
     }
     HorizontalDivider(color = Color(0xFFE0E0E0))
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AdminTopBar(currentPage: String, onBack: () -> Unit, onMenuClick: () -> Unit, titlePage: String) {
-    TopAppBar(
-        title = { Text(titlePage) },
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            }
-        },
-        actions = {
-            IconButton(onClick = onMenuClick) {
-                Icon(Icons.Default.Menu, contentDescription = "Menu")
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.White
-        )
-    )
-}
-
-// Placeholder de detalle de unidad (reemplazar por tu pantalla de detalle real)
-class UnitDetailsPlaceholder(private val unitId: Int) : Screen {
-    @Composable
-    override fun Content() {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            Text("Detalle de unidad (placeholder)", fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("ID: $unitId")
-        }
-    }
 }

@@ -45,21 +45,10 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
     }
 
     init {
-        launchCatching(
-            block = { unitRepo.getAllUnits() },
-            onSuccess = { unit ->
-
-                _state.value = _state.value.copy(unit = unit)
-                loadUsers()
-            },
-            onError = { error ->
-                _state.value = _state.value.copy(error = error.message, unit = emptyList())
-            }
-        )
+        loadUsers()
     }
 
-
-    private fun loadUsers() {
+    fun loadUsers() {
         launchCatching(
             block = { repo.getAllUsers() },
             onSuccess = { users ->
@@ -106,6 +95,11 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
     }
 
     fun getUserById(id: Int) {
+        if (id <= 0) {
+            _state.value = _state.value.copy(error = "Invalid user id: $id")
+            return
+        }
+
         launchCatching(
             block = { repo.getUserById(id) },
             onSuccess = { user ->
@@ -279,12 +273,14 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
     ) = viewModelScope.launch {
         _state.value = _state.value.copy(isLoading = true, error = null)
         try {
-            onSuccess(block())
-            _state.value = _state.value.copy(isLoading = false)
-
+            val result = block()
+            onSuccess(result)
         } catch (e: Exception) {
             onError(e)
-            _state.value = _state.value.copy(isLoading = false, error = e.message)
+            _state.value = _state.value.copy(error = e.message)
+        } finally {
+            _state.value = _state.value.copy(isLoading = false)
+
         }
     }
 }

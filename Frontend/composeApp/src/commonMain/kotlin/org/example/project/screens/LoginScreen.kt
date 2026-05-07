@@ -28,6 +28,7 @@ import org.example.project.network.SessionLogTracker
 import org.example.project.network.UserSession
 import org.example.project.screens.admindScreens.AdminDashboard
 import org.example.project.screens.admindScreens.RegisterScreen
+import org.example.project.screens.editorScreens.EditorDashboard
 import org.example.project.screens.studentScreens.StudentWelcomeScreen
 import org.example.project.service.NotificationService
 
@@ -160,11 +161,6 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
                                 )
                             }
 
-                            // Error
-                            if (showError && uiState.error != null) {
-                                println("--->>>>>>>>>>${uiState.error}")
-                            }
-
                             // Campos
                             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                                 // Email
@@ -233,11 +229,15 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
                             // Botón de iniciar sesión
                             Button(
                                 onClick = {
+                                    println("[LoginScreen] 🔐 Botón de login presionado")
+                                    println("[LoginScreen] 📧 Email: $email")
+                                    println("[LoginScreen] 🔒 isLoading antes de login: ${uiState.isLoading}")
                                     val loginUser = LoginDto(
                                         email = email,
                                         password = password
                                     )
                                     userViewModel.login(loginUser)
+                                    println("[LoginScreen] 🔐 Llamada a login() completada, esperando respuesta...")
 
                                     showError = false
                                 },
@@ -289,34 +289,63 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
                                 val currentUserId = currentUser?.id
 
                                 if (currentUser?.role == Role.STUDENT && currentUserId != null) {
-                                    SessionLogTracker.onUserLoggedIn(currentUserId)
+                                    try {
+                                        SessionLogTracker.onUserLoggedIn(currentUserId)
+                                    } catch (e: Exception) {
+                                        println("[LoginScreen] ⚠️ Error al registrar sesión: ${e.message}")
+                                        // No cierres la app, continúa normalmente
+                                    }
                                     UserSession.set(
                                         currentUserId,
                                         currentUser.name,
                                         currentUser.role,
+                                        currentUser.token,
                                         actualUnit = currentUser.currentUnitId
                                     )
-                                    NotificationService.startNotificationPolling()
+                                    try {
+                                        NotificationService.startNotificationPolling()
+                                    } catch (e: Exception) {
+                                        println("[LoginScreen] ⚠️ Error al iniciar notificaciones: ${e.message}")
+                                    }
                                     navigator.push(StudentWelcomeScreen())
                                 } else if (currentUser?.role == Role.ADMIN && currentUserId != null) {
-                                    SessionLogTracker.onUserLoggedIn(currentUserId)
+                                    try {
+                                        SessionLogTracker.onUserLoggedIn(currentUserId)
+                                    } catch (e: Exception) {
+                                        println("[LoginScreen] ⚠️ Error al registrar sesión: ${e.message}")
+                                    }
                                     UserSession.set(
                                         currentUserId,
                                         currentUser.name,
                                         currentUser.role,
+                                        currentUser.token,
                                         actualUnit = currentUser.currentUnitId
                                     )
-                                    NotificationService.startNotificationPolling()
+                                    try {
+                                        NotificationService.startNotificationPolling()
+                                    } catch (e: Exception) {
+                                        println("[LoginScreen] ⚠️ Error al iniciar notificaciones: ${e.message}")
+                                    }
                                     navigator.push(AdminDashboard(currentUserId))
                                 } else if (currentUser?.role == Role.CONTENT_EDITOR && currentUserId != null) {
-                                    SessionLogTracker.onUserLoggedIn(currentUserId)
+                                    try {
+                                        SessionLogTracker.onUserLoggedIn(currentUserId)
+                                    } catch (e: Exception) {
+                                        println("[LoginScreen] ⚠️ Error al registrar sesión: ${e.message}")
+                                    }
                                     UserSession.set(
                                         currentUserId,
                                         currentUser.name,
                                         currentUser.role,
+                                        currentUser.token,
                                         actualUnit = currentUser.currentUnitId
                                     )
-                                    NotificationService.startNotificationPolling()
+                                    try {
+                                        NotificationService.startNotificationPolling()
+                                    } catch (e: Exception) {
+                                        println("[LoginScreen] ⚠️ Error al iniciar notificaciones: ${e.message}")
+                                    }
+                                    navigator.push(EditorDashboard(currentUserId))
 
                                 }
                             }

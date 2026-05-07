@@ -122,18 +122,6 @@ class StudentWelcomeScreen(val id: Int? = null) : Screen {
             }
         }
 
-        LaunchedEffect(userUi.currentUser) {
-            userUi.currentUser.let {
-                if (it?.id != null) {
-                    UserSession.set(
-                        id = it.id,
-                        name = it.name,
-                        role = it.role,
-                        actualUnit = it.currentUnitId
-                    )
-                }
-            }
-        }
 
         val activeWelcome = testUi.welcomeTests.firstOrNull { it.isActive }
 

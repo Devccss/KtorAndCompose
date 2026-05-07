@@ -29,8 +29,17 @@ fun App() {
 
     LaunchedEffect(Unit) {
         val baseUrl = getBaseUrl()
-        RepositoryProvider.init(httpClient, baseUrl)
-        initialized = true
+        println("[App] 🔗 Obtenida URL base: $baseUrl")
+        println("[App] 📱 Plataforma: ${getPlatform().name}")
+        try {
+            RepositoryProvider.init(httpClient, baseUrl)
+            println("[App] ✅ RepositoryProvider inicializado correctamente")
+            initialized = true
+        } catch (e: Exception) {
+            println("[App] ❌ Error al inicializar RepositoryProvider: ${e.message}")
+            e.printStackTrace()
+            initialized = true // Aun así inicializamos para mostrar el error en la UI
+        }
     }
 
     MaterialTheme {

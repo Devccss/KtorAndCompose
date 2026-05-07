@@ -79,8 +79,12 @@ object RepositoryProvider {
 
 
     fun init(httpClient: HttpClient, baseUrl: String) {
-        if (initialized) return
+        if (initialized) {
+            println("[RepositoryProvider] ⚠️ Ya está inicializado, ignorando nueva inicialización")
+            return
+        }
 
+        println("[RepositoryProvider] 🚀 Inicializando con baseUrl: $baseUrl")
         _userRepo = UserRepo(httpClient, baseUrl)
         _unitRepo = UnitRepo(httpClient, baseUrl)
         _exerciseRepo = ExerciseRepo(httpClient, baseUrl)
@@ -93,6 +97,7 @@ object RepositoryProvider {
         _notificationRepo = NotificationRepo(httpClient, baseUrl)
 
         initialized = true
+        println("[RepositoryProvider] ✅ Todos los repositorios inicializados correctamente")
     }
 
     fun clear() {

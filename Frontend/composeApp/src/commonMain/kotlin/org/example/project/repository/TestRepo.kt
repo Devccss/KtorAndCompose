@@ -25,40 +25,54 @@ import org.example.project.dtos.UpdateTestExerciseDto
 class TestRepo(private val httpClient: HttpClient ,private val baseUrl: String) {
 
     suspend fun getAllTests(): List<TestDto> =
-        httpClient.get("$baseUrl/api/v1/tests").parseOrThrow()
+        httpClient.get("$baseUrl/api/v1/tests") {
+            addAuthHeader()
+        }.parseOrThrow()
 
     suspend fun getTestById(id: Int): TestDto? =
-        httpClient.get("$baseUrl/api/v1/tests/$id").let { response ->
+        httpClient.get("$baseUrl/api/v1/tests/$id") {
+            addAuthHeader()
+        }.let { response ->
             if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
         }
 
     suspend fun getTestsByUnitId(unitId: Int): TestDto? =
-        httpClient.get("$baseUrl/api/v1/tests/byUnit/$unitId").let { response ->
+        httpClient.get("$baseUrl/api/v1/tests/byUnit/$unitId") {
+            addAuthHeader()
+        }.let { response ->
             if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
         }
 
     suspend fun getTestByExerciseId(exerciseId: Int): TestDto? =
-        httpClient.get("$baseUrl/api/v1/tests/byExercise/$exerciseId").let { response ->
+        httpClient.get("$baseUrl/api/v1/tests/byExercise/$exerciseId") {
+            addAuthHeader()
+        }.let { response ->
             if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
         }
 
     suspend fun getExercisesByTestId(testId: Int): List<ExerciseDto> =
-        httpClient.get("$baseUrl/api/v1/tests/exercises/$testId").parseOrThrow()
+        httpClient.get("$baseUrl/api/v1/tests/exercises/$testId") {
+            addAuthHeader()
+        }.parseOrThrow()
 
     suspend fun createTest(test: CreateTestDto): TestDto =
         httpClient.post("$baseUrl/api/v1/tests") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(test)
+            addAuthHeader()
         }.parseOrThrow()
 
     suspend fun updateTest(id: Int, test: UpdateTestDto): Boolean =
         httpClient.put("$baseUrl/api/v1/tests/$id") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(test)
+            addAuthHeader()
         }.ensureSuccessOrThrow()
 
     suspend fun deleteTest(id: Int): Boolean =
-        httpClient.delete("$baseUrl/api/v1/tests/$id").ensureSuccessOrThrow()
+        httpClient.delete("$baseUrl/api/v1/tests/$id") {
+            addAuthHeader()
+        }.ensureSuccessOrThrow()
 
     suspend fun searchTests(filters: FilterTestsDto): List<TestDto> {
         return httpClient.get {
@@ -66,58 +80,69 @@ class TestRepo(private val httpClient: HttpClient ,private val baseUrl: String) 
             filters.name?.let { parameter("name", it) }
             filters.unitId?.let { parameter("unitId", it) }
             filters.isActive?.let { parameter("isActive", it) }
+            addAuthHeader()
         }.parseOrThrow()
     }
 
-
     //Test-Exersice
     suspend fun getAllTestExercises(): List<TestExerciseDto> =
-        httpClient.get("$baseUrl/api/v1/testExercises").parseOrThrow()
+        httpClient.get("$baseUrl/api/v1/testExercises") {
+            addAuthHeader()
+        }.parseOrThrow()
 
     suspend fun createTestExercise(dto: CreateTestExerciseDto): TestExerciseDto =
         httpClient.post("$baseUrl/api/v1/testExercises") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(dto)
+            addAuthHeader()
         }.parseOrThrow()
-
 
     suspend fun updateTestExercise(id: Int, dto: UpdateTestExerciseDto): Boolean =
         httpClient.put("$baseUrl/api/v1/testExercises/$id") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(dto)
+            addAuthHeader()
         }.ensureSuccessOrThrow()
 
     suspend fun deleteTestExercise(exerciseId: Int): Boolean =
-        httpClient.delete("$baseUrl/api/v1/testExercises/$exerciseId").ensureSuccessOrThrow()
-
-
+        httpClient.delete("$baseUrl/api/v1/testExercises/$exerciseId") {
+            addAuthHeader()
+        }.ensureSuccessOrThrow()
 
     //CompleteTest
     suspend fun getAllTestCompleted(): List<TestCompletedDto> =
-        httpClient.get("$baseUrl/api/v1/testsCompleted").parseOrThrow()
-
+        httpClient.get("$baseUrl/api/v1/testsCompleted") {
+            addAuthHeader()
+        }.parseOrThrow()
 
     suspend fun getTestCompletedById(id: Int): TestCompletedDto? =
-        httpClient.get("$baseUrl/api/v1/testsCompleted/$id").let { response ->
+        httpClient.get("$baseUrl/api/v1/testsCompleted/$id") {
+            addAuthHeader()
+        }.let { response ->
             if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
         }
 
     suspend fun getTestsCompletedByUser(userId: Int): List<TestCompletedDto> =
-        httpClient.get("$baseUrl/api/v1/testsCompleted/user/$userId").parseOrThrow()
-
+        httpClient.get("$baseUrl/api/v1/testsCompleted/user/$userId") {
+            addAuthHeader()
+        }.parseOrThrow()
 
     suspend fun createTestCompleted(dto: CreateTestCompletedDto): TestCompletedDto =
         httpClient.post("$baseUrl/api/v1/testsCompleted") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(dto)
+            addAuthHeader()
         }.parseOrThrow()
 
     suspend fun updateTestCompleted(id: Int, dto: UpdateTestCompletedDto): Boolean =
         httpClient.put("$baseUrl/api/v1/testsCompleted/$id") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(dto)
+            addAuthHeader()
         }.ensureSuccessOrThrow()
 
     suspend fun deleteTestCompleted(id: Int): Boolean =
-        httpClient.delete("$baseUrl/api/v1/testsCompleted/$id").ensureSuccessOrThrow()
+        httpClient.delete("$baseUrl/api/v1/testsCompleted/$id") {
+            addAuthHeader()
+        }.ensureSuccessOrThrow()
 }

@@ -1,7 +1,6 @@
 package org.example.project.repository
 
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.timeout
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -23,6 +22,7 @@ class AiQuestionGenerationRepo(
         httpClient.post("$baseUrl/api/v1/ai/questions/generate/$contentId") {
             contentType(ContentType.Application.Json)
             setBody(request)
+            addAuthHeader()
         }.parseOrThrow()
 
     suspend fun confirmQuestion(
@@ -30,9 +30,9 @@ class AiQuestionGenerationRepo(
         request: ConfirmAiQuestionRequestDto
     ): ConfirmAiQuestionResponseDto =
         httpClient.post("$baseUrl/api/v1/ai/questions/confirm/$contentId") {
-
             contentType(ContentType.Application.Json)
             setBody(request)
+            addAuthHeader()
         }.parseOrThrow()
 }
 

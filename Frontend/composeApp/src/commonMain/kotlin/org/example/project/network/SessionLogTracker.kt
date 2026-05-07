@@ -19,12 +19,18 @@ object SessionLogTracker {
             )
         }
 
-        val started = repo.startSession(
-            CreateUserSessionLogDto(
-                userId = userId,
+        // Envolver en runCatching para evitar que falle si el token no está establecido aún
+        runCatching {
+            val started = repo.startSession(
+                CreateUserSessionLogDto(
+                    userId = userId,
+                )
             )
-        )
-        UserSession.updateSessionLogId(started.id)
+            UserSession.updateSessionLogId(started.id)
+        }.onFailure { e ->
+            println("[SessionLogTracker] ⚠️ Error al iniciar sesión de tracking: ${e.message}")
+            // No propagamos el error, es no-crítico
+        }
     }
 
     suspend fun closeForLogout(userId: Int?) {

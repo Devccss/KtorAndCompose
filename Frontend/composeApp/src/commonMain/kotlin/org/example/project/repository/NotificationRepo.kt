@@ -21,7 +21,9 @@ class NotificationRepo(
 ) {
 
     suspend fun getAllNotifications(): List<NotificationDto> =
-        httpClient.get("$baseUrl/api/v1/notifications").parseOrThrow()
+        httpClient.get("$baseUrl/api/v1/notifications") {
+            addAuthHeader()
+        }.parseOrThrow()
 
     suspend fun getNotificationsByUser(userId: Int): List<NotificationDto> =
         searchNotifications(FilterNotificationsDto(userId = userId))
@@ -43,31 +45,42 @@ class NotificationRepo(
             filters.category?.let { parameter("category", it.name) }
             filters.subCategory?.let { parameter("subCategory", it.name) }
             filters.status?.let { parameter("status", it.name) }
+            addAuthHeader()
         }.parseOrThrow()
     }
 
     suspend fun getNotificationById(id: Int): NotificationDto =
-        httpClient.get("$baseUrl/api/v1/notifications/$id").parseOrThrow()
+        httpClient.get("$baseUrl/api/v1/notifications/$id") {
+            addAuthHeader()
+        }.parseOrThrow()
 
     suspend fun createNotification(dto: CreateNotificationDto): NotificationDto =
         httpClient.post("$baseUrl/api/v1/notifications") {
             contentType(ContentType.Application.Json)
             setBody(dto)
+            addAuthHeader()
         }.parseOrThrow()
 
     suspend fun updateNotification(id: Int, dto: UpdateNotificationDto): Boolean =
         httpClient.put("$baseUrl/api/v1/notifications/$id") {
             contentType(ContentType.Application.Json)
             setBody(dto)
+            addAuthHeader()
         }.ensureSuccessOrThrow()
 
     suspend fun markAsRead(id: Int): NotificationDto =
-        httpClient.put("$baseUrl/api/v1/notifications/$id/read").parseOrThrow()
+        httpClient.put("$baseUrl/api/v1/notifications/$id/read") {
+            addAuthHeader()
+        }.parseOrThrow()
 
     suspend fun markAsUnread(id: Int): NotificationDto =
-        httpClient.put("$baseUrl/api/v1/notifications/$id/unread").parseOrThrow()
+        httpClient.put("$baseUrl/api/v1/notifications/$id/unread") {
+            addAuthHeader()
+        }.parseOrThrow()
 
     suspend fun deleteNotification(id: Int): Boolean =
-        httpClient.delete("$baseUrl/api/v1/notifications/$id").ensureSuccessOrThrow()
+        httpClient.delete("$baseUrl/api/v1/notifications/$id") {
+            addAuthHeader()
+        }.ensureSuccessOrThrow()
 }
 

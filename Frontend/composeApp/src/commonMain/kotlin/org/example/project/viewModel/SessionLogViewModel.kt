@@ -16,19 +16,36 @@ data class SessionLogUiState(
 )
 
 class SessionLogViewModel(
-    private val repo: SessionLogRepo
+    private val repo: SessionLogRepo,
+    editor: Boolean = true
 ) : ViewModel(), ScreenModel {
 
     private val _state = MutableStateFlow(SessionLogUiState(isLoading = true))
     val state: StateFlow<SessionLogUiState> = _state
 
     init {
-        loadWeeklyMetrics()
+        if (editor) {
+            loadStudentWeeklyMetrics()
+        } else {
+            loadWeeklyMetrics()
+        }
     }
 
     fun loadWeeklyMetrics(fromDate: String? = null, toDate: String? = null) {
         launchCatching(
             block = { repo.getWeeklyMetrics(fromDate = fromDate, toDate = toDate) },
+            onSuccess = { metrics ->
+                _state.value = _state.value.copy(weeklyMetrics = metrics)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = error.message, weeklyMetrics = emptyList())
+            }
+        )
+    }
+
+    fun loadStudentWeeklyMetrics( fromDate: String? = null, toDate: String? = null) {
+        launchCatching(
+            block = { repo.getStudentWeeklyMetrics( fromDate = fromDate, toDate = toDate) },
             onSuccess = { metrics ->
                 _state.value = _state.value.copy(weeklyMetrics = metrics)
             },

@@ -16,17 +16,39 @@ import org.example.project.dtos.LoginDto
 import org.example.project.dtos.UserDto
 
 class UserRepo(private val httpClient: HttpClient, private val baseUrl: String) {
-    suspend fun getAllUsers(): List<UserDto> =
-        httpClient.get("$baseUrl/api/v1/users").parseOrThrow()
-
-
-    suspend fun getUserById(id: Int): UserDto? =
-        httpClient.get("$baseUrl/api/v1/users/$id").let { response ->
-            if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
+    suspend fun getAllUsers(): List<UserDto> {
+        val url = "$baseUrl/api/v1/users"
+        try {
+            val result: List<UserDto> = httpClient.get(url) {
+                addAuthHeader()
+            }.parseOrThrow()
+            return result
+        } catch (e: Exception) {
+            throw e
         }
+    }
+
+    suspend fun getUserById(id: Int): UserDto? {
+        val url = "$baseUrl/api/v1/users/$id"
+        try {
+            val response = httpClient.get(url) {
+                addAuthHeader()
+            }
+            return if (response.status == HttpStatusCode.NotFound) {
+                null
+            } else {
+                val result: UserDto = response.parseOrThrow()
+                result
+            }
+        } catch (e: Exception) {
+            throw e
+        }
+    }
 
     suspend fun getUserByEmail(email: String): UserDto? =
-        httpClient.get("$baseUrl/api/v1/users/email/$email").let { response ->
+        httpClient.get("$baseUrl/api/v1/users/email/$email") {
+            addAuthHeader()
+        }.let { response ->
             if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
         }
 
@@ -36,19 +58,30 @@ class UserRepo(private val httpClient: HttpClient, private val baseUrl: String) 
             filters.name?.let { parameter("name", it) }
             filters.unitId?.let { parameter("unitId", it) }
             filters.role?.let { parameter("role", it.name) }
+            addAuthHeader()
         }.parseOrThrow()
 
     suspend fun getFilterUsers(filters: FilterUsersDto): List<UserDto> =
         searchUsers(filters)
 
     suspend fun getUsersByName(name: String): List<UserDto> =
-        httpClient.get("$baseUrl/api/v1/users/name/$name").parseOrThrow()
-
-    suspend fun loginUser(dto: LoginDto): UserDto =
-        httpClient.post("$baseUrl/api/v1/users/login") {
-            contentType(io.ktor.http.ContentType.Application.Json)
-            setBody(dto)
+        httpClient.get("$baseUrl/api/v1/users/name/$name") {
+            addAuthHeader()
         }.parseOrThrow()
+
+    suspend fun loginUser(dto: LoginDto): UserDto {
+        val url = "$baseUrl/api/v1/users/login"
+        try {
+            val response = httpClient.post(url) {
+                contentType(io.ktor.http.ContentType.Application.Json)
+                setBody(dto)
+            }
+            val result: UserDto = response.parseOrThrow()
+            return result
+        } catch (e: Exception) {
+            throw e
+        }
+    }
 
     suspend fun createUser(user: CreateUserDto): UserDto =
         httpClient.post("$baseUrl/api/v1/users/register") {
@@ -60,10 +93,11 @@ class UserRepo(private val httpClient: HttpClient, private val baseUrl: String) 
         httpClient.put("$baseUrl/api/v1/users/$id") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(user)
+            addAuthHeader()
         }.ensureSuccessOrThrow()
 
     suspend fun deleteUser(id: Int): Boolean =
-        httpClient.delete("$baseUrl/api/v1/users/$id").ensureSuccessOrThrow()
-
-
+        httpClient.delete("$baseUrl/api/v1/users/$id") {
+            addAuthHeader()
+        }.ensureSuccessOrThrow()
 }

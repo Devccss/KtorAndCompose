@@ -94,17 +94,6 @@ class StudentLearnScreen(
             }
         }
 
-        LaunchedEffect(userUi.currentUser) {
-            userUi.currentUser?.id?.let {
-                UserSession.set(
-                    id = it,
-                    name = userUi.currentUser?.name,
-                    role = userUi.currentUser?.role,
-                    actualUnit = userUi.currentUser?.currentUnitId
-                )
-            }
-        }
-
         LaunchedEffect(unitUi.error, exercisesUi.error) {
             val error = unitUi.error ?: exercisesUi.error
             error?.let {
@@ -348,8 +337,6 @@ class StudentUnitExercisesScreen(
             userVm.updateUserCurrentUnit(safeUserId, nextUnitId)
             UserSession.set(
                 id = safeUserId,
-                name = studentName,
-                role = UserSession.role,
                 actualUnit = nextUnitId
             )
         }

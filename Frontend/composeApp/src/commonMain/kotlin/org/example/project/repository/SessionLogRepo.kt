@@ -23,29 +23,36 @@ class SessionLogRepo(
         httpClient.post("$baseUrl/api/v1/session-logs/start") {
             contentType(ContentType.Application.Json)
             setBody(dto)
+            addAuthHeaderIfAvailable()
         }.parseOrThrow()
 
     suspend fun closeSessionById(id: Int, dto: CloseUserSessionLogDto): UserSessionLogDto =
         httpClient.put("$baseUrl/api/v1/session-logs/$id/close") {
             contentType(ContentType.Application.Json)
             setBody(dto)
+            addAuthHeader()
         }.parseOrThrow()
 
     suspend fun closeOpenSessionByUserId(userId: Int, dto: CloseUserSessionLogDto): UserSessionLogDto? {
         val response = httpClient.put("$baseUrl/api/v1/session-logs/user/$userId/close-open") {
             contentType(ContentType.Application.Json)
             setBody(dto)
+            addAuthHeaderIfAvailable()
         }
         return if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
     }
 
     suspend fun getOpenSessionByUserId(userId: Int): UserSessionLogDto? {
-        val response = httpClient.get("$baseUrl/api/v1/session-logs/user/$userId/open")
+        val response = httpClient.get("$baseUrl/api/v1/session-logs/user/$userId/open") {
+            addAuthHeader()
+        }
         return if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
     }
 
     suspend fun getSessionsByUserId(userId: Int): List<UserSessionLogDto> =
-        httpClient.get("$baseUrl/api/v1/session-logs/user/$userId").parseOrThrow()
+        httpClient.get("$baseUrl/api/v1/session-logs/user/$userId") {
+            addAuthHeader()
+        }.parseOrThrow()
 
     suspend fun getWeeklyMetrics(
         fromDate: String? = null,
@@ -55,6 +62,19 @@ class SessionLogRepo(
             url("$baseUrl/api/v1/session-logs/metrics/weekly")
             fromDate?.let { parameter("fromDate", it) }
             toDate?.let { parameter("toDate", it) }
+            addAuthHeader()
+        }.parseOrThrow()
+    }
+
+    suspend fun getStudentWeeklyMetrics(
+        fromDate: String? = null,
+        toDate: String? = null
+    ): List<WeeklySessionMetricDto> {
+        return httpClient.get {
+            url("$baseUrl/api/v1/session-logs/metrics/weekly/student")
+            fromDate?.let { parameter("fromDate", it) }
+            toDate?.let { parameter("toDate", it) }
+            addAuthHeader()
         }.parseOrThrow()
     }
 }

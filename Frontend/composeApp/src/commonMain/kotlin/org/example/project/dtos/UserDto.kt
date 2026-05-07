@@ -16,6 +16,7 @@ data class UserDto(
     val password: String? = null,
     val provider: String? = null,
     val preferences: String? = null,
+    val token: String? = null,
     val activeNow: Boolean? = false,
     val currentUnitId: Int? = null,
     val createdAt: String,
