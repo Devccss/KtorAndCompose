@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +47,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.example.project.components.ExerciseInfoSections
 import org.example.project.components.StudentAppLayout
 import org.example.project.dtos.AlternativesDto
@@ -94,12 +96,12 @@ class StudentExerciseResolverScreen(
 
         val exerciseUi by exerciseVm.state.collectAsState()
         val questionUi by questionVm.state.collectAsState()
-        val unitUi by unitVm.state.collectAsState()
         val wordUi by wordVm.state.collectAsState()
 
         val userId = userIdArg ?: UserSession.idUser
         val studentName = studentNameArg ?: UserSession.name ?: "Estudiante"
         val snackbarHostState = remember { SnackbarHostState() }
+        val coroutineScope = rememberCoroutineScope()
 
         var submitted by remember { mutableStateOf(false) }
         var score by remember { mutableStateOf<Float?>(null) }
@@ -108,6 +110,7 @@ class StudentExerciseResolverScreen(
         var retryCooldownSeconds by remember { mutableStateOf(0) }
         var vocabularyExpanded by remember(exerciseId) { mutableStateOf(false) }
         val selectedAnswers = remember { mutableStateMapOf<Int, Int>() }
+        var selectedIndex by remember { mutableStateOf(1) }
 
         LaunchedEffect(exerciseId) {
             exerciseVm.getExerciseById(exerciseId)
@@ -145,11 +148,8 @@ class StudentExerciseResolverScreen(
             exerciseUi.completedExercises.count { it.exerciseId == exerciseId }
         }
         val canAttempt = retryCooldownSeconds == 0
-        val totalActiveExercisesInUnit = remember(exerciseUi.exercises) {
-            exerciseUi.exercises.count { it.unitId == unitId && it.isActive }
-        }
 
-        fun submitAnswers() {
+        suspend fun submitAnswers() {
             val safeUserId = userId ?: return
             if (questions.isEmpty()) return
             if (!canAttempt) return
@@ -186,21 +186,38 @@ class StudentExerciseResolverScreen(
                 retryCooldownSeconds = 30
             }
 
-            val requiresReview = testVm.requiresReview(unitId, unitUi.unitsCompleted.size)
-            if (passing && (allowCompletedReevaluation || requiresReview)) {
-                testVm.registerReviewedExercise(unitId, exerciseId)
-
-                if (
-                    testVm.remainingReviewExercises(unitId, totalActiveExercisesInUnit) == 0 &&
-                    UserSession.canEmitReviewUnitCompleted(unitId)
-                ) {
-                    unitVm.createUnitCompleted(
-                        CreateUnitCompletedDto(
-                            userId = safeUserId,
-                            unitId = unitId
-                        )
-                    )
-                    UserSession.markReviewUnitCompletedEmitted(unitId)
+            // Consultar al backend el estado de repaso para esta unidad/test
+            if (passing) {
+                // Si se permite re-evaluación por completados o si hay un test asociado, consultar backend
+                // Obtener el testId de la unidad si existe
+                val unitTest = testVm.state.value.allTests.firstOrNull { it.unitId == unitId }
+                val testId = unitTest?.id
+                if (allowCompletedReevaluation || testId != null) {
+                    try {
+                        if (testId != null) {
+                            val reviewStatus = RepositoryProvider.testRepo.getUnitReviewStatus(safeUserId, unitId, testId)
+                            if (!reviewStatus.requiresReview || reviewStatus.remainingExercises == 0) {
+                                // marcar unidad completada en backend
+                                unitVm.createUnitCompleted(
+                                    CreateUnitCompletedDto(
+                                        userId = safeUserId,
+                                        unitId = unitId
+                                    )
+                                )
+                            }
+                        } else {
+                            // No hay test asociado: si la UI permite, marcar completada localmente
+                            unitVm.createUnitCompleted(
+                                CreateUnitCompletedDto(
+                                    userId = safeUserId,
+                                    unitId = unitId
+                                )
+                            )
+                        }
+                    } catch (e: Exception) {
+                        // Error al consultar backend: no bloquear el flujo (log)
+                        println("Error al comprobar reviewStatus: ${e.message}")
+                    }
                 }
             }
 
@@ -213,14 +230,8 @@ class StudentExerciseResolverScreen(
             selectedIndex = 1,
             initialUserName = studentName,
             snackbarHostState = snackbarHostState,
-            onAvatarClick = {
-                navigator.push(
-                    StudentMeUserScreen(
-                        userIdArg = userId,
-                        studentNameArg = studentName
-                    )
-                )
-            }
+            onSelect = { idx -> selectedIndex = idx },
+
         ) { _, _, _ ->
             Card(
                 modifier = Modifier.fillMaxSize(),
@@ -327,7 +338,7 @@ class StudentExerciseResolverScreen(
 
                     item {
                         Button(
-                            onClick = { submitAnswers() },
+                            onClick = { coroutineScope.launch { submitAnswers() } },
                             enabled = !isSaving && questions.isNotEmpty() && canAttempt,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)

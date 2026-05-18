@@ -31,7 +31,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,6 +48,7 @@ import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import org.example.project.components.StudentAppLayout
 import org.example.project.dtos.ExerciseDto
+import org.example.project.dtos.UnitReviewStatusDto
 import org.example.project.dtos.FilterExercisesDto
 import org.example.project.dtos.FilterTestsDto
 import org.example.project.dtos.FilterUnitsDto
@@ -80,6 +84,7 @@ class StudentLearnScreen(
         val userId = userIdArg ?: UserSession.idUser
         val studentName = studentNameArg ?: UserSession.name ?: "Estudiante"
         val snackbarHostState = remember { SnackbarHostState() }
+        var selectedIndex by remember { mutableStateOf(1) }
 
         LaunchedEffect(userId) {
             unitVm.searchUnits(FilterUnitsDto(isActive = true))
@@ -88,7 +93,7 @@ class StudentLearnScreen(
             testVm.getAllExercisesInTests(onlyActiveTests = true, onlyActiveExercises = true)
             if (userId != null && userId > 0) {
                 userVm.getUserById(userId)
-                unitVm.getAllUnitsCompletedByUserId(userId)
+                unitVm.searchUnits(FilterUnitsDto(isActive = true))
                 testVm.getTestsCompletedByUser(userId)
                 exercisesVm.getExercisesCompletedByUserId(userId)
             }
@@ -112,6 +117,26 @@ class StudentLearnScreen(
 
         val completedUnitIds = remember(unitUi.unitsCompleted) {
             unitUi.unitsCompleted.mapNotNull { it.id }.toSet()
+        }
+
+        // Cache of review status per unit (fetched from backend)
+        val reviewStatusByUnit = remember { mutableStateMapOf<Int, UnitReviewStatusDto>() }
+
+        LaunchedEffect(userId, unitUi.units, testUi.allTests) {
+            val safeUser = userId ?: return@LaunchedEffect
+            reviewStatusByUnit.clear()
+            // For each unit that has a test, fetch review-status from backend
+            unitUi.units.forEach { unit ->
+                val uid = unit.id ?: return@forEach
+                testVm.getTestByUnitId(uid)
+                val tId = testUi.testUnit?.id ?: return@forEach
+                try {
+                    val status = RepositoryProvider.testRepo.getUnitReviewStatus(safeUser, uid, tId)
+                    reviewStatusByUnit[uid] = status
+                } catch (e: Exception) {
+                    println("Error cargando reviewStatus para unidad $uid: ${e.message}")
+                }
+            }
         }
 
         val currentUnitId = userUi.currentUser?.currentUnitId ?: UserSession.actualUnit ?: unitProgress.firstOrNull()?.unit?.id
@@ -142,9 +167,10 @@ class StudentLearnScreen(
 
         StudentAppLayout(
             actualScreen = "Aprender",
-            selectedIndex = 1,
+            selectedIndex = selectedIndex,
             initialUserName = studentName,
-            snackbarHostState = snackbarHostState
+            snackbarHostState = snackbarHostState,
+            onSelect = { idx -> selectedIndex = idx },
         ) { _, _, _ ->
             Card(
                 modifier = Modifier.fillMaxSize(),
@@ -178,18 +204,17 @@ class StudentLearnScreen(
                             )
                         }
                     } else {
-                        items(unitProgress, key = { it.unit.id ?: -1 }) { progress ->
+                                    items(unitProgress, key = { it.unit.id ?: -1 }) { progress ->
                             val unitId = progress.unit.id ?: return@items
                             val unitTest = testsByUnitId[unitId]?.firstOrNull()
                             val isUnitLocked = unitId !in unlockedUnitIds
                             val isUnitCompleted = unitId in completedUnitIds
                             val latestAttempt = unitTest?.let { testVm.getLastAttemptForTest(it.id) }
                             val unitExercisesCount = progress.totalCount
-                            val requiresReview = unitTest != null && testVm.requiresReview(unitId, completedUnitIds.size)
-                            val remainingReview = if (requiresReview) {
-                                testVm.remainingReviewExercises(unitId, unitExercisesCount)
-                            } else 0
-                            val isTestLocked = unitTest != null && (!isUnitCompleted || requiresReview)
+                                        val status = reviewStatusByUnit[unitId]
+                                        val requiresReview = status?.requiresReview ?: false
+                                        val remainingReview = status?.remainingExercises ?: 0
+                                        val isTestLocked = unitTest != null && (!isUnitCompleted || (requiresReview && remainingReview > 0))
 
                             UnitCard(
                                 progress = progress,
@@ -258,6 +283,7 @@ class StudentUnitExercisesScreen(
         val userId = userIdArg ?: UserSession.idUser
         val studentName = studentNameArg ?: UserSession.name ?: "Estudiante"
         val snackbarHostState = remember { SnackbarHostState() }
+        var selectedIndex by remember { mutableStateOf(1) }
 
         LaunchedEffect(userId) {
             exercisesVm.searchExercises(FilterExercisesDto(unitId = unitId, isActive = true))
@@ -316,10 +342,21 @@ class StudentUnitExercisesScreen(
         val unitCompleted = completionRate >= UNLOCK_THRESHOLD
         val unitTest = remember(testUi.searchTest.firstOrNull()) { testUi.searchTest.firstOrNull()}
         val latestAttempt = unitTest?.let { testVm.getLastAttemptForTest(it.id) }
-        val reviewBlocked = unitTest != null && testVm.requiresReview(unitId, unitUi.unitsCompleted.size)
-        val remainingReviewExercises = if (reviewBlocked) {
-            testVm.remainingReviewExercises(unitId, availableExercises.size)
-        } else 0
+        var reviewStatus by remember { mutableStateOf<UnitReviewStatusDto?>(null) }
+
+        LaunchedEffect(userId, unitTest, unitId) {
+            val safeUserId = userId ?: return@LaunchedEffect
+            val tId = unitTest?.id ?: run { reviewStatus = null; return@LaunchedEffect }
+            try {
+                reviewStatus = RepositoryProvider.testRepo.getUnitReviewStatus(safeUserId, unitId, tId)
+            } catch (e: Exception) {
+                println("Error cargando reviewStatus en UnitExercisesScreen: ${e.message}")
+                reviewStatus = null
+            }
+        }
+
+        val reviewBlocked = unitTest != null && (reviewStatus?.requiresReview ?: false)
+        val remainingReviewExercises = reviewStatus?.remainingExercises ?: 0
         val testLocked = unitTest != null && (!isAlreadyMarkedCompleted || (reviewBlocked && remainingReviewExercises > 0))
 
         LaunchedEffect(isAlreadyMarkedCompleted, unitTest, unitUi.units, userUi.currentUser?.currentUnitId, userId) {
@@ -343,9 +380,10 @@ class StudentUnitExercisesScreen(
 
         StudentAppLayout(
             actualScreen = unitName,
-            selectedIndex = 1,
+            selectedIndex = selectedIndex,
             initialUserName = studentName,
-            snackbarHostState = snackbarHostState
+            snackbarHostState = snackbarHostState,
+            onSelect = { idx -> selectedIndex = idx },
         ) { _, _, _ ->
             Card(
                 modifier = Modifier.fillMaxSize(),

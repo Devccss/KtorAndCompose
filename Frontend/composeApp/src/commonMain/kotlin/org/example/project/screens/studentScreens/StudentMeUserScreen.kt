@@ -47,6 +47,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import org.example.project.components.StudentAppLayout
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
+import org.example.project.screens.LoginScreen
 import org.example.project.viewModel.UserViewModel
 
 class StudentMeUserScreen(
@@ -70,6 +71,7 @@ class StudentMeUserScreen(
         var newPassword by remember { mutableStateOf("") }
         val currentUser = userUi.currentUser
         val canSave = currentUser != null && name.isNotBlank() && email.isNotBlank()
+        var selectedIndex by remember { mutableStateOf(2) }
 
         LaunchedEffect(userId) {
             if (userId != null && userId > 0) {
@@ -91,7 +93,8 @@ class StudentMeUserScreen(
             actualScreen = "Mi perfil",
             selectedIndex = -1,
             initialUserName = displayName,
-            snackbarHostState = snackbarHostState
+            snackbarHostState = snackbarHostState,
+            onSelect = { idx -> selectedIndex = idx },
         ) { _: PaddingValues, _, _ ->
             Card(
                 modifier = Modifier.fillMaxSize(),
@@ -279,6 +282,24 @@ class StudentMeUserScreen(
                         ) {
                             Text(
                                 if (userUi.isLoading) "Guardando..." else "Guardar cambios",
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    item {
+                        Button(
+                            onClick = {
+                                UserSession.clear()
+                                navigator.replaceAll(LoginScreen(logout = true))
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
+                        ) {
+                            Text(
+                                "Cerrar sesión",
                                 color = Color.White,
                                 fontWeight = FontWeight.SemiBold
                             )

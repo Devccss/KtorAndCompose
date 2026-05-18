@@ -10,8 +10,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.example.project.screens.admindScreens.UnitStatus
 import org.example.project.screens.admindScreens.LessonUnit
-import org.example.project.screens.admindScreens.UnitCard
-import org.example.project.screens.admindScreens.UnitsSection
+import org.example.project.screens.editorScreens.UnitCard
 
 /**
  * Preview de la sección completa de Unidades con datos de ejemplo.

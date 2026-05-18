@@ -33,14 +33,15 @@ import org.example.project.screens.editorScreens.UnitsScreen
 import org.example.project.network.UserSession
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.School
 import org.example.project.screens.editorScreens.ExercisesOrUnitScreen
 import org.example.project.screens.editorScreens.TestScreen
-
-data class NavItem(val id: Int, val icon: ImageVector, val label: String)
+import org.example.project.screens.studentScreens.StudentLearnScreen
+import org.example.project.screens.studentScreens.StudentWelcomeScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReusableBottomBar(
+fun ReusableStudentBottomBar(
     modifier: Modifier = Modifier.fillMaxWidth(),
     selectedIndex: Int,
     onSelect: ((Int) -> Unit)? = null,
@@ -50,7 +51,7 @@ fun ReusableBottomBar(
     // Lista fija de items para toda la app
     val fixedItems = listOf(
         NavItem(0, Icons.Default.Home, "Inicio"),
-        NavItem(1, Icons.Default.Group, "Usuarios"),
+        NavItem(1, Icons.Default.School, "Aprender"),
     )
 
     // Inicializar valores desde initial params o desde UserSession si no se pasan.
@@ -111,12 +112,10 @@ fun ReusableBottomBar(
 
                         when (index) {
                             0 -> {
-                                navigator.push(
-                                    AdminDashboard(rememberId)
-                                )
+                                navigator.push(StudentWelcomeScreen())
                             }
                             1 -> {
-                                navigator.push(UsersScreen())
+                                navigator.push(StudentLearnScreen())
                             }
                         }
                     },

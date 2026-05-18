@@ -1,4 +1,4 @@
-package org.example.project.screens.admindScreens
+package org.example.project.screens.editorScreens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -79,7 +79,7 @@ import cafe.adriel.voyager.navigator.Navigator
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
-import org.example.project.components.AppLayout
+import org.example.project.components.EditorLayout
 import org.example.project.dtos.CreateExerciseDto
 import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.FilterExercisesDto
@@ -87,7 +87,6 @@ import org.example.project.dtos.TestDto
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UpdateUnitDto
 import org.example.project.network.RepositoryProvider
-import org.example.project.network.UserSession
 import org.example.project.viewModel.ExercisesViewModel
 import org.example.project.viewModel.TestViewModel
 import org.example.project.viewModel.UnitViewModel
@@ -125,7 +124,7 @@ class ExercisesOrUnitScreen(private val unitId: Int? = null) : Screen {
                 unitVm.getUnitById(unitId)
                 exerciseVm.getExercisesByUnitId(unitId)
                 selectedIndex = 2
-                testVm.getTestsByUnitId(unitId)
+                testVm.getTestByUnitId(unitId)
             } else {
                 unitVm.actualNull()
                 unitVm.getAllUnits()
@@ -139,7 +138,7 @@ class ExercisesOrUnitScreen(private val unitId: Int? = null) : Screen {
 
         var searchQuery by remember { mutableStateOf("") }
 
-        AppLayout(
+        EditorLayout(
             actualScreen = "Administrar Ejercicios",
             selectedIndex = selectedIndex,
             onSelect = { idx -> selectedIndex = idx },

@@ -309,14 +309,15 @@ fun Application.configureRouting() {
                         val users = userService.getUsersByName(name)
                         call.respond(users)
                     }
+                    put("{id}") {
+                        val id = call.parameters["id"]?.toIntOrNull()
+                            ?: throw BadRequestException("Invalid ID in put user")
+                        val dto = call.receive<UpdateUserDto>()
+                        val updatedUser = userService.updateUser(id, dto)
+                        call.respond(updatedUser)
+                    }
                     withRoles(Role.ADMIN) {
-                        put("{id}") {
-                            val id = call.parameters["id"]?.toIntOrNull()
-                                ?: throw BadRequestException("Invalid ID in put user")
-                            val dto = call.receive<UpdateUserDto>()
-                            val updatedUser = userService.updateUser(id, dto)
-                            call.respond(updatedUser)
-                        }
+
                         delete("{id}") {
                             val id = call.parameters["id"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid ID in delete user")
@@ -776,35 +777,7 @@ fun Application.configureRouting() {
                 // Tests
                 route("/tests") {
                     withRoles(Role.ADMIN, Role.CONTENT_EDITOR, Role.STUDENT) {
-                        get {
-                            val tests = testService.getAll().filter { test ->
-                                welcomeTestService.getByTestId(test.id) == null
-                            }
-                            call.respond(tests)
-                        }
-                        get("{id}") {
-                            val id = call.parameters["id"]?.toIntOrNull()
-                                ?: throw BadRequestException("Invalid ID")
-                            val item = testService.getById(id) ?: throw NotFoundException("Test not found")
-                            call.respond(item)
-                        }
-                        get("/exercises/{testId}") {
-                            val testId = call.parameters["testId"]?.toIntOrNull()
-                                ?: throw BadRequestException("Invalid Test ID")
-                            val items = testExerciseService.searchByIds(testId = testId)
-                            val allExercises = exerciseService.getAll()
-                            val exercisesInTest = items.mapNotNull { item ->
-                                allExercises.find { it.id == item.exerciseId }
-                            }
-                            call.respond(exercisesInTest)
-                        }
-                        get("/byUnit/{unitId}") {
-                            val unitId = call.parameters["unitId"]?.toIntOrNull()
-                                ?: throw BadRequestException("Invalid Unit ID")
-                            val tests = testService.getTestsByUnitId(unitId)
-                                ?: throw NotFoundException("No tests found for unit ID $unitId")
-                            call.respond(tests)
-                        }
+
                         get("/search") {
                             val name = call.request.queryParameters["name"]
                             val unitId = call.request.queryParameters["unitId"]?.toIntOrNull()
@@ -826,6 +799,44 @@ fun Application.configureRouting() {
                                 )
                             )
                         }
+                        get("/exercises/{testId}") {
+                            val testId = call.parameters["testId"]?.toIntOrNull()
+                                ?: throw BadRequestException("Invalid Test ID")
+                            val items = testExerciseService.searchByIds(testId = testId)
+                            val allExercises = exerciseService.getAll()
+                            val exercisesInTest = items.mapNotNull { item ->
+                                allExercises.find { it.id == item.exerciseId }
+                            }
+                            call.respond(exercisesInTest)
+                        }
+                    }
+                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR) {
+                        // Obtener estado de repaso para una unidad/test y usuario
+                        get("/review-status") {
+                            val userId = call.request.queryParameters["userId"]?.toIntOrNull()
+                                ?: throw BadRequestException("Invalid userId")
+                            val unitId = call.request.queryParameters["unitId"]?.toIntOrNull()
+                                ?: throw BadRequestException("Invalid unitId")
+                            val testId = call.request.queryParameters["testId"]?.toIntOrNull()
+                                ?: throw BadRequestException("Invalid testId")
+
+                            val status = testService.getUnitReviewStatus(userId, unitId, testId)
+                            call.respond(status)
+                        }
+                    }
+                    withRoles(Role.CONTENT_EDITOR) {
+                        get {
+                            val tests = testService.getAll().filter { test ->
+                                welcomeTestService.getByTestId(test.id) == null
+                            }
+                            call.respond(tests)
+                        }
+                        get("{id}") {
+                            val id = call.parameters["id"]?.toIntOrNull()
+                                ?: throw BadRequestException("Invalid ID")
+                            val item = testService.getById(id) ?: throw NotFoundException("Test not found")
+                            call.respond(item)
+                        }
                         get("/byExercise/{exerciseId}") {
                             val exerciseId = call.parameters["exerciseId"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid Exercise ID")
@@ -835,8 +846,13 @@ fun Application.configureRouting() {
                             )
                             call.respond(test)
                         }
-                    }
-                    withRoles(Role.CONTENT_EDITOR) {
+                        get("/byUnit/{unitId}") {
+                            val unitId = call.parameters["unitId"]?.toIntOrNull()
+                                ?: throw BadRequestException("Invalid Unit ID")
+                            val tests = testService.getTestsByUnitId(unitId)
+                                ?: throw NotFoundException("No tests found for unit ID $unitId")
+                            call.respond(tests)
+                        }
                         post {
                             val dto = call.receive<CreateTestDto>()
 

@@ -45,9 +45,11 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlin.time.ExperimentalTime
+import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import org.example.project.components.ExerciseInfoSections
 import org.example.project.components.StudentAppLayout
 import org.example.project.dtos.AlternativesDto
@@ -97,6 +99,7 @@ class StudentTestResolverScreen(
         val userId = userIdArg ?: UserSession.idUser
         val studentName = studentNameArg ?: UserSession.name ?: "Estudiante"
         val snackbarHostState = remember { SnackbarHostState() }
+        val snackbarScope = rememberCoroutineScope()
 
         var submitted by remember { mutableStateOf(false) }
         var score by remember { mutableStateOf<Float?>(null) }
@@ -109,6 +112,7 @@ class StudentTestResolverScreen(
         val vocabularyExpandedByExercise = remember { mutableStateMapOf<Int, Boolean>() }
         var loadingExerciseData by remember { mutableStateOf(false) }
         var resolverError by remember { mutableStateOf<String?>(null) }
+        var selectedIndex by remember { mutableStateOf(1) }
 
         LaunchedEffect(testId) {
             testVm.getExercisesByTestId(testId)
@@ -207,21 +211,39 @@ class StudentTestResolverScreen(
         val latestAttempt = remember(testUi.testsCompleted, testId) {
             testVm.getLastAttemptForTest(testId)
         }
-        val remainingReviewExercises = if (testVm.requiresReview(unitId, completedUnitsCount)) {
-            testVm.remainingReviewExercises(unitId, totalActiveExercisesInUnit)
-        } else 0
+
+        var reviewStatus: org.example.project.dtos.UnitReviewStatusDto? by remember { mutableStateOf(null) }
+
+        LaunchedEffect(userId, unitId, testId) {
+            val safeUser = userId ?: return@LaunchedEffect
+            val tId = testId ?: return@LaunchedEffect
+            try {
+                reviewStatus = RepositoryProvider.testRepo.getUnitReviewStatus(safeUser, unitId, tId)
+            } catch (e: Exception) {
+                println("Error cargando reviewStatus: ${e.message}")
+            }
+        }
+
+        val remainingReviewExercises = reviewStatus?.remainingExercises ?: 0
         val reviewBlocked = latestAttempt?.score != 100 && remainingReviewExercises > 0
 
         fun submitAnswers() {
             val safeUserId = userId ?: return
             if (allQuestions.isEmpty()) return
             if (reviewBlocked) {
+                // Informar al usuario por qué no puede enviar
+                snackbarScope.launch {
+                    snackbarHostState.showSnackbar("Debes aprobar $remainingReviewExercises ejercicio(s) de repaso antes de reintentar este test.")
+                }
                 return
             }
 
             val answered = allQuestions.count { selectedAnswers[it.id] != null }
             if (answered != allQuestions.size) {
                 snackbarHostState.currentSnackbarData?.dismiss()
+                snackbarScope.launch {
+                    snackbarHostState.showSnackbar("Debes responder todas las preguntas antes de enviar las respuestas.")
+                }
                 return
             }
 
@@ -266,7 +288,8 @@ class StudentTestResolverScreen(
                     }
                 }
             } else {
-                testVm.markTestRequiresReview(unitId, completedUnitsCount)
+                // No necesitamos marcar en frontend: el intento ya fue persistido en backend
+                // El backend calculará que el usuario requiere repaso si aplica
             }
         }
 
@@ -275,14 +298,7 @@ class StudentTestResolverScreen(
             selectedIndex = 1,
             initialUserName = studentName,
             snackbarHostState = snackbarHostState,
-            onAvatarClick = {
-                navigator.push(
-                    StudentMeUserScreen(
-                        userIdArg = userId,
-                        studentNameArg = studentName
-                    )
-                )
-            }
+            onSelect = { idx -> selectedIndex = idx },
         ) { _, _, _ ->
             Card(
                 modifier = Modifier.fillMaxSize(),

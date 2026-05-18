@@ -1,4 +1,4 @@
-package org.example.project.screens.admindScreens
+package org.example.project.screens.editorScreens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -8,10 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -27,7 +24,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,14 +35,14 @@ import cafe.adriel.voyager.navigator.Navigator
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
-import org.example.project.components.AppLayout
+import org.example.project.components.EditorLayout
 import org.example.project.dtos.CreateUnitDto
 import org.example.project.dtos.DifficultyLevel
 import org.example.project.dtos.FilterUnitsDto
-import org.example.project.dtos.Role
 import org.example.project.dtos.UnitDto
 import org.example.project.network.RepositoryProvider
-import org.example.project.network.UserSession
+import org.example.project.screens.admindScreens.LessonUnit
+import org.example.project.screens.admindScreens.UnitStatus
 import org.example.project.viewModel.UnitViewModel
 import org.jetbrains.compose.resources.Font
 
@@ -66,7 +62,7 @@ class UnitsScreen : Screen {
             LessonUnit(
                 id = u.id ?: 0,
                 title = u.name,
-                description = u.description ,
+                description = u.description,
                 status = if (u.isActive) UnitStatus.PUBLISHED else UnitStatus.DRAFT,
                 emoji = "📚"
             )
@@ -82,7 +78,7 @@ class UnitsScreen : Screen {
         }
 
 
-        AppLayout(
+        EditorLayout(
             actualScreen = "Administrar Unidades",
             selectedIndex = selectedIndex,
             onSelect = { idx -> selectedIndex = idx },

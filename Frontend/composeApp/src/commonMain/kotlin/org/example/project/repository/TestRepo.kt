@@ -21,6 +21,7 @@ import org.example.project.dtos.TestExerciseDto
 import org.example.project.dtos.UpdateTestCompletedDto
 import org.example.project.dtos.UpdateTestDto
 import org.example.project.dtos.UpdateTestExerciseDto
+import org.example.project.dtos.UnitReviewStatusDto
 
 class TestRepo(private val httpClient: HttpClient ,private val baseUrl: String) {
 
@@ -36,7 +37,7 @@ class TestRepo(private val httpClient: HttpClient ,private val baseUrl: String) 
             if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
         }
 
-    suspend fun getTestsByUnitId(unitId: Int): TestDto? =
+    suspend fun getTestByUnitId(unitId: Int): TestDto? =
         httpClient.get("$baseUrl/api/v1/tests/byUnit/$unitId") {
             addAuthHeader()
         }.let { response ->
@@ -145,4 +146,12 @@ class TestRepo(private val httpClient: HttpClient ,private val baseUrl: String) 
         httpClient.delete("$baseUrl/api/v1/testsCompleted/$id") {
             addAuthHeader()
         }.ensureSuccessOrThrow()
+
+    suspend fun getUnitReviewStatus(userId: Int, unitId: Int, testId: Int): UnitReviewStatusDto =
+        httpClient.get("$baseUrl/api/v1/tests/review-status") {
+            parameter("userId", userId)
+            parameter("unitId", unitId)
+            parameter("testId", testId)
+            addAuthHeader()
+        }.parseOrThrow()
 }

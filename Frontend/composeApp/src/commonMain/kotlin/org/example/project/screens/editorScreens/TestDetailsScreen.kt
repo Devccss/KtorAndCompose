@@ -1,4 +1,4 @@
-package org.example.project.screens.admindScreens
+package org.example.project.screens.editorScreens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,16 +7,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.EventNote
-import androidx.compose.material.icons.automirrored.filled.LabelImportant
-import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material3.*
@@ -38,7 +33,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
-import org.example.project.components.AppLayout
+import org.example.project.components.EditorLayout
 import org.example.project.dtos.CreateTestExerciseDto
 import org.example.project.dtos.CreateWelcomeTestDto
 import org.example.project.dtos.ExerciseDto
@@ -48,7 +43,6 @@ import org.example.project.dtos.UpdateTestDto
 import org.example.project.dtos.UpdateWelcomeTestDto
 import org.example.project.dtos.WelcomeTestDto
 import org.example.project.network.RepositoryProvider
-import org.example.project.network.UserSession
 import org.example.project.viewModel.ExercisesViewModel
 import org.example.project.viewModel.TestViewModel
 import org.example.project.viewModel.UnitViewModel
@@ -91,7 +85,7 @@ class TestDetailsScreen(private val testId: Int) : Screen {
             testUi.error?.let { snackbarHostState.showSnackbar(it) }
         }
 
-        AppLayout(
+        EditorLayout(
             actualScreen = "Detalle del Test",
             snackbarHostState = snackbarHostState,
             selectedIndex = selectedIndex,
@@ -115,70 +109,72 @@ class TestDetailsScreen(private val testId: Int) : Screen {
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     item {
-                     // 1. Header del Test (Basado en ExercisesOrUnitScreen)
-                     testUi.currentTest?.let { testData ->
-                         TestHeader(
-                             test = testData,
-                             onEdit = { dto -> testVm.updateTest(testId, dto) },
-                             unit = unitUi.actualUnit,
-                             onDelete = { testVm.deleteTest(testId)
-                                 navigator.pop()
-                             }
-                         )
-                     }
+                        // 1. Header del Test (Basado en ExercisesOrUnitScreen)
+                        testUi.currentTest?.let { testData ->
+                            TestHeader(
+                                test = testData,
+                                onEdit = { dto -> testVm.updateTest(testId, dto) },
+                                unit = unitUi.actualUnit,
+                                onDelete = {
+                                    testVm.deleteTest(testId)
+                                    navigator.pop()
+                                }
+                            )
+                        }
                     }
- 
+
                     item {
-                     val welcomeRelation = testUi.welcomeTests.firstOrNull { it.testId == testId }
-                     WelcomeAssociationSection(
-                         welcomeRelation = welcomeRelation,
-                         isLoading = testUi.isLoading,
-                         onAssociate = {
-                             testVm.createWelcomeTest(
-                                 CreateWelcomeTestDto(
-                                     testId = testId,
-                                     isActive = false
-                                 )
-                             )
-                         },
-                         onActivate = { testVm.activateWelcomeTest(testId) },
-                         onDeactivate = {
-                             testVm.updateWelcomeTest(
-                                 testId,
-                                 UpdateWelcomeTestDto(isActive = false)
-                             )
-                         },
-                         onDelete = { testVm.deleteWelcomeTest(testId) }
-                     )
+                        val welcomeRelation =
+                            testUi.welcomeTests.firstOrNull { it.testId == testId }
+                        WelcomeAssociationSection(
+                            welcomeRelation = welcomeRelation,
+                            isLoading = testUi.isLoading,
+                            onAssociate = {
+                                testVm.createWelcomeTest(
+                                    CreateWelcomeTestDto(
+                                        testId = testId,
+                                        isActive = false
+                                    )
+                                )
+                            },
+                            onActivate = { testVm.activateWelcomeTest(testId) },
+                            onDeactivate = {
+                                testVm.updateWelcomeTest(
+                                    testId,
+                                    UpdateWelcomeTestDto(isActive = false)
+                                )
+                            },
+                            onDelete = { testVm.deleteWelcomeTest(testId) }
+                        )
                     }
- 
+
                     item {
-                     // 2. Sección de Ejercicios Vinculados
-                     Text(
-                         text = "Ejercicios del Test",
-                         style = MaterialTheme.typography.titleMedium,
-                         fontWeight = FontWeight.Bold
-                     )
-                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        // 2. Sección de Ejercicios Vinculados
+                        Text(
+                            text = "Ejercicios del Test",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     }
- 
+
                     item {
-                     AddExerciseToTestSection(
-                         availableExercises = exercisesUi.exercises.filter { ex ->
-                             testUi.testExercises.none { it.id == ex.id }
-                         },
-                         onAdd = { exerciseId ->
-                             testVm.createTestExercise(
-                                 CreateTestExerciseDto(
-                                     testId = testId,
-                                     exerciseId = exerciseId
-                                 )
-                             )
-                         }
-                     )
+                        AddExerciseToTestSection(
+                            availableExercises = exercisesUi.exercises.filter { ex ->
+                                testUi.testExercises.none { it.id == ex.id }
+                            },
+                            onAdd = { exerciseId ->
+                                testVm.createTestExercise(
+                                    CreateTestExerciseDto(
+                                        testId = testId,
+                                        exerciseId = exerciseId
+                                    )
+                                )
+                            }
+                        )
                     }
- 
-                     if (linkedExercises.isEmpty()) {
+
+                    if (linkedExercises.isEmpty()) {
                         item {
                             Text(
                                 "Este test no tiene ejercicios asignados.",
@@ -186,8 +182,10 @@ class TestDetailsScreen(private val testId: Int) : Screen {
                                 modifier = Modifier.padding(vertical = 8.dp)
                             )
                         }
-                     } else {
-                        itemsIndexed(linkedExercises, key = { _, exercise -> exercise.id }) { _, exercise ->
+                    } else {
+                        itemsIndexed(
+                            linkedExercises,
+                            key = { _, exercise -> exercise.id }) { _, exercise ->
                             val relationId = testUi.testExercises.find { it.id == exercise.id }?.id
 
                             Row(
@@ -222,11 +220,11 @@ class TestDetailsScreen(private val testId: Int) : Screen {
                                 }
                             }
                         }
-                     }
+                    }
 
-                 }
-             }
-         }
+                }
+            }
+        }
      }
  }
 

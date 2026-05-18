@@ -1,6 +1,5 @@
 package org.example.project.screens.editorScreens
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -10,10 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,8 +19,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_bold
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
-import org.example.project.components.AppLayout
-import org.example.project.dtos.Role
+import org.example.project.components.EditorLayout
 import org.example.project.dtos.WeeklySessionMetricDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
@@ -73,27 +68,16 @@ class EditorDashboard(private val id: Int? = null ) : Screen {
 
 
         // Usar AppLayout que provee la card principal (bienvenida) y la bottom bar fija
-        AppLayout(
+        EditorLayout(
             actualScreen = null,
             selectedIndex = selectedIndex,
             onSelect = { idx -> selectedIndex = idx },
-        ) { _,_,_ ->
-
-            if (UserSession.role != Role.ADMIN) {
-                Column(modifier = Modifier
-                    .fillMaxSize()
-                ) {
-                    Card {
-                        Text("No tienes permisos para ver este contenido.")
-                    }
-                }
-                return@AppLayout
-            }
+        ) { _, _, _ ->
 
 
             // Llamamos al contenido del dashboard, pasando padding desde el layout
             EditorDashboardContent(
-                editirName = UserSession.name?: "Unknown",
+                editirName = UserSession.name ?: "Unknown",
                 totalUnits = totalUnits,
                 totalUsers = totalUsers,
                 totalExercises = totalExercises,
@@ -201,21 +185,6 @@ fun EditorDashboardContent(
                         }
                     }
 
-                    else -> {
-                        LineChart(
-                            data = chartData,
-                            labels = chartLabels,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(180.dp)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        latestMetric?.let { metric ->
-                            StatRow("Usuarios activos (ultima semana)", metric.activeUsers.toString())
-                            StatRow("Sesiones (ultima semana)", metric.totalSessions.toString())
-                            StatRow("Duracion total (ultima semana)", "${metric.totalDurationSeconds / 60} min")
-                        }
-                    }
                 }
             }
         }
@@ -289,143 +258,9 @@ fun EditorDashboardContent(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                when (selectedSectionTabs) {
-                    0 -> AnalysisSection()
-                    1 -> UnitPreviewSection(totalUnits)
-                    2 -> UsersSection(totalUsers)
-                    3 -> ExerciseSection(totalExercises)
-                }
             }
         }
     }
 }
 
-@Composable
-fun AnalysisSection() {
-    Column {
-        StatRow("Alumnos actualmente en línea", "20")
-        StatRow("Alumnos activos esta semana", "100")
-        StatRow("Alumnos inactivos", "200")
-        StatRow("Alumnos que completaron el contenido", "2")
-        StatRow("Alumnos en racha 7+ días", "25")
-        StatRow("Alumnos en racha 7- días", "300")
-    }
-}
 
-@Composable
-fun UnitPreviewSection(units: Int) {
-    Column {
-        StatRow("Unidades totales", "$units")
-
-    }
-}
-@Composable
-fun UsersSection(users: Int) {
-    StatRow("Alumnos totales", "$users")
-}
-
-@Composable
-fun ExerciseSection(exercises: Int) {
-    StatRow("Alumnos totales", "$exercises")
-}
-
-
-@Composable
-fun LineChart(
-    data: List<Float>,
-    labels: List<String>,
-    modifier: Modifier = Modifier
-) {
-    val maxDataValue = data.maxOrNull()?.coerceAtLeast(1f) ?: 1f
-    Canvas(modifier = modifier) {
-        val width = size.width
-        val height = size.height
-        if (data.isEmpty()) return@Canvas
-
-        val spacing = if (data.size > 1) width / (data.size - 1) else 0f
-        val maxValue = maxDataValue * 1.15f
-        val minValue = 0f
-
-        // Dibujar líneas de la cuadrícula
-        val gridLines = 7
-        for (i in 0..gridLines) {
-            val y = height - (height * i / gridLines)
-            drawLine(
-                color = Color(0xFFE0E0E0),
-                start = Offset(0f, y),
-                end = Offset(width, y),
-                strokeWidth = 1.dp.toPx()
-            )
-        }
-
-        // Dibujar línea de datos
-        val path = Path()
-        val points = data.mapIndexed { index, value ->
-            val x = if (data.size == 1) width / 2f else index * spacing
-            val normalizedValue = (value - minValue) / (maxValue - minValue)
-            val y = height - (normalizedValue * height * 0.8f) - (height * 0.1f)
-            Offset(x, y)
-        }
-
-        if (points.isNotEmpty()) {
-            path.moveTo(points[0].x, points[0].y)
-            for (i in 1 until points.size) {
-                path.lineTo(points[i].x, points[i].y)
-            }
-        }
-
-        drawPath(
-            path = path,
-            color = Color(0xFFFF6B6B),
-            style = Stroke(width = 3.dp.toPx())
-        )
-
-        // Dibujar puntos
-        points.forEach { point ->
-            drawCircle(
-                color = Color(0xFFFF6B6B),
-                radius = 4.dp.toPx(),
-                center = point
-            )
-        }
-    }
-
-    // Etiquetas del eje X
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        labels.forEach { label ->
-            Text(
-                text = label,
-                fontSize = 10.sp,
-                color = Color.Gray,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
-    }
-}
-
-@Composable
-fun StatRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF2D2D2D)
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFFFF6B6B)
-        )
-    }
-    HorizontalDivider(color = Color(0xFFE0E0E0))
-}

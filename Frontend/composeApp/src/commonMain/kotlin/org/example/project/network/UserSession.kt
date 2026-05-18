@@ -28,6 +28,8 @@ object UserSession {
     var sessionLogId: Int? by mutableStateOf(null)
         private set
 
+    // Legacy: la lógica de repaso se ha movido al backend. Estas estructuras se mantienen para compatibilidad
+    // pero las funciones públicas relacionadas ahora son NO-OP o están marcadas como @Deprecated.
     private val unitReviewCheckpoints = mutableMapOf<Int, Int>()
     private val reviewedExercisesByUnit = mutableMapOf<Int, MutableSet<Int>>()
     private val reviewUnitCompletionEvents = mutableSetOf<Int>()
@@ -44,30 +46,31 @@ object UserSession {
         sessionLogId = logId
     }
 
+    @Deprecated("La lógica de repaso ahora se ejecuta en el backend. Usar el endpoint /tests/review-status")
     fun markUnitRequiresReview(unitId: Int, completedUnitsCount: Int) {
-        unitReviewCheckpoints[unitId] = completedUnitsCount
-        reviewedExercisesByUnit.remove(unitId)
-        reviewUnitCompletionEvents.remove(unitId)
+        // NO-OP: ahora el backend calcula y persiste el estado de repaso
     }
 
+    @Deprecated("La lógica de repaso ahora se ejecuta en el backend. Usar el endpoint /tests/review-status")
     fun clearUnitReviewRequirement(unitId: Int) {
-        unitReviewCheckpoints.remove(unitId)
-        reviewedExercisesByUnit.remove(unitId)
-        reviewUnitCompletionEvents.remove(unitId)
+        // NO-OP
     }
 
+    @Deprecated("La lógica de repaso ahora se ejecuta en el backend. Usar el endpoint /tests/review-status")
     fun requiresUnitReview(unitId: Int, completedUnitsCount: Int): Boolean {
-        val checkpoint = unitReviewCheckpoints[unitId] ?: return false
-        return completedUnitsCount <= checkpoint
+        // NO-OP -> el frontend debe consultar el backend
+        return false
     }
 
+    @Deprecated("La lógica de repaso ahora se ejecuta en el backend. Registrar ejercicios completados via API")
     fun registerReviewedExercise(unitId: Int, exerciseId: Int) {
-        val reviewed = reviewedExercisesByUnit.getOrPut(unitId) { mutableSetOf() }
-        reviewed += exerciseId
+        // NO-OP
     }
 
+    @Deprecated("La lógica de repaso ahora se ejecuta en el backend. Consultar /tests/review-status")
     fun reviewedExercisesCount(unitId: Int): Int = reviewedExercisesByUnit[unitId]?.size ?: 0
 
+    @Deprecated("La regla de requiredReview permanece pero la fuente de verdad es el backend")
     fun requiredReviewExercises(totalExercisesInUnit: Int): Int {
         if (totalExercisesInUnit <= 0) return 1
         return when {
@@ -77,15 +80,17 @@ object UserSession {
         }
     }
 
+    @Deprecated("La verificación ahora se hace en el backend")
     fun isUnitReviewSatisfied(unitId: Int, totalExercisesInUnit: Int): Boolean {
-        val required = requiredReviewExercises(totalExercisesInUnit)
-        return reviewedExercisesCount(unitId) >= required
+        return reviewedExercisesCount(unitId) >= requiredReviewExercises(totalExercisesInUnit)
     }
 
+    @Deprecated("Control de emisión ahora debe delegarse al backend o al repositorio")
     fun canEmitReviewUnitCompleted(unitId: Int): Boolean = unitId !in reviewUnitCompletionEvents
 
+    @Deprecated("Control de emisión ahora debe delegarse al backend o al repositorio")
     fun markReviewUnitCompletedEmitted(unitId: Int) {
-        reviewUnitCompletionEvents += unitId
+        // NO-OP
     }
 
     fun clear() {

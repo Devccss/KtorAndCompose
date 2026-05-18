@@ -1,4 +1,4 @@
-package org.example.project.screens.admindScreens
+package org.example.project.screens.editorScreens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -30,6 +30,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -67,7 +68,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
-import org.example.project.components.AppLayout
+import org.example.project.components.EditorLayout
 import org.example.project.dtos.CreateTestDto
 import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.FilterTestsDto
@@ -75,7 +76,6 @@ import org.example.project.dtos.TestDto
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.WelcomeTestDto
 import org.example.project.network.RepositoryProvider
-import org.example.project.network.UserSession
 import org.example.project.viewModel.ExercisesViewModel
 import org.example.project.viewModel.TestViewModel
 import org.example.project.viewModel.UnitViewModel
@@ -118,7 +118,7 @@ class TestScreen : Screen {
         }
 
 
-        AppLayout(
+        EditorLayout(
             actualScreen = "Administrar Tests",
             selectedIndex = selectedIndex,
             onSelect = { idx -> selectedIndex = idx },
@@ -591,7 +591,7 @@ fun TestSection(
                                                 .padding(6.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            androidx.compose.material3.Checkbox(
+                                            Checkbox(
                                                 checked = selectedWelcomeExercises.contains(exercise.id),
                                                 onCheckedChange = { checked ->
                                                     selectedWelcomeExercises = if (checked) {

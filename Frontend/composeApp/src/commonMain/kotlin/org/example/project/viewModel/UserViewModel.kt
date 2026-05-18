@@ -45,7 +45,20 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
     }
 
     init {
-        loadUsers()
+        launchCatching(
+            block = { return@launchCatching true },
+            onSuccess = {
+                _state.value = _state.value.copy(
+                    isLoading = false
+                )
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(
+                    error = error.message,
+                    isLoading = false
+                )
+            }
+        )
     }
 
     fun loadUsers() {

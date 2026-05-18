@@ -21,26 +21,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import org.example.project.dtos.Role
-import org.example.project.screens.admindScreens.AdminDashboard
-import org.example.project.screens.admindScreens.UsersScreen
-import org.example.project.screens.editorScreens.UnitsScreen
 import org.example.project.network.UserSession
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Group
+import org.example.project.screens.editorScreens.EditorDashboard
+import org.example.project.screens.editorScreens.EditorUsersScreen
 import org.example.project.screens.editorScreens.ExercisesOrUnitScreen
 import org.example.project.screens.editorScreens.TestScreen
+import org.example.project.screens.editorScreens.UnitsScreen
 
-data class NavItem(val id: Int, val icon: ImageVector, val label: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReusableBottomBar(
+fun ReusableEditorBottomBar(
     modifier: Modifier = Modifier.fillMaxWidth(),
     selectedIndex: Int,
     onSelect: ((Int) -> Unit)? = null,
@@ -51,6 +49,9 @@ fun ReusableBottomBar(
     val fixedItems = listOf(
         NavItem(0, Icons.Default.Home, "Inicio"),
         NavItem(1, Icons.Default.Group, "Usuarios"),
+        NavItem(2, Icons.AutoMirrored.Filled.List, "Unidades"),
+        NavItem(3, Icons.AutoMirrored.Filled.Article, "Ejercicios"),
+        NavItem(4, Icons.AutoMirrored.Filled.FactCheck, "Tests")
     )
 
     // Inicializar valores desde initial params o desde UserSession si no se pasan.
@@ -112,11 +113,20 @@ fun ReusableBottomBar(
                         when (index) {
                             0 -> {
                                 navigator.push(
-                                    AdminDashboard(rememberId)
+                                    EditorDashboard(rememberId)
                                 )
                             }
                             1 -> {
-                                navigator.push(UsersScreen())
+                                navigator.push(EditorUsersScreen())
+                            }
+                            2 -> {
+                                navigator.push(UnitsScreen())
+                            }
+                            3 -> {
+                                navigator.push(ExercisesOrUnitScreen(null))
+                            }
+                            4 -> {
+                                navigator.push(TestScreen())
                             }
                         }
                     },

@@ -1,4 +1,4 @@
-package org.example.project.screens.admindScreens
+package org.example.project.screens.editorScreens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically

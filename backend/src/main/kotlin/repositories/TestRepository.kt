@@ -10,8 +10,12 @@ import com.example.dtos.UpdateTestDto
 import io.ktor.server.plugins.BadRequestException
 import models.Tests
 import models.TestCompleted
+import models.Exercises
+import models.ExerciseCompleted
 import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -160,5 +164,62 @@ class TestRepository {
         getTestCompletedById(id)
             ?: throw BadRequestException("El test completado con ID $id no existe.")
         TestCompleted.deleteWhere { TestCompleted.id eq id } > 0
+    }
+
+    // Calcula el estado de repaso para una unidad/test para un usuario
+    fun getUnitReviewStatus(userId: Int, unitId: Int, testId: Int): com.example.dtos.UnitReviewStatusDto = transaction {
+        // obtener último intento del test por este usuario
+        val lastAttemptRow = TestCompleted.selectAll()
+            .where { (TestCompleted.testId eq testId) and  (TestCompleted.userId eq userId) }
+            .orderBy(TestCompleted.completionDate, SortOrder.DESC)
+            .limit(1)
+            .singleOrNull()
+
+        val lastScore: Int? = lastAttemptRow?.get(TestCompleted.score)
+        val lastAttemptAt: java.time.LocalDateTime? = lastAttemptRow?.get(TestCompleted.completionDate)
+
+        // contar ejercicios activos en la unidad
+        val totalExercisesInUnit = Exercises.selectAll()
+            .where { Exercises.unitId eq unitId and Exercises.isActive.eq(true) }
+            .count()
+            .toInt()
+
+        val required = when {
+            totalExercisesInUnit <= 0 -> 1
+            totalExercisesInUnit <= 2 -> 1
+            totalExercisesInUnit <= 5 -> 2
+            else -> kotlin.math.ceil(totalExercisesInUnit * 0.4f).toInt()
+        }
+
+        // seleccionar ejercicios completados por el usuario en esa unidad
+        val completedRows = (ExerciseCompleted innerJoin Exercises)
+            .selectAll()
+            .where { (ExerciseCompleted.userId eq userId) and (Exercises.unitId eq unitId) }
+
+        val reviewedSet: Set<Int> = completedRows.mapNotNull { row ->
+            val completionDate = row[ExerciseCompleted.completionDate]
+            val exerciseId = row[ExerciseCompleted.exerciseId]
+            if (lastAttemptAt != null) {
+                if (completionDate.isAfter(lastAttemptAt)) exerciseId else null
+            } else {
+                exerciseId
+            }
+        }.toSet()
+
+        val reviewed = reviewedSet.size
+        val remaining = (required - reviewed).coerceAtLeast(0)
+        val requiresReview = (lastScore ?: 0) != 100 && remaining > 0
+
+        com.example.dtos.UnitReviewStatusDto(
+            userId = userId,
+            unitId = unitId,
+            testId = testId,
+            requiresReview = requiresReview,
+            requiredExercises = required,
+            reviewedExercises = reviewed,
+            remainingExercises = remaining,
+            lastAttemptScore = lastScore,
+            lastAttemptAt = lastAttemptAt?.toString()
+        )
     }
 }

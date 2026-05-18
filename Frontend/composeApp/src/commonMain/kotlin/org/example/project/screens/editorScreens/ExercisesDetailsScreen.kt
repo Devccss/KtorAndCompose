@@ -1,4 +1,4 @@
-package org.example.project.screens.admindScreens
+package org.example.project.screens.editorScreens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -80,24 +80,20 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import org.example.project.components.AppLayout
 import org.example.project.components.CustomTextField
+import org.example.project.components.EditorLayout
 import org.example.project.dtos.ContentType
 import org.example.project.dtos.CreateAlternativeDto
 import org.example.project.dtos.CreateExerciseContentDto
 import org.example.project.dtos.CreateQuestionDto
 import org.example.project.dtos.CreateWordDto
-import org.example.project.dtos.FilterWordsDto
 import org.example.project.dtos.UpdateAlternativeDto
 import org.example.project.dtos.UpdateExerciseContentDto
 import org.example.project.dtos.UpdateExerciseDto
 import org.example.project.dtos.UpdateQuestionDto
 import org.example.project.dtos.UpdateWordDto
-import org.example.project.dtos.Role
 import org.example.project.network.RepositoryProvider
-import org.example.project.network.UserSession
 import org.example.project.service.AiQuestionGenerationService
 import org.example.project.viewModel.ExercisesViewModel
 import org.example.project.viewModel.AiQuestionGenerationViewModel
@@ -459,7 +455,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
         }
 
 
-        AppLayout(
+        EditorLayout(
             actualScreen = "Detalles del Ejercicio",
             selectedIndex = selectedIndex,
             onSelect = { idx -> selectedIndex = idx },
@@ -590,7 +586,9 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                     modifier = Modifier
                                         .size(20.dp)
                                         .background(
-                                            if (isEditingExercise) Color(0xFFB8F4C4) else Color(0xFFF5F5F5),
+                                            if (isEditingExercise) Color(0xFFB8F4C4) else Color(
+                                                0xFFF5F5F5
+                                            ),
                                             RoundedCornerShape(20.dp)
                                         )
                                 ) {
@@ -723,7 +721,9 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                     if (isEditingContent) onSaveContent() else startSectionEdit("content")
                                 },
                                 onCancel = { isEditingContent = false },
-                                onDelete = if (exerciseUi.selectedContent != null) ({ onDeleteContent = true }) else null
+                                onDelete = if (exerciseUi.selectedContent != null) ({
+                                    onDeleteContent = true
+                                }) else null
                             )
                         }
 
@@ -763,13 +763,19 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                                 onDeleteContent = false
                                                 isEditingContent = false
                                             },
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD4D4))
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color(
+                                                    0xFFFFD4D4
+                                                )
+                                            )
                                         ) {
                                             Text("Eliminar", color = Color(0xFF8B0000))
                                         }
                                     },
                                     dismissButton = {
-                                        TextButton(onClick = { onDeleteContent = false }) { Text("Cancelar") }
+                                        TextButton(onClick = {
+                                            onDeleteContent = false
+                                        }) { Text("Cancelar") }
                                     }
                                 )
                             }
@@ -834,7 +840,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
 
                                         CustomTextField(
                                             value = newWordEnglish,
-                                            onValueChange = {newWordEnglish = it},
+                                            onValueChange = { newWordEnglish = it },
                                             label = "Inglés",
                                             modifier = Modifier.fillMaxWidth(),
                                             singleLine = true,
@@ -860,7 +866,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                         Spacer(modifier = Modifier.height(8.dp))
                                         CustomTextField(
                                             value = newWordDescription,
-                                            onValueChange = { newWordDescription = it},
+                                            onValueChange = { newWordDescription = it },
                                             label = "Descripción (opcional)",
                                             modifier = Modifier.fillMaxWidth(),
                                             singleLine = false,
@@ -922,7 +928,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                             }
                             if (wordsUi.words.isEmpty()) {
                                 Text("No hay vocabulario asociado", color = Color.Gray)
-                                Spacer( modifier = Modifier.height(8.dp) )
+                                Spacer(modifier = Modifier.height(8.dp))
 
 
                             } else {
@@ -942,7 +948,8 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                         isEditing = isEditingWords,
                                         isExpanded = expandedWordCards[word.id] ?: false,
                                         onToggleExpanded = {
-                                            expandedWordCards[word.id] = !(expandedWordCards[word.id] ?: false)
+                                            expandedWordCards[word.id] =
+                                                !(expandedWordCards[word.id] ?: false)
                                         },
                                         draft = wordDraft,
                                         jetbrainsMonoFamily = jetbrainsMonoFamily,
@@ -956,7 +963,7 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                             }
 
 
-                            if (UserSession.role == Role.ADMIN && exerciseUi.selectedContent != null) {
+                            if (exerciseUi.selectedContent != null) {
                                 AiQuestionGenerationSection(
                                     contentId = exerciseUi.selectedContent?.id,
                                     aiVm = aiQuestionVm,
@@ -989,7 +996,9 @@ class ExercisesDetailsScreen(private val exerciseId: Int, private val unitId: In
                                 SectionActionButtons(
                                     isEditing = isEditingQuestions,
                                     onEditOrSave = {
-                                        if (isEditingQuestions) onSaveQuestions() else startSectionEdit("questions")
+                                        if (isEditingQuestions) onSaveQuestions() else startSectionEdit(
+                                            "questions"
+                                        )
                                     },
                                     onCancel = { isEditingQuestions = false }
                                 )

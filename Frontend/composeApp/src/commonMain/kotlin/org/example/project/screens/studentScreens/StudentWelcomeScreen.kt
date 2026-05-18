@@ -109,6 +109,7 @@ class StudentWelcomeScreen(val id: Int? = null) : Screen {
         val name = UserSession.name ?: "Estudiante"
         val snackbarHostState = remember { SnackbarHostState() }
         val navigator = LocalNavigator.currentOrThrow
+        var selectedIndex by remember { mutableStateOf(0) }
 
         LaunchedEffect(userId) {
             testVm.getAllWelcomeTests()
@@ -161,17 +162,10 @@ class StudentWelcomeScreen(val id: Int? = null) : Screen {
 
         StudentAppLayout(
             actualScreen = "Inicio",
-            selectedIndex = 0,
+            selectedIndex = selectedIndex,
             initialUserName = name,
             snackbarHostState = snackbarHostState,
-            onAvatarClick = {
-                navigator.push(
-                    StudentMeUserScreen(
-                        userIdArg = userId,
-                        studentNameArg = name
-                    )
-                )
-            }
+            onSelect = { idx -> selectedIndex = idx },
         ) { _, _, _ ->
             StudentDashboardContent(
                 name = name,

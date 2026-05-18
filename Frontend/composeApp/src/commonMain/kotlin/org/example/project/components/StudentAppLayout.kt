@@ -53,6 +53,7 @@ import org.example.project.network.UserSession.role
 import org.example.project.service.NotificationService
 import org.example.project.screens.LoginScreen
 import org.example.project.screens.studentScreens.StudentLearnScreen
+import org.example.project.screens.studentScreens.StudentMeUserScreen
 import org.example.project.screens.studentScreens.StudentWelcomeScreen
 import org.example.project.viewModel.NotificationViewModel
 import org.jetbrains.compose.resources.Font
@@ -60,10 +61,11 @@ import org.jetbrains.compose.resources.Font
 @Composable
 fun StudentAppLayout(
     actualScreen: String? = null,
-    selectedIndex: Int = 0,
+    selectedIndex: Int,
     initialUserName: String? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
-    onAvatarClick: (() -> Unit)? = null,
+
+    onSelect: (Int) -> Unit,
     content: @Composable (paddingValues: PaddingValues, userName: String, role: Role) -> Unit
 ) {
     val navigator = LocalNavigator.currentOrThrow
@@ -86,17 +88,9 @@ fun StudentAppLayout(
         modifier = Modifier.navigationBarsPadding(),
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
-            StudentBottomBar(
+            ReusableStudentBottomBar(
                 selectedIndex = selectedIndex,
-                onNavigate = { index ->
-                    when (index) {
-                        0 -> navigator.replaceAll(StudentWelcomeScreen(userId))
-                        1 -> navigator.replaceAll(StudentLearnScreen(userId, userName))
-                        2 -> {
-                            navigator.replaceAll(LoginScreen(logout = true))
-                        }
-                    }
-                }
+                onSelect = { idx -> onSelect(idx) }
             )
         }
     ) { paddingValues ->
@@ -212,22 +206,11 @@ fun StudentAppLayout(
                         }
                     }
 
-                    val avatarModifier = if (onAvatarClick != null) {
-                        Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF4A4A4A))
-                            .clickable { onAvatarClick.invoke() }
-                    } else {
-                        Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF4A4A4A))
-                    }
-
-                    Box(
-                        modifier = avatarModifier,
-                        contentAlignment = Alignment.Center
+                    IconButton(
+                        onClick = { UserSession.idUser?.let { navigator.push(StudentMeUserScreen(it)) } },
+                        modifier = Modifier.size(48.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF4A4A4A)),
                     ) {
                         Icon(
                             Icons.Default.Person,
@@ -249,39 +232,5 @@ fun StudentAppLayout(
             }
         }
 
-    }
-}
-
-@Composable
-private fun StudentBottomBar(
-    selectedIndex: Int,
-    onNavigate: (Int) -> Unit
-) {
-    NavigationBar(
-        modifier = Modifier.navigationBarsPadding(),
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 8.dp
-    ) {
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Home, contentDescription = "Inicio") },
-            label = { Text("Inicio") },
-            selected = selectedIndex == 0,
-            onClick = { onNavigate(0) }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.School, contentDescription = "Aprender") },
-            label = { Text("Aprender") },
-            selected = selectedIndex == 1,
-            onClick = { onNavigate(1) }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Salir") },
-            label = { Text("Salir") },
-            selected = false,
-            onClick = { onNavigate(2) },
-            colors = NavigationBarItemDefaults.colors(
-                unselectedIconColor = MaterialTheme.colorScheme.error
-            )
-        )
     }
 }
