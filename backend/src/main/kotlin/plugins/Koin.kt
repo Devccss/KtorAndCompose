@@ -8,6 +8,7 @@ import com.example.services.ExerciseService
 import com.example.services.NotificationsService
 import com.example.services.QuestionAIClientService
 import com.example.services.QuestionService
+import com.example.services.UnitExerciseAssignmentService
 import com.example.services.TestExerciseService
 import com.example.services.TestService
 import services.UnitService
@@ -29,6 +30,7 @@ import repositories.QuestionRepository
 import repositories.TestExerciseRepository
 import repositories.TestRepository
 import repositories.UnitRepository
+import repositories.UnitExerciseAssignmentRepository
 import repositories.UsersRepository
 import repositories.UserSessionLogsRepository
 import repositories.WordRepository
@@ -39,6 +41,7 @@ val repositoryModule = module {
     single { UsersRepository() }
     single { UserSessionLogsRepository() }
     single { UnitRepository() }
+    single { UnitExerciseAssignmentRepository() }
     single { WordRepository() }
     single { TestRepository() }
     single { TestExerciseRepository() }
@@ -66,6 +69,7 @@ fun serviceModule(stringApiKey: String, baseUrlIa: String, longTimeoutMs: Long, 
     single { ExerciseContentService(get()) }
     single { ExerciseWordService(get()) }
     single { WelcomeTestService(get()) }
+    single { UnitExerciseAssignmentService(get(), get(), get(), get()) }
     single { QuestionAIClientService(
         baseUrl = baseUrlIa,
         apiKey = stringApiKey,

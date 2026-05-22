@@ -42,6 +42,10 @@ object Notifications : IntIdTable() {
 
 enum class DifficultyLevel { A1, A2, B1, B2, C1, C2 }
 
+enum class AssignmentType { INITIAL, REVIEW }
+
+enum class AssignmentStatus { ACTIVE, EXPIRED, USED }
+
 object Units : IntIdTable() {
     val difficulty = enumerationByName<DifficultyLevel>("difficulty", 10)
     val name = varchar("name", 100)
@@ -59,6 +63,20 @@ object Exercises : IntIdTable() {
     val orderExercise = integer("orderExersice").uniqueIndex()
     val isActive = bool("is_active").default(false)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
+}
+
+object UnitExerciseAssignments : IntIdTable() {
+    val userId = integer("user_id").references(Users.id)
+    val unitId = integer("unit_id").references(Units.id)
+    val assignmentType = enumerationByName<AssignmentType>("assignment_type", 20)
+    val exerciseIds = text("exercise_ids")
+    val status = enumerationByName<AssignmentStatus>("status", 20).default(AssignmentStatus.ACTIVE)
+    val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
+
+    init {
+        index(false, userId, unitId, assignmentType, status)
+        index(false, unitId, createdAt)
+    }
 }
 
 enum class ContentType { READING, LISTENING }

@@ -87,6 +87,7 @@ fun Application.configureRouting() {
     val aiQuestionGenerationService = get<AiQuestionGenerationService>()
     val userSessionLogsService = get<UserSessionLogsService>()
     val userStatisticsService = get<UserStatisticsService>()
+    val unitExerciseAssignmentService = get<UnitExerciseAssignmentService>()
 
     routing {
 
@@ -431,6 +432,50 @@ fun Application.configureRouting() {
                             call.respond(results)
                         }
                         
+                    }
+
+                    route("{unitId}/assignments") {
+                        withRoles(Role.STUDENT) {
+                            get("/current") {
+                                val unitId = call.parameters["unitId"]?.toIntOrNull()
+                                    ?: throw BadRequestException("Invalid unit ID")
+                                val mode = call.request.queryParameters["mode"] ?: "initial"
+                                val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 5
+                                val principal = call.principal<JWTPrincipal>()
+                                val tokenUserId = principal?.payload?.getClaim("id")?.asInt()
+
+                                if (tokenUserId == null ) {
+                                    call.respond(
+                                        HttpStatusCode.Forbidden,
+                                        mapOf("error" to "No tienes permiso para solicitar asignaciones de otro usuario")
+                                    )
+                                    return@get
+                                }
+
+                                val assignment = unitExerciseAssignmentService.getCurrentAssignment(unitId, tokenUserId, mode, limit)
+                                call.respond(assignment)
+                            }
+
+                            post {
+                                val unitId = call.parameters["unitId"]?.toIntOrNull()
+                                    ?: throw BadRequestException("Invalid unit ID")
+                                val mode = call.request.queryParameters["mode"] ?: "initial"
+                                val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 5
+                                val principal = call.principal<JWTPrincipal>()
+                                val tokenUserId = principal?.payload?.getClaim("id")?.asInt()
+
+                                if (tokenUserId == null) {
+                                    call.respond(
+                                        HttpStatusCode.Forbidden,
+                                        mapOf("error" to "No tienes permiso para solicitar asignaciones de otro usuario")
+                                    )
+                                    return@post
+                                }
+
+                                val assignment = unitExerciseAssignmentService.generateAssignment(unitId, tokenUserId, mode, limit)
+                                call.respond(HttpStatusCode.Created, assignment)
+                            }
+                        }
                     }
                     withRoles(Role.CONTENT_EDITOR) {
                         get {
