@@ -60,9 +60,7 @@ fun EditorLayout(
             // ahora ReusableBottomBar no requiere items
             ReusableEditorBottomBar(
                 selectedIndex = selectedIndex,
-                onSelect = { idx -> onSelect(idx) },
-                initialUserName = userName.ifBlank { null },
-                role = userRole
+                onSelect = { idx -> onSelect(idx) }
             )
         }
     ) { paddingValues ->

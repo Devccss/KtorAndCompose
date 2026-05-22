@@ -57,6 +57,7 @@ import org.example.project.dtos.CreateTestCompletedDto
 import org.example.project.dtos.ExerciseContentDto
 import org.example.project.dtos.FilterExercisesDto
 import org.example.project.dtos.QuestionDto
+import org.example.project.dtos.UpdateUserDto
 import org.example.project.dtos.WordDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
@@ -275,17 +276,14 @@ class StudentTestResolverScreen(
                 val currentUnitIndex = userUi.unit.indexOfFirst { it.id == unitId }
                 if (currentUnitIndex >= 0 && currentUnitIndex + 1 < userUi.unit.size) {
                     val nextUnitId = userUi.unit[currentUnitIndex + 1].id ?: unitId
-                    val currentUser = userUi.currentUser
-                    if (currentUser != null) {
-                        userVm.updateUser(
-                            safeUserId,
-                            currentUser.copy(currentUnitId = nextUnitId)
-                        )
-                        UserSession.set(
-                            id = safeUserId,
-                            actualUnit = nextUnitId
-                        )
-                    }
+                    userVm.updateUser(
+                        safeUserId,
+                        UpdateUserDto(currentUnitId = nextUnitId)
+                    )
+                    UserSession.set(
+                        id = safeUserId,
+                        actualUnit = nextUnitId
+                    )
                 }
             } else {
                 // No necesitamos marcar en frontend: el intento ya fue persistido en backend
@@ -588,5 +586,4 @@ private fun ResolverEmptyCard() {
         }
     }
 }
-
 

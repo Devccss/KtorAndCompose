@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.filled.FactCheck
-import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.Surface
@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import org.example.project.dtos.Role
 import org.example.project.network.UserSession
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Group
@@ -42,25 +41,20 @@ fun ReusableEditorBottomBar(
     modifier: Modifier = Modifier.fillMaxWidth(),
     selectedIndex: Int,
     onSelect: ((Int) -> Unit)? = null,
-    initialUserName: String? = null,
-    role: Role? = null,
 ) {
     // Lista fija de items para toda la app
     val fixedItems = listOf(
         NavItem(0, Icons.Default.Home, "Inicio"),
         NavItem(1, Icons.Default.Group, "Usuarios"),
-        NavItem(2, Icons.AutoMirrored.Filled.List, "Unidades"),
+        NavItem(2, Icons.AutoMirrored.Filled.MenuBook, "Unidades"),
         NavItem(3, Icons.AutoMirrored.Filled.Article, "Ejercicios"),
         NavItem(4, Icons.AutoMirrored.Filled.FactCheck, "Tests")
     )
 
     // Inicializar valores desde initial params o desde UserSession si no se pasan.
     val sessionId = UserSession.idUser
-    val sessionName = UserSession.name
-    val sessionRole = UserSession.role
 
     var rememberId by rememberSaveable { mutableStateOf(sessionId) }
-    var rememberedUserName by rememberSaveable { mutableStateOf(initialUserName ?: sessionName ?: "") }
 
     val navigator = LocalNavigator.currentOrThrow
 
@@ -108,7 +102,6 @@ fun ReusableEditorBottomBar(
                     onClick = {
                         onSelect?.invoke(index)
 
-                        val nameToUse = rememberedUserName.ifBlank { (UserSession.name ?: "") }
 
                         when (index) {
                             0 -> {

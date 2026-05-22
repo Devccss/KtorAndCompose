@@ -68,6 +68,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
+import org.example.project.components.EditorContentCard
 import org.example.project.components.EditorLayout
 import org.example.project.dtos.CreateTestDto
 import org.example.project.dtos.ExerciseDto
@@ -135,6 +136,8 @@ class TestScreen : Screen {
                     welcomeT = testUi.selectedTests,
                     allTests = testUi.allTests, // Pasamos la lista de tests como datos reales
                     allUnits = unitUi.units,
+                    actualUnit = unitUi.actualUnit,
+                    searchUnitTest = {unitVm.getUnitById(it)},
                     welcomeTests = testUi.welcomeTests,
                     allExercises = exercisesUi.exercises,
                     isLoading = testUi.isLoading,
@@ -163,6 +166,8 @@ fun TestSection(
     welcomeT: List<TestDto>,
     allTests: List<TestDto>, // Lista origen datos reales
     allUnits: List<UnitDto> = emptyList(), // Lista de unidades para el dropdown
+    searchUnitTest: (Int) -> Unit, // Función para obtener unidad por ID
+    actualUnit: UnitDto? = null, // Unidad actual seleccionada (opcional)
     welcomeTests: List<WelcomeTestDto>,
     allExercises: List<ExerciseDto>,
     isLoading: Boolean,
@@ -799,8 +804,19 @@ fun TestSection(
                 }
             }
         } else {
+
             itemsIndexed(allTests) { _, test ->
-                TestCard(test = test, onClick = { onNavigate(TestDetailsScreen(test.id)) })
+                searchUnitTest(test.unitId)
+                val unitDifficult = actualUnit?.difficulty
+                EditorContentCard(
+                    title = test.name,
+                    description = test.description,
+                    isActive = test.isActive,
+                    difficulty = unitDifficult,
+                    testName = null,
+                    onClick = { onNavigate(TestDetailsScreen(test.id)) },
+                    icon = Icons.AutoMirrored.Filled.FactCheck
+                )
             }
         }
     }

@@ -9,11 +9,15 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.CreateUserDto
 import org.example.project.dtos.FilterUsersDto
 import org.example.project.dtos.LoginDto
+import org.example.project.dtos.TestDto
 import org.example.project.dtos.UnitDto
+import org.example.project.dtos.UpdateUserDto
 import org.example.project.dtos.UserDto
+import org.example.project.dtos.UserStatsDto
 import org.example.project.network.UserSession
 import org.example.project.repository.UnitRepo
 import org.example.project.repository.UserRepo
@@ -23,6 +27,15 @@ data class UsersUiState(
     val users: List<UserDto> = emptyList(),
     val unit: List<UnitDto> = emptyList(),
     val currentUser: UserDto? = null,
+    val userStats: UserStatsDto? = null,
+    val completedUnits: List<UnitDto> = emptyList(),
+    val completedExercises: List<ExerciseDto> = emptyList(),
+    val completedTests: List<TestDto> = emptyList(),
+    val failedTests: List<TestDto> = emptyList(),
+    val weeklyHours: Double = 0.0,
+    val sessionCount: Int = 0,
+    val statsLoading: Boolean = false,
+    val statsError: String? = null,
     val isLoading: Boolean = false,
     val registerUser: CreateUserDto? = null,
     var error: String? = null,
@@ -137,6 +150,52 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
         )
     }
 
+    fun loadUserStatistics(userId: Int) {
+        if (userId <= 0) {
+            _state.value = _state.value.copy(
+                statsError = "Invalid user id: $userId",
+                userStats = null,
+                completedUnits = emptyList(),
+                completedExercises = emptyList(),
+                completedTests = emptyList(),
+                failedTests = emptyList(),
+                weeklyHours = 0.0,
+                sessionCount = 0,
+                statsLoading = false
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            _state.value = _state.value.copy(statsLoading = true, statsError = null)
+            try {
+                val summary = runCatching { repo.getUserStats(userId) }.getOrNull()
+                val completedUnits = runCatching { repo.getCompletedUnitsByUserId(userId) }.getOrDefault(emptyList())
+                val completedExercises = runCatching { repo.getCompletedExercisesByUserId(userId) }.getOrDefault(emptyList())
+                val completedTests = runCatching { repo.getCompletedTestsByUserId(userId) }.getOrDefault(emptyList())
+                val failedTests = runCatching { repo.getFailedTestsByUserId(userId) }.getOrDefault(emptyList())
+                val weeklyHours = runCatching { repo.getWeeklyHoursByUserId(userId) }.getOrNull()
+
+                _state.value = _state.value.copy(
+                    userStats = summary,
+                    completedUnits = completedUnits,
+                    completedExercises = completedExercises,
+                    completedTests = completedTests,
+                    failedTests = failedTests,
+                    weeklyHours = weeklyHours?.weeklyHours ?: summary?.weeklyHours ?: 0.0,
+                    sessionCount = weeklyHours?.sessionCount ?: summary?.sessionCount ?: 0,
+                    statsLoading = false,
+                    statsError = null
+                )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    statsLoading = false,
+                    statsError = e.message ?: "No se pudieron cargar las estadísticas"
+                )
+            }
+        }
+    }
+
     fun getUserByEmail(email: String) {
         launchCatching(
             block = { repo.getUserByEmail(email) },
@@ -222,7 +281,7 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
         )
     }
 
-    fun updateUser(id: Int, updatedUser: UserDto) {
+    fun updateUser(id: Int, updatedUser: UpdateUserDto) {
         launchCatching(
             block = { repo.updateUser(id, updatedUser) },
             onSuccess = {
@@ -238,12 +297,7 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
     fun updateUserCurrentUnit(userId: Int, unitId: Int) {
         launchCatching(
             block = {
-                val user = repo.getUserById(userId)
-                    ?: throw IllegalStateException("No se encontro el usuario con ID $userId")
-                repo.updateUser(
-                    userId,
-                    user.copy(currentUnitId = unitId)
-                )
+                repo.updateUser(userId, UpdateUserDto(currentUnitId = unitId))
             },
             onSuccess = {
                 getUserById(userId)

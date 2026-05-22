@@ -20,8 +20,18 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.text.ClickableText
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -72,7 +82,7 @@ fun ExerciseInfoSections(
                 color = Color.Gray
             )
             Spacer(modifier = Modifier.height(6.dp))
-            Text(content.textContent)
+            InlineVocabularyText(text = content.textContent, entries = mergedVocabulary)
         }
     )
 
@@ -286,5 +296,89 @@ fun mergeVocabulary(words: List<WordDto>, parsedFromGrammar: List<VocabularyEntr
     }
 
     return merged.values.toList()
+}
+
+@Composable
+fun InlineVocabularyText(text: String, entries: List<VocabularyEntry>) {
+    if (text.isBlank()) {
+        Text("")
+        return
+    }
+
+    if (entries.isEmpty()) {
+        Text(text)
+        return
+    }
+
+    val vocabColor = Color(0xFFB57A3E) // naranja grisaseo
+    // Map keys to entries by lowercase english word
+    val vocabMap = entries.associateBy { it.english.trim().lowercase() }
+
+    // Build regex pattern from entries, longer first to avoid partial matches
+    val wordsSorted = entries.map { Regex.escape(it.english.trim()) }.distinct().sortedByDescending { it.length }
+    val pattern = if (wordsSorted.isEmpty()) null else "\\b(${wordsSorted.joinToString("|")})\\b"
+    val regex = pattern?.let { Regex(it, RegexOption.IGNORE_CASE) }
+
+    val annotated = if (regex == null) {
+        AnnotatedString(text)
+    } else {
+        buildAnnotatedString {
+            var lastIndex = 0
+            for (m in regex.findAll(text)) {
+                val start = m.range.first
+                val end = m.range.last + 1
+                if (start > lastIndex) append(text.substring(lastIndex, start))
+                val matched = text.substring(start, end)
+                val key = matched.lowercase()
+                pushStringAnnotation(tag = "vocab", annotation = key)
+                withStyle(style = SpanStyle(color = vocabColor, fontWeight = FontWeight.SemiBold)) {
+                    append(matched)
+                }
+                pop()
+                lastIndex = end
+            }
+            if (lastIndex < text.length) append(text.substring(lastIndex))
+        }
+    }
+
+    var selected by remember { mutableStateOf<VocabularyEntry?>(null) }
+
+    ClickableText(
+        text = annotated,
+        onClick = { offset ->
+            val list = annotated.getStringAnnotations(tag = "vocab", start = offset, end = offset)
+            if (list.isNotEmpty()) {
+                val key = list.first().item
+                selected = vocabMap[key]
+            }
+        },
+        style = MaterialTheme.typography.bodyMedium
+    )
+
+    selected?.let { entry ->
+        VocabInfoDialog(entry = entry, onDismiss = { selected = null })
+    }
+}
+
+@Composable
+fun VocabInfoDialog(entry: VocabularyEntry, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cerrar") }
+        },
+        title = { Text(entry.english, fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                Text("Significado: ${entry.spanish}")
+                entry.phonetic?.takeIf { it.isNotBlank() }?.let {
+                    Text("Fonetica: $it", color = Color.Gray)
+                }
+                entry.description?.takeIf { it.isNotBlank() }?.let {
+                    Text("Descripcion: $it", color = Color.Gray)
+                }
+            }
+        }
+    )
 }
 

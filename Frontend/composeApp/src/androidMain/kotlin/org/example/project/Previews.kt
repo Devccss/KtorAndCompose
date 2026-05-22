@@ -36,11 +36,4 @@ fun UnitCardPreview() {
         emoji = "📘"
     )
 
-    MaterialTheme {
-        Surface {
-            Box(modifier = Modifier.padding(16.dp)) {
-                UnitCard(lessonUnit = unit)
-            }
-        }
-    }
 }

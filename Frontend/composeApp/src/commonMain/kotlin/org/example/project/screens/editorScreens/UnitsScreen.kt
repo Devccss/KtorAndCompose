@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.DragHandle
@@ -36,6 +37,7 @@ import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import org.example.project.components.EditorLayout
+import org.example.project.components.EditorContentCard
 import org.example.project.dtos.CreateUnitDto
 import org.example.project.dtos.DifficultyLevel
 import org.example.project.dtos.FilterUnitsDto
@@ -58,15 +60,6 @@ class UnitsScreen : Screen {
         var selectedIndex by remember { mutableStateOf(2) }
         val snackbarHostState = remember { SnackbarHostState() }
 
-        val lessonUnits = unitUi.units.sortedBy { it.orderUnit }.map { u ->
-            LessonUnit(
-                id = u.id ?: 0,
-                title = u.name,
-                description = u.description,
-                status = if (u.isActive) UnitStatus.PUBLISHED else UnitStatus.DRAFT,
-                emoji = "📚"
-            )
-        }
 
         LaunchedEffect(unitUi.error) {
             unitUi.error?.let {
@@ -95,7 +88,6 @@ class UnitsScreen : Screen {
                 // Usamos la UnitsSection tal como la pediste
                 UnitsSection(
                     navigator = navigator,
-                    lessonUnits = lessonUnits,
                     allUnitsDto = unitUi.units, // Pasamos la lista original DTO para poder actualizar
                     onCreateUnit = { dto -> unitVm.createUnit(dto) },
                     onReorderUnits = { updatedList -> unitVm.updateUnitsOrder(updatedList) }, // Callback
@@ -112,7 +104,6 @@ class UnitsScreen : Screen {
 @Composable
 fun UnitsSection(
     navigator: Navigator,
-    lessonUnits: List<LessonUnit>,
     allUnitsDto: List<UnitDto>, // Lista origen datos reales
     onCreateUnit: (CreateUnitDto) -> Unit,
     onReorderUnits: (List<Pair<Int, Int>>) -> Unit,
@@ -235,7 +226,7 @@ fun UnitsSection(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text("Filtros de Unidades", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                        
+
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             // Dificultad
                             Box(Modifier.weight(1f)) {
@@ -361,10 +352,10 @@ fun UnitsSection(
                             }
                         }
                         println("Reordenando unidades con el siguiente orden: $updates")
-                        
+
                         // Enviamos la lista al backend
                         onReorderUnits(updates)
-                        
+
                         isReordering = false
                     } else {
                         // Activar modo
@@ -529,50 +520,53 @@ fun UnitsSection(
                     val isFirst = index == 0
                     val isLast = index == reorderableList.lastIndex
 
-                    ReorderableUnitCard(
-                        name = unitDto.name,
-                        index = index + 1, // Visual index (Order)
+                    EditorContentCard(
+                        title = unitDto.name,
+                        description = unitDto.description,
+                        difficulty = unitDto.difficulty ?: DifficultyLevel.A1,
+                        isActive = unitDto.isActive,
+                        icon = Icons.AutoMirrored.Filled.MenuBook,
+                        isReordering = true,
                         isFirst = isFirst,
                         isLast = isLast,
                         onMoveUp = {
                             if (!isFirst) {
-                                // Intercambio visual: Movemos el elemento actual hacia arriba
                                 val mutable = reorderableList.toMutableList()
                                 val current = mutable[index]
                                 val previous = mutable[index - 1]
-                                
                                 mutable[index] = previous
                                 mutable[index - 1] = current
-                                
                                 reorderableList = mutable
                             }
                         },
                         onMoveDown = {
                             if (!isLast) {
-                                // Intercambio visual: Movemos el elemento actual hacia abajo
                                 val mutable = reorderableList.toMutableList()
                                 val current = mutable[index]
                                 val next = mutable[index + 1]
-                                
                                 mutable[index] = next
                                 mutable[index + 1] = current
-                                
                                 reorderableList = mutable
                             }
                         }
                     )
                 }
             } else {
-                // MODO NORMAL: Usamos lessonUnits original filtrado por búsqueda
-                val filteredUnits =
-                    if (searchQuery.isBlank()) lessonUnits else lessonUnits.filter {
-                        it.title.contains(searchQuery, ignoreCase = true)
+                // MODO NORMAL: Usamos allUnitsDto (UnitDto) para disponer de dificultad y estado
+                val filteredUnitsDto =
+                    if (searchQuery.isBlank()) allUnitsDto.sortedBy { it.orderUnit } else allUnitsDto.filter {
+                        it.name.contains(searchQuery, ignoreCase = true)
                     }
 
-                itemsIndexed(filteredUnits) { _, unit ->
-                    UnitCard(
-                        lessonUnit = unit,
-                        onClick = { navigator.push(ExercisesOrUnitScreen(unit.id)) },
+                itemsIndexed(filteredUnitsDto) { _, unitDto ->
+                    EditorContentCard(
+                        title = unitDto.name,
+                        description = unitDto.description,
+                        difficulty = unitDto.difficulty ?: DifficultyLevel.A1,
+                        isActive = unitDto.isActive,
+                        icon = Icons.AutoMirrored.Filled.MenuBook,
+                        isReordering = false,
+                        onClick = { navigator.push(ExercisesOrUnitScreen(unitDto.id ?: 0)) }
                     )
                 }
             }
@@ -715,3 +709,4 @@ fun UnitCard(
         }
     }
 }
+

@@ -50,7 +50,7 @@ data class UpdateUserDto(
     val activeNow: Boolean? = null,
     val provider: String? = null,
     val currentUnitId: Int? = null,
-    val role: Role? = Role.STUDENT
+    val role: Role? = null
 )
 
 @Serializable

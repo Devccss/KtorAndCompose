@@ -10,10 +10,16 @@ import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
+import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.CreateUserDto
 import org.example.project.dtos.FilterUsersDto
 import org.example.project.dtos.LoginDto
+import org.example.project.dtos.TestDto
+import org.example.project.dtos.UpdateUserDto
 import org.example.project.dtos.UserDto
+import org.example.project.dtos.UserStatsDto
+import org.example.project.dtos.UserWeeklyHoursDto
+import org.example.project.dtos.UnitDto
 
 class UserRepo(private val httpClient: HttpClient, private val baseUrl: String) {
     suspend fun getAllUsers(): List<UserDto> {
@@ -52,6 +58,39 @@ class UserRepo(private val httpClient: HttpClient, private val baseUrl: String) 
             if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
         }
 
+    suspend fun getUserStats(userId: Int): UserStatsDto? =
+        httpClient.get("$baseUrl/api/v1/users/$userId/stats") {
+            addAuthHeader()
+        }.let { response ->
+            if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
+        }
+
+    suspend fun getCompletedUnitsByUserId(userId: Int): List<UnitDto> =
+        httpClient.get("$baseUrl/api/v1/users/$userId/completed-units") {
+            addAuthHeader()
+        }.parseOrThrow()
+
+    suspend fun getCompletedExercisesByUserId(userId: Int): List<ExerciseDto> =
+        httpClient.get("$baseUrl/api/v1/users/$userId/completed-exercises") {
+            addAuthHeader()
+        }.parseOrThrow()
+
+    suspend fun getCompletedTestsByUserId(userId: Int): List<TestDto> =
+        httpClient.get("$baseUrl/api/v1/users/$userId/completed-tests") {
+            addAuthHeader()
+        }.parseOrThrow()
+
+    suspend fun getFailedTestsByUserId(userId: Int, minScore: Int = 60): List<TestDto> =
+        httpClient.get("$baseUrl/api/v1/users/$userId/failed-tests") {
+            parameter("minScore", minScore)
+            addAuthHeader()
+        }.parseOrThrow()
+
+    suspend fun getWeeklyHoursByUserId(userId: Int): UserWeeklyHoursDto =
+        httpClient.get("$baseUrl/api/v1/users/$userId/weekly-hours") {
+            addAuthHeader()
+        }.parseOrThrow()
+
     suspend fun searchUsers(filters: FilterUsersDto): List<UserDto> =
         httpClient.get {
             url("$baseUrl/api/v1/users/filter")
@@ -89,7 +128,7 @@ class UserRepo(private val httpClient: HttpClient, private val baseUrl: String) 
             setBody(user)
         }.parseOrThrow()
 
-    suspend fun updateUser(id: Int, user: UserDto): Boolean =
+    suspend fun updateUser(id: Int, user: UpdateUserDto): Boolean =
         httpClient.put("$baseUrl/api/v1/users/$id") {
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(user)

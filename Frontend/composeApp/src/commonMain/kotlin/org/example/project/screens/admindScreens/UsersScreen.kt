@@ -625,25 +625,6 @@ fun UserCard(
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Spacer(Modifier.width(8.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(user.name, style = MaterialTheme.typography.titleMedium)
-                        if (user.role == Role.ADMIN) {
-                            Badge(containerColor = BadgeDefaults.containerColor) {
-                                Text(user.role.name.lowercase(), fontSize = 12.sp)
-                            }
-                        } else {
-                            Badge(containerColor = Color(0xFFB8F4C4)) {
-                                user.role?.let { Text(it.name.lowercase(), fontSize = 12.sp) }
-                            }
-                        }
-                    }
-                    Text("Nivel: $levelName", style = MaterialTheme.typography.labelSmall)
-                }
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -659,6 +640,26 @@ fun UserCard(
                         )
                     }
                 }
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(user.name, style = MaterialTheme.typography.titleMedium)
+                        if (user.role == Role.STUDENT) {
+                            Badge(containerColor = BadgeDefaults.containerColor) {
+                                Text(user.role.name.lowercase(), fontSize = 12.sp)
+                            }
+                        } else {
+                            Badge(containerColor = Color(0xFF8A4F13)) {
+                                user.role?.let { Text(it.name.lowercase(), fontSize = 12.sp) }
+                            }
+                        }
+                    }
+                    Text("Nivel: $levelName", style = MaterialTheme.typography.labelSmall)
+                }
+
 
             }
         }

@@ -25,6 +25,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.automirrored.filled.FactCheck
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterList
@@ -80,12 +83,14 @@ import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import org.example.project.components.EditorLayout
+import org.example.project.components.EditorContentCard
 import org.example.project.dtos.CreateExerciseDto
 import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.FilterExercisesDto
 import org.example.project.dtos.TestDto
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UpdateUnitDto
+import org.example.project.dtos.DifficultyLevel
 import org.example.project.network.RepositoryProvider
 import org.example.project.viewModel.ExercisesViewModel
 import org.example.project.viewModel.TestViewModel
@@ -1058,17 +1063,21 @@ fun ExercisesSection(
                     }
                 } else {
                     itemsIndexed(exercises) { _, ex ->
-                        ExerciseCard(
-                            exercises = ex,
+                        EditorContentCard(
+                            title = ex.name,
+                            description = ex.description,
+                            difficulty = actualUnit?.difficulty ?: DifficultyLevel.A1,
+                            isActive = ex.isActive,
+                            icon = Icons.AutoMirrored.Filled.Article,
                             testName = exerciseToTestNameMap[ex.id],
-                            onExerciseClick = {
+                            onClick = {
                                 navigator.push(
                                     ExercisesDetailsScreen(
                                         ex.id,
                                         ex.unitId
                                     )
                                 )
-                            },
+                            }
                         )
                     }
                 }
@@ -1089,13 +1098,15 @@ fun ExercisesSection(
                     if (testUnit == null) {
                         Text("No hay test asociados a esta unidad", color = Color.Gray)
                     } else {
-                        TestCard(
-                            test = testUnit,
+                        EditorContentCard(
+                            title = testUnit.name,
+                            description = testUnit.description,
+                            difficulty = actualUnit?.difficulty,
+                            isActive = testUnit.isActive,
+                            icon = Icons.AutoMirrored.Filled.FactCheck,
                             onClick = {
                                 navigator.push(
-                                    TestDetailsScreen(
-                                        testUnit.id
-                                    )
+                                    TestDetailsScreen(testUnit.id)
                                 )
                             }
                         )
@@ -1138,10 +1149,11 @@ fun ExerciseCard(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.Top
             ) {
-                Text(
-                    text = "📝",
-                    fontSize = 20.sp,
-                    modifier = Modifier.padding(end = 8.dp)
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Article,
+                    contentDescription = "Ejercicio",
+                    tint = Color(0xFF4A4A4A),
+                    modifier = Modifier.size(32.dp)
                 )
 
                 Column(

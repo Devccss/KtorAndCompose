@@ -44,7 +44,9 @@ import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import org.example.project.dtos.UpdateUserDto
 import org.example.project.components.StudentAppLayout
+import org.example.project.components.UserStatisticsSection
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
 import org.example.project.screens.LoginScreen
@@ -76,6 +78,7 @@ class StudentMeUserScreen(
         LaunchedEffect(userId) {
             if (userId != null && userId > 0) {
                 userVm.getUserById(userId)
+                userVm.loadUserStatistics(userId)
             }
         }
 
@@ -179,6 +182,13 @@ class StudentMeUserScreen(
                     }
 
                     item {
+                        UserStatisticsSection(
+                            state = userUi,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    item {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text(
                                 text = "Información básica",
@@ -238,7 +248,7 @@ class StudentMeUserScreen(
                                     onValueChange = { newPassword = it },
                                     label = { Text("Nueva contraseña") },
                                     leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                                    placeholder = { Text("Opcional") },
+                                    placeholder = { Text("Minimo 6 caracteres") },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
                                     visualTransformation = PasswordVisualTransformation(),
@@ -258,15 +268,16 @@ class StudentMeUserScreen(
                             onClick = {
                                 val safeUser = currentUser ?: return@Button
                                 val safeId = safeUser.id ?: return@Button
-
+                                
                                 userVm.updateUser(
                                     safeId,
-                                    safeUser.copy(
+                                    UpdateUserDto(
                                         name = name.trim(),
                                         email = email.trim(),
-                                        password = newPassword.takeIf { it.isNotBlank() } ?: safeUser.password
+                                        password = newPassword.takeIf { it.isNotBlank() }
                                     )
                                 )
+                                
 
                                 UserSession.set(
                                     id = safeId,
@@ -275,7 +286,7 @@ class StudentMeUserScreen(
                                 )
                                 newPassword = ""
                             },
-                            enabled = canSave && !userUi.isLoading,
+                            enabled = canSave && !userUi.isLoading && (newPassword.isBlank() || newPassword.length >= 6),
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2D5E3D))
@@ -310,4 +321,3 @@ class StudentMeUserScreen(
         }
     }
 }
-

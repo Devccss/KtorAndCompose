@@ -75,7 +75,9 @@ import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import kotlinx.coroutines.launch
 import org.example.project.components.AppLayout
+import org.example.project.components.UserStatisticsSection
 import org.example.project.dtos.Role
+import org.example.project.dtos.UpdateUserDto
 import org.example.project.dtos.UserDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
@@ -125,6 +127,7 @@ class UserDetailsScreen(private val userId: Int) : Screen {
         LaunchedEffect(userId) {
             if (userId > 0 ) {
                 vm.getUserById(userId)
+                vm.loadUserStatistics(userId)
             }
         }
 
@@ -353,19 +356,17 @@ class UserDetailsScreen(private val userId: Int) : Screen {
                                         onClick = {
                                             isEditing = false
                                             // Lógica de guardado
-                                            val updatedDto = ui.currentUser?.copy(
+                                            val updatedDto = UpdateUserDto(
                                                 name = editedName,
                                                 email = editedEmail,
                                                 role = editedRole,
                                                 currentUnitId = editedUnitId
                                             )
-                                            ui.currentUser?.id?.let {
-                                                if (updatedDto != null) {
-                                                    vm.updateUser(it, updatedDto)
-                                                }
-                                            }
-                                            scope.launch { snackbarHostState.showSnackbar("Cambios guardados") }
-                                        },
+                                             ui.currentUser?.id?.let {
+                                                vm.updateUser(it, updatedDto)
+                                             }
+                                             scope.launch { snackbarHostState.showSnackbar("Cambios guardados") }
+                                         },
                                         modifier = Modifier
                                             .size(36.dp)
                                             .background(Color(0xFFB8F4C4), CircleShape)
@@ -510,6 +511,11 @@ class UserDetailsScreen(private val userId: Int) : Screen {
                                 }
                             }
                         }
+
+                        UserStatisticsSection(
+                            state = ui,
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
                         // --- INFORMACIÓN ADICIONAL ---
                         Card(

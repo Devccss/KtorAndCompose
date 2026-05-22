@@ -77,7 +77,9 @@ import frontend.composeapp.generated.resources.encode_sans_variable
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import kotlinx.coroutines.launch
 import org.example.project.components.EditorLayout
+import org.example.project.components.UserStatisticsSection
 import org.example.project.dtos.Role
+import org.example.project.dtos.UpdateUserDto
 import org.example.project.dtos.UserDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
@@ -127,6 +129,7 @@ class EditorUserDetailsScreen(private val userId: Int) : Screen {
         LaunchedEffect(userId) {
             if (userId > 0 ) {
                 vm.getUserById(userId)
+                vm.loadUserStatistics(userId)
             }
         }
 
@@ -369,87 +372,6 @@ class EditorUserDetailsScreen(private val userId: Int) : Screen {
                                     }
                                     Spacer(Modifier.height(8.dp))
                                 }
-
-                                if (isEditing) {
-                                    // Botón Guardar
-                                    IconButton(
-                                        onClick = {
-                                            isEditing = false
-                                            // Lógica de guardado
-                                            val updatedDto = ui.currentUser?.copy(
-                                                name = editedName,
-                                                email = editedEmail,
-                                                role = editedRole,
-                                                currentUnitId = editedUnitId
-                                            )
-                                            ui.currentUser?.id?.let {
-                                                if (updatedDto != null) {
-                                                    vm.updateUser(it, updatedDto)
-                                                }
-                                            }
-                                            scope.launch { snackbarHostState.showSnackbar("Cambios guardados") }
-                                        },
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .background(Color(0xFFB8F4C4), CircleShape)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Check,
-                                            "Guardar",
-                                            tint = Color(0xFF2D5E3D),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                    Spacer(Modifier.height(8.dp))
-                                    // Botón Cancelar
-                                    IconButton(
-                                        onClick = {
-                                            isEditing = false
-                                            // Revertir cambios
-                                            editedName = user?.name ?: ""
-                                            editedEmail = user?.email ?: ""
-                                            editedRole = user?.role ?: Role.STUDENT
-                                            editedUnitId = user?.currentUnitId
-                                        },
-                                        modifier = Modifier.size(36.dp)
-                                            .background(Color(0xFFFFD4D4), CircleShape)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Close,
-                                            "Cancelar",
-                                            tint = Color(0xFF8B0000),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                } else {
-                                    // Botón Editar
-                                    IconButton(
-                                        onClick = { isEditing = true },
-                                        modifier = Modifier.size(36.dp)
-                                            .background(Color.Transparent, CircleShape)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Edit,
-                                            "Editar",
-                                            tint = Color(0xFF4A4A4A),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                    Spacer(Modifier.height(8.dp))
-                                    // Botón Eliminar
-                                    IconButton(
-                                        onClick = { confirmDelete = user },
-                                        modifier = Modifier.size(36.dp)
-                                            .background(Color.Transparent, CircleShape)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Delete,
-                                            "Eliminar",
-                                            tint = Color(0xFF8B0000),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                }
                             }
                         }
 
@@ -590,6 +512,11 @@ class EditorUserDetailsScreen(private val userId: Int) : Screen {
                                 }
                             }
                         }
+
+                        UserStatisticsSection(
+                            state = ui,
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
                         // --- INFORMACIÓN ADICIONAL ---
                         Card(
