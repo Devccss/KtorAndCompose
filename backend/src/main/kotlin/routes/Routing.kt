@@ -86,6 +86,7 @@ fun Application.configureRouting() {
     val welcomeTestService = get<WelcomeTestService>()
     val aiQuestionGenerationService = get<AiQuestionGenerationService>()
     val userSessionLogsService = get<UserSessionLogsService>()
+    val userStatisticsService = get<UserStatisticsService>()
 
     routing {
 
@@ -238,6 +239,67 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.Created, user)
                 }
 
+                // User Statistics endpoints (no eliminar código existente, se agregan rutas nuevas)
+                authenticate("auth-jwt") {
+                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR, Role.STUDENT) {
+                        route("/users") {
+                            route("{userId}/stats") {
+                                get {
+                                    val userId = call.parameters["userId"]?.toIntOrNull()
+                                        ?: throw BadRequestException("Invalid User ID")
+                                    val stats = userStatisticsService.getUserStats(userId)
+                                    call.respond(stats)
+                                }
+                            }
+
+                            route("{userId}/completed-units") {
+                                get {
+                                    val userId = call.parameters["userId"]?.toIntOrNull()
+                                        ?: throw BadRequestException("Invalid User ID")
+                                    val units = unitService.getUnitsCompletedByUser(userId)
+                                    call.respond(units)
+                                }
+                            }
+
+                            route("{userId}/completed-exercises") {
+                                get {
+                                    val userId = call.parameters["userId"]?.toIntOrNull()
+                                        ?: throw BadRequestException("Invalid User ID")
+                                    val exercises = exerciseService.getExerciseCompletedByUser(userId)
+                                    call.respond(exercises)
+                                }
+                            }
+
+                            route("{userId}/completed-tests") {
+                                get {
+                                    val userId = call.parameters["userId"]?.toIntOrNull()
+                                        ?: throw BadRequestException("Invalid User ID")
+                                    val tests = testService.getTestsCompletedByUser(userId)
+                                    call.respond(tests)
+                                }
+                            }
+
+                            route("{userId}/failed-tests") {
+                                get {
+                                    val userId = call.parameters["userId"]?.toIntOrNull()
+                                        ?: throw BadRequestException("Invalid User ID")
+                                    val minScore = call.request.queryParameters["minScore"]?.toIntOrNull() ?: 60
+                                    val tests = testService.getTestsFailedByUser(userId, minScore)
+                                    call.respond(tests)
+                                }
+                            }
+
+                            route("{userId}/weekly-hours") {
+                                get {
+                                    val userId = call.parameters["userId"]?.toIntOrNull()
+                                        ?: throw BadRequestException("Invalid User ID")
+                                    val result = userSessionLogsService.getWeeklyHoursByUserId(userId)
+                                    call.respond(result)
+                                }
+                            }
+                        }
+                    }
+                }
                 authenticate("auth-jwt"){
 
                     // Protected routes

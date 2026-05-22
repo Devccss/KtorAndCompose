@@ -24,6 +24,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import java.time.LocalDateTime
 
+
 class TestRepository {
 
     private fun resultRowToTest(row: ResultRow): TestDto {
@@ -124,6 +125,12 @@ class TestRepository {
     fun getTestsCompletedByUser(userId: Int): List<TestCompletedDto> = transaction {
         TestCompleted.selectAll().where { TestCompleted.userId eq userId }
             .map(::resultRowToTestCompleted)
+    }
+
+    fun getTestsFailedByUser(userId: Int, minScore: Int = 60): List<TestCompletedDto> = transaction {
+        TestCompleted.selectAll().where { 
+            (TestCompleted.userId eq userId) and (TestCompleted.score less minScore)
+        }.map(::resultRowToTestCompleted)
     }
 
     fun createTestCompleted(dto: CreateTestCompletedDto): TestCompletedDto = try {

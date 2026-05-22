@@ -22,6 +22,8 @@ class TestService(private val repo: TestRepository) {
     fun getAllTestCompleted(): List<TestCompletedDto> = repo.getAllTestCompleted()
     fun getTestCompletedById(id: Int): TestCompletedDto? = repo.getTestCompletedById(id)
     fun getTestsCompletedByUser(userId: Int): List<TestCompletedDto> = repo.getTestsCompletedByUser(userId)
+    fun getTestsFailedByUser(userId: Int, minScore: Int = 60): List<TestCompletedDto> =
+        repo.getTestsFailedByUser(userId, minScore)
     fun updateTestCompleted(id: Int, dto: UpdateTestCompletedDto) = repo.updateTestCompleted(id, dto)
     fun deleteTestCompleted(id: Int): Boolean = repo.deleteTestCompleted(id)
 

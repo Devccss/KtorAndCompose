@@ -43,3 +43,10 @@ data class WeeklySessionMetricDto(
     val averageDurationSeconds: Long
 )
 
+@Serializable
+data class UserWeeklyHoursDto(
+    val userId: Int,
+    val weeklyHours: Double,
+    val sessionCount: Int
+)
+

@@ -26,7 +26,8 @@ class QuestionService(private val repo: QuestionRepository) {
 
     //Alternatives
     fun getAllAlternatives(): List<AlternativeDto> = repo.getAllAlternatives()
-    fun getAlternativeByQuestionId(questionId: Int): List<AlternativeDto> = repo.getAlternativesByQuestionId(questionId)
+    fun getAlternativeByQuestionId(questionId: Int): List<AlternativeDto> =
+        repo.getAlternativesByQuestionId(questionId).shuffled()
     fun createAlternative(questionId: Int,dto: CreateAlternativeDto): AlternativeDto = repo.createAlternative(questionId,dto)
     fun updateAlternative(id: Int, dto: UpdateAlternativeDto) = repo.updateAlternative(id, dto)
     fun deleteAlternative(id: Int): Boolean = repo.deleteAlternative(id)

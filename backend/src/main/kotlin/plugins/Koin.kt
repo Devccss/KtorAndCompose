@@ -13,6 +13,7 @@ import com.example.services.TestService
 import services.UnitService
 import com.example.services.UserService
 import com.example.services.UserSessionLogsService
+import com.example.services.UserStatisticsService
 import com.example.services.WelcomeTestService
 import com.example.services.WordService
 import config.TokenManager
@@ -71,7 +72,7 @@ fun serviceModule(stringApiKey: String, baseUrlIa: String, longTimeoutMs: Long, 
         timeoutMs = longTimeoutMs
     ) }
     single { AiQuestionGenerationService(get(), get(), get()) }
-
+    single { UserStatisticsService(get(), get(), get(), get(), get()) }
 }
 
 fun Application.configureKoin() {

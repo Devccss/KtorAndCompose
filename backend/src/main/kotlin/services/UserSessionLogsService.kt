@@ -4,6 +4,7 @@ import com.example.dtos.CloseUserSessionLogDto
 import com.example.dtos.CreateUserSessionLogDto
 import com.example.dtos.FilterUserSessionLogsDto
 import com.example.dtos.UserSessionLogDto
+import com.example.dtos.UserWeeklyHoursDto
 import com.example.dtos.WeeklySessionMetricDto
 import repositories.UserSessionLogsRepository
 
@@ -27,5 +28,15 @@ class UserSessionLogsService(private val repository: UserSessionLogsRepository) 
 
     fun getWeeklyMetrics(studentId: Boolean? = true, fromDate: String?, toDate: String?): List<WeeklySessionMetricDto> =
         repository.weeklyMetrics(studentId,fromDate, toDate)
+
+    fun getWeeklyHoursByUserId(userId: Int): UserWeeklyHoursDto {
+        val sessions = getSessionsByUserId(userId)
+        val totalSeconds = sessions.sumOf { it.durationSeconds ?: 0L }
+        return UserWeeklyHoursDto(
+            userId = userId,
+            weeklyHours = totalSeconds.toDouble() / 3600.0,
+            sessionCount = sessions.size
+        )
+    }
 }
 
