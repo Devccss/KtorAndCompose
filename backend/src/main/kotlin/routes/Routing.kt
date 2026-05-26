@@ -252,52 +252,6 @@ fun Application.configureRouting() {
                                     call.respond(stats)
                                 }
                             }
-
-                            route("{userId}/completed-units") {
-                                get {
-                                    val userId = call.parameters["userId"]?.toIntOrNull()
-                                        ?: throw BadRequestException("Invalid User ID")
-                                    val units = unitService.getUnitsCompletedByUser(userId)
-                                    call.respond(units)
-                                }
-                            }
-
-                            route("{userId}/completed-exercises") {
-                                get {
-                                    val userId = call.parameters["userId"]?.toIntOrNull()
-                                        ?: throw BadRequestException("Invalid User ID")
-                                    val exercises = exerciseService.getExerciseCompletedByUser(userId)
-                                    call.respond(exercises)
-                                }
-                            }
-
-                            route("{userId}/completed-tests") {
-                                get {
-                                    val userId = call.parameters["userId"]?.toIntOrNull()
-                                        ?: throw BadRequestException("Invalid User ID")
-                                    val tests = testService.getTestsCompletedByUser(userId)
-                                    call.respond(tests)
-                                }
-                            }
-
-                            route("{userId}/failed-tests") {
-                                get {
-                                    val userId = call.parameters["userId"]?.toIntOrNull()
-                                        ?: throw BadRequestException("Invalid User ID")
-                                    val minScore = call.request.queryParameters["minScore"]?.toIntOrNull() ?: 60
-                                    val tests = testService.getTestsFailedByUser(userId, minScore)
-                                    call.respond(tests)
-                                }
-                            }
-
-                            route("{userId}/weekly-hours") {
-                                get {
-                                    val userId = call.parameters["userId"]?.toIntOrNull()
-                                        ?: throw BadRequestException("Invalid User ID")
-                                    val result = userSessionLogsService.getWeeklyHoursByUserId(userId)
-                                    call.respond(result)
-                                }
-                            }
                         }
                     }
                 }
@@ -436,25 +390,6 @@ fun Application.configureRouting() {
 
                     route("{unitId}/assignments") {
                         withRoles(Role.STUDENT) {
-                            get("/current") {
-                                val unitId = call.parameters["unitId"]?.toIntOrNull()
-                                    ?: throw BadRequestException("Invalid unit ID")
-                                val mode = call.request.queryParameters["mode"] ?: "initial"
-                                val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 5
-                                val principal = call.principal<JWTPrincipal>()
-                                val tokenUserId = principal?.payload?.getClaim("id")?.asInt()
-
-                                if (tokenUserId == null ) {
-                                    call.respond(
-                                        HttpStatusCode.Forbidden,
-                                        mapOf("error" to "No tienes permiso para solicitar asignaciones de otro usuario")
-                                    )
-                                    return@get
-                                }
-
-                                val assignment = unitExerciseAssignmentService.getCurrentAssignment(unitId, tokenUserId, mode, limit)
-                                call.respond(assignment)
-                            }
 
                             post {
                                 val unitId = call.parameters["unitId"]?.toIntOrNull()
@@ -469,6 +404,13 @@ fun Application.configureRouting() {
                                         HttpStatusCode.Forbidden,
                                         mapOf("error" to "No tienes permiso para solicitar asignaciones de otro usuario")
                                     )
+                                    return@post
+                                }
+
+                                // Intentar obtener la asignación actual; si no existe, generar una nueva
+                                val current = unitExerciseAssignmentService.getCurrentAssignment(unitId, tokenUserId, mode, limit)
+                                if (current != null) {
+                                    call.respond(HttpStatusCode.OK, current)
                                     return@post
                                 }
 
@@ -490,6 +432,16 @@ fun Application.configureRouting() {
                             val id = call.parameters["id"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid ID in put unit")
                             val dto = call.receive<UpdateUnitDto>()
+
+                            dto.isActive?.let {
+                                val exercisesInUnit = exerciseService.getByUnitId(id)
+                                val activeExercises = exercisesInUnit.filter {
+                                    it.isActive
+                                }
+                                if (activeExercises.count() < 3) {
+                                    throw BadRequestException("La unidad debe tener al menos 3 ejercicios activos para ser activada")
+                                }
+                            }
                             unitService.updateUnit(id, dto)
                             call.respond(HttpStatusCode.OK)
                         }
@@ -522,6 +474,12 @@ fun Application.configureRouting() {
                             val id = call.parameters["id"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid ID")
                             val dto = call.receive<UpdateExerciseDto>()
+                            dto.isActive?.let {
+                                val questionsActive =  questionService.getQuestionsByExerciseId(id).filter { it.isActive == true }
+                                if(questionsActive.count() < 1){
+                                    throw BadRequestException("El ejercicio debe tener al menos una pregunta activa")
+                                }
+                            }
                             val success = exerciseService.update(id, dto)
                             call.respond(success)
                         }
@@ -830,6 +788,11 @@ fun Application.configureRouting() {
                             val contentId = call.parameters["contentId"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid Exercise ID")
                             val dto = call.receive<CreateQuestionDto>()
+                            val questions = questionService.getQuestionsByContentId(contentId)
+
+                            if (questions.count() > 3) {
+                                throw BadRequestException("El ejercicio debe tener un máximo de 3 preguntas")
+                            }
                             val created = questionService.createQuestion(contentId, dto)
                             call.respond(HttpStatusCode.Created, created)
                         }

@@ -69,12 +69,14 @@ object UnitExerciseAssignments : IntIdTable() {
     val userId = integer("user_id").references(Users.id)
     val unitId = integer("unit_id").references(Units.id)
     val assignmentType = enumerationByName<AssignmentType>("assignment_type", 20)
+    val retakeKey = varchar("retake_key", 120).nullable()
     val exerciseIds = text("exercise_ids")
     val status = enumerationByName<AssignmentStatus>("status", 20).default(AssignmentStatus.ACTIVE)
     val createdAt = datetime("created_at").clientDefault { LocalDateTime.now() }
 
     init {
         index(false, userId, unitId, assignmentType, status)
+        index(false, userId, unitId, assignmentType, retakeKey)
         index(false, unitId, createdAt)
     }
 }

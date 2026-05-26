@@ -46,7 +46,7 @@ class UnitRepository {
     }
 
     fun getAllUnits(): List<UnitDto> = transaction {
-        Units.selectAll().orderBy(Units.createdAt).map(::resultRowToUnit)
+        Units.selectAll().orderBy(Units.difficulty).map(::resultRowToUnit)
     }
 
     fun getUnitById(id: Int): UnitDto? = transaction {
@@ -59,7 +59,7 @@ class UnitRepository {
     }
 
     fun getUnitsByDifficulty(difficulty: DifficultyLevel): List<UnitDto> = transaction {
-        Units.selectAll().where { Units.difficulty eq difficulty }.map(::resultRowToUnit)
+        Units.selectAll().where { Units.difficulty eq difficulty }.orderBy(Units.difficulty).map(::resultRowToUnit)
     }
 
     fun searchUnits(filters: FilterUnitsDto): List<UnitDto> =
@@ -76,7 +76,7 @@ class UnitRepository {
                 query = query.andWhere { Units.isActive eq it }
             }
 
-            return@transaction query.orderBy(Units.createdAt).map(::resultRowToUnit)
+            return@transaction query.orderBy(Units.difficulty).map(::resultRowToUnit)
         }
 
 

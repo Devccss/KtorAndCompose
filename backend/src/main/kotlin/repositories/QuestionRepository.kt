@@ -63,6 +63,9 @@ class QuestionRepository {
         Questions.selectAll().where { Questions.exerciseContentId eq exerciseContentId }.orderBy(Questions.createdAt).map(::resultRowToQuestion)
     }
 
+    fun getQuestionsByContentId(contentId: Int): List<QuestionDto> = transaction {
+        Questions.selectAll().where { Questions.exerciseContentId eq contentId }.orderBy(Questions.createdAt).map(::resultRowToQuestion)
+    }
     fun getQuestionById(id: Int): QuestionDto? = transaction {
         Questions.selectAll().where { Questions.id eq id }.singleOrNull()?.let(::resultRowToQuestion)
     }

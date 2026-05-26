@@ -34,6 +34,7 @@ import repositories.UnitExerciseAssignmentRepository
 import repositories.UsersRepository
 import repositories.UserSessionLogsRepository
 import repositories.WordRepository
+// TestCompletedRepository y ExerciseCompletedRepository no existen en el workspace actual
 
 
 val repositoryModule = module {
@@ -51,6 +52,7 @@ val repositoryModule = module {
     single { ExerciseContentRepository() }
     single { ExerciseWordsRepository()}
     single { WelcomeTestRepo() }
+    // repositorios adicionales (si se crean, agregar aquí)
 
 
 }
@@ -69,7 +71,8 @@ fun serviceModule(stringApiKey: String, baseUrlIa: String, longTimeoutMs: Long, 
     single { ExerciseContentService(get()) }
     single { ExerciseWordService(get()) }
     single { WelcomeTestService(get()) }
-    single { UnitExerciseAssignmentService(get(), get(), get(), get()) }
+    // UnitExerciseAssignmentService constructor espera: assignmentRepository, exerciseService, unitService, userService, testService
+    single { UnitExerciseAssignmentService(get(), get(), get(), get(), get()) }
     single { QuestionAIClientService(
         baseUrl = baseUrlIa,
         apiKey = stringApiKey,

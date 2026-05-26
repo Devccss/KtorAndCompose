@@ -1,9 +1,9 @@
 package com.example.services
 
-import com.example.dtos.ExerciseDto
+// ...existing code...
 import com.example.dtos.UnitExerciseAssignmentDto
 import io.ktor.server.plugins.BadRequestException
-import models.AssignmentStatus
+// ...existing code...
 import models.AssignmentType
 import models.TestExercises
 import org.slf4j.LoggerFactory
@@ -12,14 +12,14 @@ import repositories.UnitExerciseAssignmentRepository
 import services.UnitService
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import kotlin.random.Random
 
 @Suppress("unused")
 class UnitExerciseAssignmentService(
     private val assignmentRepository: UnitExerciseAssignmentRepository,
     private val exerciseService: ExerciseService,
     private val unitService: UnitService,
-    private val userService: UserService
+    private val userService: UserService,
+    private val testService: TestService
 ) {
 
     private val log = LoggerFactory.getLogger(UnitExerciseAssignmentService::class.java)
@@ -27,86 +27,72 @@ class UnitExerciseAssignmentService(
     private companion object {
         const val MAX_LIMIT = 5
         const val RECENT_ASSIGNMENT_WINDOW = 10
-        const val ASSIGNMENT_TTL_SECONDS = 30L
+        const val ASSIGNMENT_TTL_SECONDS = 8 * 60L // 8 minutes
+        const val PASSING_SCORE = 70
     }
 
-    fun getCurrentAssignment(unitId: Int, userId: Int, mode: String, limit: Int): UnitExerciseAssignmentDto {
-        return resolveAssignment(unitId, userId, mode, limit, forceNew = false)
-    }
 
-    fun generateAssignment(unitId: Int, userId: Int, mode: String, limit: Int): UnitExerciseAssignmentDto {
-        return resolveAssignment(unitId, userId, mode, limit, forceNew = true)
-    }
 
-    private fun resolveAssignment(unitId: Int, userId: Int, mode: String, limit: Int, forceNew: Boolean): UnitExerciseAssignmentDto {
-        val assignmentType = parseMode(mode)
-        val normalizedLimit = limit.coerceIn(1, MAX_LIMIT)
 
-        userService.getUserById(userId) ?: throw BadRequestException("El usuario con ID $userId no existe.")
+    fun shouldRetakeUnit(unitId: Int, userId: Int): com.example.dtos.UnitRetakeStatusDto {
         unitService.getUnitById(unitId) ?: throw BadRequestException("La unidad con ID $unitId no existe.")
+        userService.getUserById(userId) ?: throw BadRequestException("El usuario con ID $userId no existe.")
 
-        if (forceNew) {
-            assignmentRepository.expireActiveAssignments(userId, unitId, assignmentType)
-        } else {
-            assignmentRepository.getActiveAssignment(userId, unitId, assignmentType)?.let { current ->
-                if (!isExpired(current) && !isCompleted(current, userId)) {
-                    log.debug("Returning active assignment id={} unitId={} userId={} mode={}", current.id, unitId, userId, mode)
-                    return toDto(current)
-                }
-
-                assignmentRepository.updateStatus(
-                    current.id,
-                    if (isCompleted(current, userId)) AssignmentStatus.USED else AssignmentStatus.EXPIRED
-                )
-            }
+        val test = testService.getTestsByUnitId(unitId)
+        if (test == null) {
+            log.info("shouldRetakeUnit: no test found for unit=$unitId -> shouldRetake=false")
+            return com.example.dtos.UnitRetakeStatusDto(
+                shouldRetake = false,
+                reason = null,
+                lastTestScore = null,
+                lastTestDate = null,
+                expirationDate = null,
+                minutesRemaining = null
+            )
         }
 
-        val exercises = selectExercises(unitId, userId, assignmentType, normalizedLimit)
-        val created = assignmentRepository.createAssignment(
-            userId = userId,
-            unitId = unitId,
-            assignmentType = assignmentType,
-            exerciseIds = exercises.map { it.id }
-        )
-
-        return toDto(created)
-    }
-
-    private fun selectExercises(unitId: Int, userId: Int, assignmentType: AssignmentType, limit: Int): List<ExerciseDto> {
-        val available = exerciseService.getByUnitId(unitId)
-            .filter { it.isActive }
-            .filterNot { isExerciseUsedInTests(it.id) }
-            .distinctBy { it.id }
-
-        if (available.isEmpty()) {
-            throw BadRequestException("No hay ejercicios activos disponibles para la unidad $unitId.")
+        val reviewStatus = testService.getUnitReviewStatus(userId, unitId, test.id)
+        log.info("shouldRetakeUnit: reviewStatus for user=$userId unit=$unitId test=${test.id} -> requiresReview=${reviewStatus.requiresReview}, score=${reviewStatus.lastAttemptScore}")
+        
+        // Solo retoma si falló el test (score < PASSING_SCORE)
+        // requiresReview es para ejercicios pendientes de revisar, NO es motivo para retomar
+         val score = reviewStatus.lastAttemptScore ?: run {
+            log.info("shouldRetakeUnit: no test score found for user=$userId unit=$unitId -> shouldRetake=true reason=no_test_taken")
+            return com.example.dtos.UnitRetakeStatusDto(
+                shouldRetake = true,
+                reason = "no_test_taken",
+                lastTestScore = null,
+                lastTestDate = null,
+                expirationDate = null,
+                minutesRemaining = null
+            )
         }
-
-        if (available.size <= limit) {
-            return available.shuffled(Random.Default)
+        
+        // Solo retoma si falló (score < 70), NO por requiresReview
+        if (score < PASSING_SCORE) {
+            log.info("shouldRetakeUnit: user=$userId unit=$unitId must retake (reason=low_score, score=$score < $PASSING_SCORE)")
+            return com.example.dtos.UnitRetakeStatusDto(
+                shouldRetake = true,
+                reason = "low_score",
+                lastTestScore = score,
+                lastTestDate = reviewStatus.lastAttemptAt,
+                expirationDate = null,
+                minutesRemaining = null
+            )
         }
+        
+        // Usuario pasó el test con score suficiente: no retoma, aunque requiresReview sea true
+        log.info("shouldRetakeUnit: user=$userId unit=$unitId does NOT need retake (score=$score >= $PASSING_SCORE, requiresReview=${reviewStatus.requiresReview})")
+         return com.example.dtos.UnitRetakeStatusDto(
+             shouldRetake = false,
+             reason = null,
+             lastTestScore = score,
+             lastTestDate = reviewStatus.lastAttemptAt,
+             expirationDate = null,
+             minutesRemaining = null
+         )
+     }
 
-        val completedIds = exerciseService.getExerciseCompletedByUser(userId)
-            .map { it.exerciseId }
-            .toSet()
-
-        val recentIds = assignmentRepository.getRecentAssignments(userId, unitId, assignmentType, RECENT_ASSIGNMENT_WINDOW)
-            .flatMap { it.exerciseIds }
-            .distinct()
-
-        val withoutRecent = available.filterNot { it.id in recentIds }
-        val prioritizedPool = if (withoutRecent.size >= limit) withoutRecent else available
-
-        val notCompleted = prioritizedPool.filterNot { it.id in completedIds }.shuffled(Random.Default)
-        val completed = prioritizedPool.filter { it.id in completedIds }.shuffled(Random.Default)
-        val selected = (notCompleted + completed).distinctBy { it.id }.take(limit)
-
-        return if (selected.size < limit) {
-            available.shuffled(Random.Default).take(limit)
-        } else {
-            selected
-        }
-    }
 
     private fun isExerciseUsedInTests(exerciseId: Int): Boolean {
         return transaction {
@@ -118,14 +104,27 @@ class UnitExerciseAssignmentService(
         return java.time.Duration.between(record.createdAt, java.time.LocalDateTime.now()).seconds > ASSIGNMENT_TTL_SECONDS
     }
 
-    private fun isCompleted(record: UnitExerciseAssignmentRecord, userId: Int): Boolean {
-        val completedIds = exerciseService.getExerciseCompletedByUser(userId).map { it.exerciseId }.toSet()
-        return record.exerciseIds.isNotEmpty() && record.exerciseIds.all { it in completedIds }
-    }
-
     private fun parseMode(mode: String): AssignmentType {
         return runCatching { AssignmentType.valueOf(mode.trim().uppercase()) }
             .getOrElse { throw BadRequestException("Modo inválido: $mode. Usa 'initial' o 'review'.") }
+    }
+
+    private fun buildRetakeKey(unitId: Int, userId: Int): String? {
+        val test = testService.getTestsByUnitId(unitId) ?: return null
+        val reviewStatus = testService.getUnitReviewStatus(userId, unitId, test.id)
+        val score = reviewStatus.lastAttemptScore ?: return null
+
+        if (!reviewStatus.requiresReview && score >= PASSING_SCORE) return null
+
+        // Marca estable del episodio de retake: cambia cuando cambia el último intento del test o el score
+        return listOf(
+            test.id,
+            userId,
+            unitId,
+            reviewStatus.lastAttemptAt ?: "no-attempt",
+            score,
+            reviewStatus.requiresReview
+        ).joinToString("|")
     }
 
     private fun toDto(record: UnitExerciseAssignmentRecord): UnitExerciseAssignmentDto {
@@ -141,6 +140,139 @@ class UnitExerciseAssignmentService(
             status = record.status.name.lowercase(),
             createdAt = record.createdAt.toString()
         )
+    }
+
+    fun getCurrentAssignment(unitId: Int, userId: Int, mode: String, limit: Int): UnitExerciseAssignmentDto? {
+        val assignmentType = parseMode(mode)
+        log.info("getCurrentAssignment called: unitId=$unitId, userId=$userId, mode=$mode, limit=$limit, assignmentType=$assignmentType")
+        val active = assignmentRepository.getActiveAssignment(userId, unitId, assignmentType)
+        val currentRetakeKey = buildRetakeKey(unitId, userId)
+        log.info("getCurrentAssignment: currentRetakeKey=$currentRetakeKey")
+
+        if (active == null) {
+            log.info("getCurrentAssignment: no active assignment found for user=$userId unit=$unitId mode=$assignmentType")
+            return null
+        }
+
+        log.info("getCurrentAssignment: found active assignment id=${active.id}, createdAt=${active.createdAt}, status=${active.status}")
+
+        // If expired, expire and return null
+        val now = java.time.LocalDateTime.now()
+        val secondsSinceCreation = java.time.Duration.between(active.createdAt, now).seconds
+        if (isExpired(active)) {
+            log.info("getCurrentAssignment: active assignment id=${active.id} is EXPIRED (created ${secondsSinceCreation}s ago, TTL=${ASSIGNMENT_TTL_SECONDS}s) -> expiring")
+            assignmentRepository.expireActiveAssignments(userId, unitId, assignmentType)
+            return null
+        }
+        log.info("getCurrentAssignment: assignment id=${active.id} is NOT expired (created ${secondsSinceCreation}s ago, TTL=${ASSIGNMENT_TTL_SECONDS}s)")
+
+        // Si el usuario debe retomar, pero ya existe una asignación para el mismo retakeKey, se reutiliza
+        val retake = runCatching { shouldRetakeUnit(unitId, userId) }.getOrNull()
+        log.info("getCurrentAssignment: retake check for user=$userId unit=$unitId -> shouldRetake=${retake?.shouldRetake}, reason=${retake?.reason}")
+        if (retake?.shouldRetake == true) {
+            if (currentRetakeKey != null && active.retakeKey == currentRetakeKey) {
+                log.info("getCurrentAssignment: user=$userId still on same retakeKey=${active.retakeKey} -> reusing active assignment id=${active.id}")
+                val dto = toDto(active)
+                log.info("getCurrentAssignment: returning assignment id=${dto.assignmentId} exercises=${dto.exerciseIds}")
+                return dto
+            }
+
+            log.info("getCurrentAssignment: user=$userId must retake unit=$unitId (reason=${retake.reason}) and retakeKey changed from ${active.retakeKey} to $currentRetakeKey -> expiring active assignment id=${active.id}")
+            assignmentRepository.expireActiveAssignments(userId, unitId, assignmentType)
+            return null
+        }
+        log.info("getCurrentAssignment: user=$userId does NOT need to retake unit=$unitId -> returning assignment")
+
+        val dto = toDto(active)
+        log.info("getCurrentAssignment: returning assignment id=${dto.assignmentId} exercises=${dto.exerciseIds}")
+        return dto
+    }
+
+    fun generateAssignment(unitId: Int, userId: Int, mode: String, limitParam: Int): UnitExerciseAssignmentDto {
+        log.info("generateAssignment called: unitId=$unitId, userId=$userId, mode=$mode, limitParam=$limitParam")
+        unitService.getUnitById(unitId) ?: throw BadRequestException("La unidad con ID $unitId no existe.")
+        userService.getUserById(userId) ?: throw BadRequestException("El usuario con ID $userId no existe.")
+
+        val limit = limitParam.coerceAtMost(MAX_LIMIT).coerceAtLeast(1)
+        val currentRetakeKey = buildRetakeKey(unitId, userId)
+
+        // Decide si usar modo REVIEW u INITIAL consultando el servicio de tests
+        val test = testService.getTestsByUnitId(unitId)
+        val assignmentType = if (test != null) {
+            val reviewStatus = testService.getUnitReviewStatus(userId, unitId, test.id)
+            log.info("generateAssignment: test found for unit=$unitId id=${test.id}, reviewStatus=$reviewStatus")
+            if (reviewStatus.requiresReview) AssignmentType.REVIEW else parseMode(mode)
+        } else {
+            parseMode(mode)
+        }
+        log.info("generateAssignment: resolved assignmentType=$assignmentType")
+
+        // Si existe una asignación activa y no ha expirado, comprobar si debe renovarse por retake
+        val active = assignmentRepository.getActiveAssignment(userId, unitId, assignmentType)
+        if (active != null) {
+            log.info("generateAssignment: found active assignment id=${active.id}, createdAt=${active.createdAt}")
+            if (isExpired(active)) {
+                log.info("generateAssignment: active assignment id=${active.id} is expired -> expiring")
+                assignmentRepository.expireActiveAssignments(userId, unitId, assignmentType)
+            } else {
+                val retake = runCatching { shouldRetakeUnit(unitId, userId) }.getOrNull()
+                log.info("generateAssignment: retake check -> shouldRetake=${retake?.shouldRetake}, reason=${retake?.reason}, currentRetakeKey=$currentRetakeKey, storedRetakeKey=${active.retakeKey}")
+                if (retake?.shouldRetake == true && currentRetakeKey != null && active.retakeKey == currentRetakeKey) {
+                    val dto = toDto(active)
+                    log.info("generateAssignment: reusing active assignment for same retakeKey id=${dto.assignmentId} exercises=${dto.exerciseIds}")
+                    return dto
+                }
+                if (retake?.shouldRetake == true) {
+                    log.info("generateAssignment: user=$userId must retake unit=$unitId and retakeKey changed -> expiring active assignment id=${active.id}")
+                    assignmentRepository.expireActiveAssignments(userId, unitId, assignmentType)
+                } else {
+                    val dto = toDto(active)
+                    log.info("generateAssignment: reusing active assignment id=${dto.assignmentId} exercises=${dto.exerciseIds}")
+                    return dto
+                }
+            }
+        }
+
+        // Seleccionar ejercicios candidatos
+        val allExercises = exerciseService.getByUnitId(unitId).filter { it.isActive }
+        if (allExercises.isEmpty()) throw BadRequestException("No hay ejercicios activos en la unidad $unitId")
+
+        val recent = assignmentRepository.getRecentAssignments(userId, unitId, assignmentType, RECENT_ASSIGNMENT_WINDOW)
+            .flatMap { it.exerciseIds }
+            .toSet()
+
+        // Filtrar ejercicios que NO están en tests
+        val notInTests = allExercises.map { it.id }.filter { !isExerciseUsedInTests(it) }
+        
+        // Prioridad 1: ejercicios no recientes
+        val notRecent = notInTests.filter { !recent.contains(it) }
+        
+        // Seleccionar estrategia: 
+        // - Si hay suficientes no-recientes, usarlos
+        // - Si no, llenar con recientes hasta alcanzar limit
+        val chosen = if (notRecent.size >= limit) {
+            log.info("generateAssignment: selecting from ${notRecent.size} non-recent exercises (limit=$limit)")
+            notRecent.shuffled().take(limit)
+        } else {
+            val firstBatch = notRecent.shuffled()
+            val remaining = limit - firstBatch.size
+            val secondBatch = (notInTests - firstBatch.toSet()).shuffled().take(remaining)
+            log.info("generateAssignment: selected ${firstBatch.size} non-recent + ${secondBatch.size} recent (limit=$limit)")
+            (firstBatch + secondBatch).shuffled()
+        }
+
+        if (chosen.isEmpty()) throw BadRequestException("No se pudieron seleccionar ejercicios para la asignación")
+
+        log.info("generateAssignment: chosen exercises for user=$userId unit=$unitId (total=${chosen.size}, limit=$limit) -> $chosen")
+
+        val created = assignmentRepository.createAssignment(userId, unitId, assignmentType, chosen, currentRetakeKey)
+        log.info("generateAssignment: created assignment id=${created.id} exercises=${created.exerciseIds}")
+
+        // Expirar otras asignaciones activas del mismo tipo por seguridad (ya lo hicimos si había una expiración)
+        // pero aseguramos que el nuevo sea el único activo
+        // La función createAssignment inserta con status ACTIVE por defecto
+
+        return toDto(created)
     }
 }
 

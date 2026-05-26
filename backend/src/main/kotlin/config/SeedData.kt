@@ -332,7 +332,7 @@ object SeedDataProvider {
                 name = "Test Unidad 1 - To Be",
                 unitId = 1,
                 description = "Evaluación completa del verbo 'to be'",
-                exerciseIds = (1..10).toList()
+                exerciseIds = (6..7).toList()
             )
         )
     }

@@ -1,0 +1,28 @@
+meta {
+  name: Delete CompletedExercise copy
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{BackendKtor}}/exercisesCompleted/3
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJrdG9yLWF1ZGllbmNlIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDAwIiwiaWQiOjEsInVzZXJuYW1lIjoiYWRtaW5AMjAyNiIsInJvbGUiOiJBRE1JTiIsImV4cCI6MTc3OTIyNjg2Mn0.RGm-mBdIVSL38tp_mjkZGfRM1z4SDh0gOGU-aB59jmk
+}
+
+body:json {
+  {
+    "unitId": 1,
+    "name": "Ejercicio nuevo nuevo nuevo",
+    "description": "Contenido del ejercicio"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

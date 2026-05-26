@@ -1,0 +1,24 @@
+meta {
+  name: create ExerciseWords by ExerciseId
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{BackendKtor}}/units/1/assignments?userId=2
+  body: none
+  auth: bearer
+}
+
+params:query {
+  userId: 2
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJrdG9yLWF1ZGllbmNlIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDAwIiwiaWQiOjIsInVzZXJuYW1lIjoic3R1ZGVudEAyMDI2Iiwicm9sZSI6IlNUVURFTlQiLCJleHAiOjE3Nzk3NDQwNjR9.yF1qaAZQV9lL_MdGumYKXHEWs6TRB7PTiDs-LYTMxNE
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

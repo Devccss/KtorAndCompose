@@ -14,6 +14,7 @@ import org.example.project.dtos.CreateUnitCompletedDto
 import org.example.project.dtos.CreateUnitDto
 import org.example.project.dtos.FilterUnitsDto
 import org.example.project.dtos.UnitDto
+import org.example.project.dtos.UnitExerciseAssignmentDto
 import org.example.project.dtos.UpdateUnitDto
 
 class UnitRepo(private val httpClient: HttpClient, private val baseUrl: String) {
@@ -73,12 +74,28 @@ class UnitRepo(private val httpClient: HttpClient, private val baseUrl: String) 
             addAuthHeader()
         }.ensureSuccessOrThrow()
 
-    //Complete unit
 
+    // Assignments: backend now exposes a single POST endpoint that returns the current assignment
+    // (HTTP 200) or creates a new one (HTTP 201). Use this method to request the assignment.
+    suspend fun postAssignment(unitId: Int, mode: String = "initial", limit: Int = 5): UnitExerciseAssignmentDto =
+        httpClient.post("$baseUrl/api/v1/units/$unitId/assignments") {
+            // Query parameters used by the backend to control mode/limit
+            parameter("mode", mode)
+            parameter("limit", limit)
+            addAuthHeader()
+        }.let { response ->
+            // backend returns either 200 OK or 201 Created with the assignment payload
+            response.parseOrThrow()
+        }
+
+
+    //Complete unit
     suspend fun getAllCompletedUnitsByUserId(userId: Int): List<UnitDto> =
         httpClient.get("$baseUrl/api/v1/unitsCompleted/user/$userId") {
             addAuthHeader()
         }.parseOrThrow()
+
+
 
     suspend fun getCompletedUnitById(id: Int): UnitDto? =
         httpClient.get("$baseUrl/api/v1/unitsCompleted/$id") {

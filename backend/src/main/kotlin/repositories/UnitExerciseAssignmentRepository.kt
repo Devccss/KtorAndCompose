@@ -22,6 +22,7 @@ data class UnitExerciseAssignmentRecord(
     val userId: Int,
     val unitId: Int,
     val assignmentType: AssignmentType,
+    val retakeKey: String?,
     val exerciseIds: List<Int>,
     val status: AssignmentStatus,
     val createdAt: LocalDateTime
@@ -41,6 +42,7 @@ class UnitExerciseAssignmentRepository {
             userId = row[UnitExerciseAssignments.userId],
             unitId = row[UnitExerciseAssignments.unitId],
             assignmentType = row[UnitExerciseAssignments.assignmentType],
+            retakeKey = row[UnitExerciseAssignments.retakeKey],
             exerciseIds = exerciseIds,
             status = row[UnitExerciseAssignments.status],
             createdAt = row[UnitExerciseAssignments.createdAt]
@@ -51,13 +53,11 @@ class UnitExerciseAssignmentRepository {
         UnitExerciseAssignments.selectAll()
             .where {
                 (UnitExerciseAssignments.userId eq userId) and
-                    (UnitExerciseAssignments.unitId eq unitId) and
-                    (UnitExerciseAssignments.assignmentType eq assignmentType) and
-                    (UnitExerciseAssignments.status eq AssignmentStatus.ACTIVE)
+                        (UnitExerciseAssignments.unitId eq unitId) and
+                        (UnitExerciseAssignments.assignmentType eq assignmentType) and
+                        (UnitExerciseAssignments.status eq AssignmentStatus.ACTIVE)
             }
-            .map(::rowToRecord)
-            .sortedByDescending { it.createdAt }
-            .firstOrNull()
+            .map(::rowToRecord).maxByOrNull { it.createdAt }
     }
 
     fun getRecentAssignments(userId: Int, unitId: Int, assignmentType: AssignmentType, limit: Int = 10): List<UnitExerciseAssignmentRecord> = transaction {
@@ -77,6 +77,7 @@ class UnitExerciseAssignmentRepository {
         unitId: Int,
         assignmentType: AssignmentType,
         exerciseIds: List<Int>,
+        retakeKey: String? = null,
         status: AssignmentStatus = AssignmentStatus.ACTIVE
     ): UnitExerciseAssignmentRecord = transaction {
         if (exerciseIds.isEmpty()) throw BadRequestException("No se puede crear una asignación sin ejercicios.")
@@ -85,6 +86,7 @@ class UnitExerciseAssignmentRepository {
             it[this.userId] = userId
             it[this.unitId] = unitId
             it[this.assignmentType] = assignmentType
+            it[this.retakeKey] = retakeKey
             it[this.exerciseIds] = json.encodeToString(ListSerializer(Int.serializer()), exerciseIds)
             it[this.status] = status
             it[this.createdAt] = LocalDateTime.now()

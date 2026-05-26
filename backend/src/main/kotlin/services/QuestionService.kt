@@ -17,6 +17,8 @@ class QuestionService(private val repo: QuestionRepository) {
     // Question CRUD
     fun getAllQuestions(): List<QuestionDto> = repo.getAllQuestions()
     fun getQuestionsByExerciseId(contentId: Int): List<QuestionDto> = repo.getQuestionsByExerciseId(contentId)
+
+    fun getQuestionsByContentId(contentId: Int): List<QuestionDto> = repo.getQuestionsByContentId(contentId)
     fun getQuestionById(id: Int): QuestionDto? = repo.getQuestionById(id)
     fun searchQuestions(filters: FilterQuestionsDto): List<QuestionDto> = repo.searchQuestions(filters)
 
