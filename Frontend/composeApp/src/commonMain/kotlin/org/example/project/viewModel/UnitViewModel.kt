@@ -67,15 +67,17 @@ class UnitViewModel(
     }
 
     init {
-        if (!autoLoad) {
-            _state.value = _state.value.copy(isLoading = false)
-        }else if (unitId != null) {
-            getUnitById(unitId)
-            _state.value = _state.value.copy(units = emptyList())
-        } else {
-            getAllUnits()
-            _state.value = _state.value.copy(actualUnit = null)
-        }
+        launchCatching(
+            block = {
+                true
+            },
+            onSuccess = {
+                _state.value = _state.value.copy(isLoading = false)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = error.message)
+            }
+        )
     }
 
     fun actualNull() {

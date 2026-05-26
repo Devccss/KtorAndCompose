@@ -842,7 +842,7 @@ fun ExercisesSection(
                         Spacer(modifier = Modifier.weight(1f))
                     }
 
-                    if (!showUnitHeader) {
+                    /*if (!showUnitHeader) {
                         OutlinedButton(
                             onClick = {
 
@@ -883,7 +883,7 @@ fun ExercisesSection(
                                 Text("Orden")
                             }
                         }
-                    }
+                    }*/
                 }
             }
 

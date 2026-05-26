@@ -342,7 +342,7 @@ fun UnitsSection(
             }
 
             // Botón Ordenar
-            OutlinedButton(
+            /*OutlinedButton(
                 onClick = {
                     if (isReordering) {
 
@@ -381,7 +381,7 @@ fun UnitsSection(
                 } else {
                     Text("Orden")
                 }
-            }
+            }*/
         }
 
         // Formulario desplegable para agregar unidad

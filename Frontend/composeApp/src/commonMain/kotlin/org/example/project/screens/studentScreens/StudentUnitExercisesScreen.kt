@@ -30,6 +30,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -88,12 +90,40 @@ class StudentUnitExercisesScreen(
         val userId = userIdArg ?: UserSession.idUser
         val studentName = studentNameArg ?: UserSession.name ?: "Estudiante"
         val snackbarHostState = remember { SnackbarHostState() }
+        val coroutineScope = rememberCoroutineScope()
         var selectedIndex by remember { mutableStateOf(1) }
+        var assignmentExercises by remember { mutableStateOf<List<ExerciseDto>?>(null) }
 
         // Recargar búsquedas cuando cambie el usuario o la unidad seleccionada
         LaunchedEffect(userId, unitId) {
-            // Buscar ejercicios para la unidad actual
-            exercisesVm.searchExercises(FilterExercisesDto(unitId = unitId, isActive = true))
+            // Buscar ejercicios para la unidad actual. Si hay más de 5 ejercicios en la unidad,
+            // solicitar la asignación persistida al backend (/units/{unitId}/assignments/current).
+            val safeUserId = userId ?: UserSession.idUser
+            try {
+                val candidates = RepositoryProvider.exerciseRepo.getExercisesByUnitId(unitId)
+                // Si hay más candidatos que el límite, usar la asignación del backend
+                if (candidates.size > 5 && safeUserId != null && safeUserId > 0) {
+                    try {
+                        // Use POST endpoint which returns the existing assignment or creates a new one
+                        val assignment = RepositoryProvider.unitRepo.postAssignment(unitId = unitId, mode = "initial", limit = 5)
+                        assignmentExercises = assignment.exercises
+                    } catch (e: Exception) {
+                        println("Error al obtener assignment: ${'$'}{e.message}")
+                        // fallback: cargar ejercicios normalmente
+                        assignmentExercises = null
+                        exercisesVm.searchExercises(FilterExercisesDto(unitId = unitId, isActive = true))
+                    }
+                } else {
+                    // No hace falta usar assignments, cargar ejercicios normalmente
+                    assignmentExercises = null
+                    exercisesVm.searchExercises(FilterExercisesDto(unitId = unitId, isActive = true))
+                }
+            } catch (e: Exception) {
+                // Si falla la petición de candidates, intentar la carga normal (muestra error si corresponde)
+                println("Error cargando ejercicios por unidad: ${'$'}{e.message}")
+                assignmentExercises = null
+                exercisesVm.searchExercises(FilterExercisesDto(unitId = unitId, isActive = true))
+            }
             // Cargar unidades (no depende de unitId, pero es barato)
             unitVm.searchUnits(FilterUnitsDto(isActive = true))
             // Buscar test(s) para la unidad actual y sus ejercicios en tests
@@ -123,8 +153,9 @@ class StudentUnitExercisesScreen(
         val completedIds = remember(exercisesUi.completedExercises) {
             exercisesUi.completedExercises.map { it.exerciseId }.toSet()
         }
-        val availableExercises = remember(exercisesUi.exercises, completedIds, testUi.allExercisesInTests) {
-            exercisesUi.exercises
+        val availableExercises = remember(exercisesUi.exercises, assignmentExercises, completedIds, testUi.allExercisesInTests) {
+            val base = assignmentExercises ?: exercisesUi.exercises
+            base
                 .filter { it.isActive }
                 .filter { it.id !in testUi.allExercisesInTests }  // Filtrar ejercicios que no están en tests
                 .sortedBy { it.orderExercise }

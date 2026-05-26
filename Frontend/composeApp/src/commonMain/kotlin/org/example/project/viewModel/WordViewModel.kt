@@ -43,7 +43,17 @@ class WordViewModel(private val repo: WordRepository) : ViewModel(), ScreenModel
     }
 
     init {
-        getAllWords()
+        launchCatching(
+            block = {
+                true
+            },
+            onSuccess = {
+                _state.value = _state.value.copy(isLoading = false)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = error.message)
+            }
+        )
     }
 
     fun getAllWords() {

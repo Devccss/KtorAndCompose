@@ -128,7 +128,12 @@ class StudentLearnScreen(
             // For each unit that has a test, fetch review-status from backend
             unitUi.units.forEach { unit ->
                 val uid = unit.id ?: return@forEach
-                testVm.getTestByUnitId(uid)
+                testVm.searchTests(
+                    FilterTestsDto(
+                        isActive = true,
+                        unitId = uid
+                    )
+                )
                 val tId = testUi.testUnit?.id ?: return@forEach
                 try {
                     val status = RepositoryProvider.testRepo.getUnitReviewStatus(safeUser, uid, tId)
