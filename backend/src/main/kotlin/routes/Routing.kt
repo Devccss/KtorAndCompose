@@ -211,6 +211,11 @@ fun Application.configureRouting() {
                                 ?: throw BadRequestException("Invalid contentId")
                             val dto = call.receive<GenerateQuestionsFromAiRequestDto>()
                             val result = aiQuestionGenerationService.generateForContent(contentId, dto)
+                            dto.questionCount.let {
+                                if(dto.questionCount !in 1..3){
+                                    throw BadRequestException("El número de preguntas debe estar entre 1 y 3")
+                                }
+                            }
                             call.respond(HttpStatusCode.Created, result)
                         }
     

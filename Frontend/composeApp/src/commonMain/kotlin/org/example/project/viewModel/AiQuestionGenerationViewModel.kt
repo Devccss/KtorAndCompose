@@ -13,9 +13,9 @@ import org.example.project.dtos.GenerateQuestionsFromAiResponseDto
 import org.example.project.service.AiQuestionGenerationService
 
 data class AiQuestionGenerationUiState(
-    val questionCountInput: String = "1",
-    val language: String = "es",
-    val difficulty: String = "",
+    var questionCountInput: Int = 1,
+    val language: String = "en",
+    val difficulty: String = "A1",
     val lastResponse: GenerateQuestionsFromAiResponseDto? = null,
     val generatedQuestions: List<AiGeneratedQuestionDto> = emptyList(),
     val rejectedSuggestions: List<AiGeneratedQuestionDto> = emptyList(),
@@ -31,10 +31,6 @@ class AiQuestionGenerationViewModel(
 
     private val _state = MutableStateFlow(AiQuestionGenerationUiState())
     val state: StateFlow<AiQuestionGenerationUiState> = _state
-
-    fun updateQuestionCount(value: String) {
-        _state.update { it.copy(questionCountInput = value.filter { ch -> ch.isDigit() }.takeIf { it.isNotBlank() } ?: "1") }
-    }
 
     fun updateLanguage(value: String) {
         _state.update { it.copy(language = value) }
@@ -69,8 +65,8 @@ class AiQuestionGenerationViewModel(
     }
 
     fun generateQuestions(contentId: Int) {
-        val questionCount = _state.value.questionCountInput.toIntOrNull()?.coerceAtLeast(1) ?: 1
-        val language = _state.value.language.trim().ifBlank { "es" }
+        val questionCount = _state.value.questionCountInput.coerceAtLeast(1)
+        val language = _state.value.language.trim().ifBlank { "en" }
         val difficulty = _state.value.difficulty.trim().takeIf { it.isNotBlank() }
 
         launchCatching(

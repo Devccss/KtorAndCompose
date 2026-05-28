@@ -22,8 +22,13 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -44,6 +49,7 @@ import org.example.project.dtos.AiGeneratedQuestionDto
 import org.example.project.dtos.ConfirmAiQuestionResponseDto
 import org.example.project.viewModel.AiQuestionGenerationViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiQuestionGenerationSection(
     contentId: Int?,
@@ -53,6 +59,8 @@ fun AiQuestionGenerationSection(
 ) {
     val aiUi by aiVm.state.collectAsState()
     var showRejectedStack by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
+    val cantQuestion = intArrayOf(1, 2, 3)
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF7F9FC)),
@@ -75,38 +83,33 @@ fun AiQuestionGenerationSection(
                 color = Color(0xFF6B7280)
             )
 
-            OutlinedTextField(
-                value = aiUi.questionCountInput,
-                onValueChange = aiVm::updateQuestionCount,
-                label = { Text("Cantidad de preguntas") },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !aiUi.isLoading,
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors()
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded }
             ) {
                 OutlinedTextField(
-                    value = aiUi.language,
-                    onValueChange = aiVm::updateLanguage,
-                    label = { Text("Idioma") },
-                    modifier = Modifier.weight(1f),
-                    enabled = !aiUi.isLoading,
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors()
+                    value = "${aiUi.questionCountInput}",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Cantidad de preguntas", fontSize = 12.sp) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
                 )
-                OutlinedTextField(
-                    value = aiUi.difficulty,
-                    onValueChange = aiVm::updateDifficulty,
-                    label = { Text("Dificultad") },
-                    modifier = Modifier.weight(1f),
-                    enabled = !aiUi.isLoading,
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors()
-                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    cantQuestion.forEach { entry ->
+                        DropdownMenuItem(
+                            text = { Text("$entry pregunta${if (entry > 1) "s" else ""}") },
+                            onClick = {
+                                aiUi.questionCountInput = entry
+                                expanded = false
+                            }
+                        )
+                    }
+                }
             }
 
             Button(

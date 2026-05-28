@@ -32,6 +32,6 @@ ai:
   python:
     baseUrl: "http://localhost:8090"
     apiKey: ""
-    timeoutMs: 5000
+    timeoutMs: 50000
 
 
