@@ -127,9 +127,21 @@ class TestRepository {
             .map(::resultRowToTestCompleted)
     }
 
+    fun getAllTestsCompletedByStudents(): List<TestCompletedDto> = transaction {
+        (TestCompleted innerJoin models.Users).selectAll()
+            .where { models.Users.role eq models.Role.STUDENT }
+            .map(::resultRowToTestCompleted)
+    }
+
     fun getTestsFailedByUser(userId: Int, minScore: Int = 60): List<TestCompletedDto> = transaction {
         TestCompleted.selectAll().where { 
             (TestCompleted.userId eq userId) and (TestCompleted.score less minScore)
+        }.map(::resultRowToTestCompleted)
+    }
+
+    fun getAllTestsFailedByStudents(minScore: Int = 60): List<TestCompletedDto> = transaction {
+        (TestCompleted innerJoin models.Users).selectAll().where {
+            (models.Users.role eq models.Role.STUDENT) and (TestCompleted.score less minScore)
         }.map(::resultRowToTestCompleted)
     }
 

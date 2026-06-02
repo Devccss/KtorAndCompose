@@ -38,6 +38,13 @@ class UsersRepository {
     fun getAll(): List<UserDto> = transaction {
         Users.selectAll().where { Users.role neq Role.ADMIN  }.orderBy(Users.createdAt).map(::resultRowToUser)
     }
+
+    fun getAllStudents(): List<UserDto> = transaction {
+        Users.selectAll()
+            .where { Users.role eq Role.STUDENT }
+            .orderBy(Users.createdAt)
+            .map(::resultRowToUser)
+    }
     fun getUsersByName(name: String): List<UserDto> = transaction {
         Users.selectAll().where { Users.role neq Role.ADMIN }.andWhere { Users.name like "%$name%" }.orderBy(Users.createdAt).map(::resultRowToUser)
     }

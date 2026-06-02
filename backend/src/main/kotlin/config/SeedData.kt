@@ -1,8 +1,13 @@
 package config
 
+import com.example.dtos.UnitDto
+import com.example.dtos.UserDto
+import io.github.cdimascio.dotenv.dotenv
 import models.*
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.mindrot.jbcrypt.BCrypt
 import java.time.LocalDateTime
 
 // Data classes for seeds
@@ -36,9 +41,148 @@ data class SessionLogSeed(
     val endReason: SessionEndReason? = null
 )
 
+fun createAdminUserIfNotExists() {
+    val dotenv = dotenv()
+    val adminName = dotenv["ADMIN_NAME"]
+    val adminEmail = dotenv["ADMIN_EMAIL"]
+    val adminPassword = dotenv["ADMIN_PASSWORD"]
+
+    val student = dotenv["STUDENT_NAME"]
+    val studentEmail = dotenv["STUDENT_EMAIL"]
+    val studentPassword = dotenv["STUDENT_PASSWORD"]
+
+    val editor = dotenv["EDITOR_NAME"]
+    val editorEmail = dotenv["EDITOR_EMAIL"]
+    val editorPassword = dotenv["EDITOR_PASSWORD"]
+
+    val exists = Users.selectAll().where { Users.email eq adminEmail }.count() > 0
+    if (!exists) {
+        val hashed = BCrypt.hashpw(adminPassword, BCrypt.gensalt())
+        val newId = Users.insert {
+            it[email] = adminEmail
+            it[password] = hashed
+            it[name] = adminName
+            it[preferences] = null
+            it[provider] = "Created"
+            it[currentUnitId] = null
+            it[role] = Role.ADMIN
+        }[Users.id]
+        UserDto(
+            id = newId.value,
+            name = adminName,
+            email = adminEmail,
+            password = hashed,
+            provider = "Created",
+            preferences = null,
+            activeNow = true,
+            currentUnitId = null,
+            createdAt = LocalDateTime.now().toString(),
+            role = Role.ADMIN,
+        )
+    }
+    val editorExists = Users.selectAll().where { Users.email eq editorEmail }.count() > 0
+    if (!editorExists) {
+        val hashed = BCrypt.hashpw(editorPassword, BCrypt.gensalt())
+        val newId = Users.insert {
+            it[email] = editorEmail
+            it[password] = hashed
+            it[name] = editor
+            it[preferences] = null
+            it[provider] = "Created"
+            it[currentUnitId] = null
+            it[role] = Role.CONTENT_EDITOR
+        }[Users.id]
+        UserDto(
+            id = newId.value,
+            name = editor,
+            email = editorEmail,
+            password = hashed,
+            provider = "Created",
+            preferences = null,
+            activeNow = true,
+            currentUnitId = null,
+            createdAt = LocalDateTime.now().toString(),
+            role = Role.CONTENT_EDITOR,
+        )
+
+        val new2 = Units.insert {
+            it[difficulty] = models.DifficultyLevel.A1
+            it[name] = "Unidad 1"
+            it[description] = "Descripción de la unidad 1"
+            it[orderUnit] = 1
+            it[isActive] = true
+        }[Units.id]
+        UnitDto(
+            id = new2.value,
+            difficulty = models.DifficultyLevel.A1,
+            name = "Unidad 1",
+            description = "Descripción de la unidad 1",
+            orderUnit = 1,
+            isActive = true,
+            createdAt = LocalDateTime.now().toString()
+        )
+    }
+    val studentExists = Users.selectAll().where { Users.email eq studentEmail }.count() > 0
+    if (!studentExists) {
+        studentsCreate(studentPassword, studentEmail, student)
+    }
+}
+
+
+fun studentsCreate(studentPassword : String, studentEmail : String, student : String){
+    val hashed = BCrypt.hashpw(studentPassword, BCrypt.gensalt())
+    Users.insert {
+        it[email] = studentEmail
+        it[password] = hashed
+        it[name] = student
+        it[preferences] = null
+        it[provider] = "Created"
+        it[currentUnitId] = null
+        it[role] = Role.STUDENT
+    }
+
+    val newid2 = Users.insert {
+        it[email] = "student2@2026"
+        it[password] = hashed
+        it[name] = "student2"
+        it[preferences] = null
+        it[provider] = "Created"
+        it[currentUnitId] = null
+        it[role] = Role.STUDENT
+    }
+
+    Users.insert {
+        it[email] = "student3@2026"
+        it[password] = hashed
+        it[name] = "student3"
+        it[preferences] = null
+        it[provider] = "Created"
+        it[currentUnitId] = null
+    }
+
+    Users.insert {
+        it[email] = "student4@2026"
+        it[password] = hashed
+        it[name] = "student4"
+        it[preferences] = null
+        it[provider] = "Created"
+        it[currentUnitId] = null
+    }
+
+    Users.insert {
+        it[email] = "student5@2026"
+        it[password] = hashed
+        it[name] = "student5"
+        it[preferences] = null
+        it[provider] = "Created"
+        it[currentUnitId] = null
+    }
+
+}
+
 object SeedDataProvider {
 
-    private var exerciseCounter = 1
+    private var exerciseCounter = 0
 
     fun getExerciseSeeds(): List<ExerciseSeed> {
         return listOf(
@@ -339,57 +483,92 @@ object SeedDataProvider {
 
     fun getCompletedExerciseSeeds(): List<CompletedExerciseSeed> {
         return listOf(
-            CompletedExerciseSeed(userId = 2, exerciseId = 1),
-            CompletedExerciseSeed(userId = 2, exerciseId = 2),
-            CompletedExerciseSeed(userId = 2, exerciseId = 3)
+            CompletedExerciseSeed(userId = 3, exerciseId = 1),
+            CompletedExerciseSeed(userId = 3, exerciseId = 2),
+            CompletedExerciseSeed(userId = 3, exerciseId = 3)
         )
     }
 
     fun getCompletedUnitSeeds(): List<CompletedUnitSeed> {
         return listOf(
-            CompletedUnitSeed(userId = 2, unitId = 1)
+            CompletedUnitSeed(userId = 3, unitId = 1)
         )
     }
 
     fun getTestCompletedSeeds(): List<TestCompletedSeed> {
         return listOf(
-            TestCompletedSeed(userId = 2, testId = 1, score = 85)
+            TestCompletedSeed(userId = 3, testId = 1, score = 85)
         )
     }
 
     fun getSessionLogSeeds(): List<SessionLogSeed> {
         val now = LocalDateTime.now()
+
         return listOf(
+
+            // Usuario 3
             SessionLogSeed(
-                userId = 2,
+                userId = 3,
                 loginAt = now.minusDays(7),
                 logoutAt = now.minusDays(7).plusHours(2),
                 endReason = SessionEndReason.LOGOUT
             ),
             SessionLogSeed(
-                userId = 2,
+                userId = 3,
                 loginAt = now.minusDays(5),
                 logoutAt = now.minusDays(5).plusHours(1).plusMinutes(30),
                 endReason = SessionEndReason.LOGOUT
             ),
             SessionLogSeed(
-                userId = 2,
+                userId = 3,
                 loginAt = now.minusDays(3),
                 logoutAt = now.minusDays(3).plusHours(3),
                 endReason = SessionEndReason.LOGOUT
             ),
             SessionLogSeed(
-                userId = 2,
+                userId = 3,
                 loginAt = now.minusDays(1),
                 logoutAt = now.minusDays(1).plusHours(1).plusMinutes(45),
                 endReason = SessionEndReason.LOGOUT
             ),
             SessionLogSeed(
-                userId = 2,
+                userId = 3,
                 loginAt = now.minusHours(3),
                 logoutAt = null,
                 endReason = null
-            )
+            ),
+
+            // Usuario 4 - Muy activo
+            SessionLogSeed(4, now.minusDays(28), now.minusDays(28).plusHours(2), SessionEndReason.LOGOUT),
+            SessionLogSeed(4, now.minusDays(25), now.minusDays(25).plusHours(1), SessionEndReason.LOGOUT),
+            SessionLogSeed(4, now.minusDays(21), now.minusDays(21).plusHours(3), SessionEndReason.LOGOUT),
+            SessionLogSeed(4, now.minusDays(18), now.minusDays(18).plusHours(2).plusMinutes(20), SessionEndReason.LOGOUT),
+            SessionLogSeed(4, now.minusDays(14), now.minusDays(14).plusHours(4), SessionEndReason.LOGOUT),
+            SessionLogSeed(4, now.minusDays(10), now.minusDays(10).plusHours(2), SessionEndReason.LOGOUT),
+            SessionLogSeed(4, now.minusDays(7), now.minusDays(7).plusHours(1).plusMinutes(50), SessionEndReason.LOGOUT),
+            SessionLogSeed(4, now.minusDays(3), now.minusDays(3).plusHours(3), SessionEndReason.LOGOUT),
+
+            // Usuario 5 - Actividad moderada
+            SessionLogSeed(5, now.minusDays(30), now.minusDays(30).plusMinutes(45), SessionEndReason.LOGOUT),
+            SessionLogSeed(5, now.minusDays(23), now.minusDays(23).plusHours(1), SessionEndReason.LOGOUT),
+            SessionLogSeed(5, now.minusDays(16), now.minusDays(16).plusHours(1).plusMinutes(15), SessionEndReason.LOGOUT),
+            SessionLogSeed(5, now.minusDays(9), now.minusDays(9).plusHours(2), SessionEndReason.LOGOUT),
+            SessionLogSeed(5, now.minusDays(2), now.minusDays(2).plusHours(1).plusMinutes(40), SessionEndReason.LOGOUT),
+
+            // Usuario 6 - Comenzó hace poco
+            SessionLogSeed(6, now.minusDays(12), now.minusDays(12).plusHours(1), SessionEndReason.LOGOUT),
+            SessionLogSeed(6, now.minusDays(10), now.minusDays(10).plusHours(2), SessionEndReason.LOGOUT),
+            SessionLogSeed(6, now.minusDays(8), now.minusDays(8).plusHours(1).plusMinutes(20), SessionEndReason.LOGOUT),
+            SessionLogSeed(6, now.minusDays(5), now.minusDays(5).plusHours(2).plusMinutes(15), SessionEndReason.LOGOUT),
+            SessionLogSeed(6, now.minusDays(1), now.minusDays(1).plusHours(3), SessionEndReason.LOGOUT),
+
+            // Usuario 7 - Poco frecuente
+            SessionLogSeed(7, now.minusDays(35), now.minusDays(35).plusHours(1), SessionEndReason.LOGOUT),
+            SessionLogSeed(7, now.minusDays(27), now.minusDays(27).plusHours(1).plusMinutes(30), SessionEndReason.LOGOUT),
+            SessionLogSeed(7, now.minusDays(15), now.minusDays(15).plusHours(2), SessionEndReason.LOGOUT),
+            SessionLogSeed(7, now.minusDays(4), now.minusDays(4).plusMinutes(50), SessionEndReason.LOGOUT),
+
+
         )
     }
 }

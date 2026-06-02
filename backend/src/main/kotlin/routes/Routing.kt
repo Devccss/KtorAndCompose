@@ -133,7 +133,7 @@ fun Application.configureRouting() {
                             val created = userSessionLogsService.startSession(dto)
                             call.respond(HttpStatusCode.Created, created)
                         }
-    
+
                         put("/{id}/close") {
                             val id = call.parameters["id"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid session ID")
@@ -141,15 +141,16 @@ fun Application.configureRouting() {
                             val closed = userSessionLogsService.closeSessionById(id, dto)
                             call.respond(closed)
                         }
-    
+
                         put("/user/{userId}/close-open") {
                             val userId = call.parameters["userId"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid user ID")
                             val dto = call.receive<CloseUserSessionLogDto>()
-                            val closed = userSessionLogsService.closeOpenSessionByUserId(userId, dto)
+                            val closed =
+                                userSessionLogsService.closeOpenSessionByUserId(userId, dto)
                             call.respond(closed)
                         }
-    
+
                         get("/{id}") {
                             val id = call.parameters["id"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid session ID")
@@ -157,14 +158,14 @@ fun Application.configureRouting() {
                                 ?: throw NotFoundException("Session log not found")
                             call.respond(session)
                         }
-    
+
                         get("/user/{userId}") {
                             val userId = call.parameters["userId"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid user ID")
                             val sessions = userSessionLogsService.getSessionsByUserId(userId)
                             call.respond(sessions)
                         }
-    
+
                         get("/user/{userId}/open") {
                             val userId = call.parameters["userId"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid user ID")
@@ -172,9 +173,9 @@ fun Application.configureRouting() {
                                 ?: throw NotFoundException("No hay sesion abierta para este usuario")
                             call.respond(session)
                         }
-    
+
                         get("/metrics/weekly/student") {
-    
+
                             val fromDate = call.request.queryParameters["fromDate"]
                             val toDate = call.request.queryParameters["toDate"]
                             val metrics =
@@ -183,14 +184,14 @@ fun Application.configureRouting() {
                         }
 
                     }
-                    
-                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR){
+
+                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR) {
                         get("/filter") {
                             val filters = call.receive<FilterUserSessionLogsDto>()
                             val sessions = userSessionLogsService.filter(filters)
                             call.respond(sessions)
                         }
-    
+
                         get("/metrics/weekly") {
                             val fromDate = call.request.queryParameters["fromDate"]
                             val toDate = call.request.queryParameters["toDate"]
@@ -198,40 +199,42 @@ fun Application.configureRouting() {
                                 userSessionLogsService.getWeeklyMetrics(false, fromDate, toDate)
                             call.respond(metrics)
                         }
-                        
+
                     }
                 }
             }
 
-            authenticate("auth-jwt"){
+            authenticate("auth-jwt") {
                 withRoles(Role.ADMIN, Role.CONTENT_EDITOR) {
                     route("/ai/questions") {
                         post("generate/{contentId}") {
                             val contentId = call.parameters["contentId"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid contentId")
                             val dto = call.receive<GenerateQuestionsFromAiRequestDto>()
-                            val result = aiQuestionGenerationService.generateForContent(contentId, dto)
+                            val result =
+                                aiQuestionGenerationService.generateForContent(contentId, dto)
                             dto.questionCount.let {
-                                if(dto.questionCount !in 1..3){
+                                if (dto.questionCount !in 1..3) {
                                     throw BadRequestException("El número de preguntas debe estar entre 1 y 3")
                                 }
                             }
                             call.respond(HttpStatusCode.Created, result)
                         }
-    
+
                         post("confirm/{contentId}") {
                             val contentId = call.parameters["contentId"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid contentId")
                             val dto = call.receive<ConfirmAiQuestionRequestDto>()
-                            val result = aiQuestionGenerationService.confirmForContent(contentId, dto)
+                            val result =
+                                aiQuestionGenerationService.confirmForContent(contentId, dto)
                             call.respond(HttpStatusCode.Created, result)
                         }
                     }
-                    
+
                 }
             }
 
-            
+
             route("/users") {
                 // Public routes
                 post("/login") {
@@ -245,25 +248,39 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.Created, user)
                 }
 
-                // User Statistics endpoints (no eliminar código existente, se agregan rutas nuevas)
+
                 authenticate("auth-jwt") {
-                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR, Role.STUDENT) {
-                        route("/users") {
-                            route("{userId}/stats") {
-                                get {
-                                    val userId = call.parameters["userId"]?.toIntOrNull()
-                                        ?: throw BadRequestException("Invalid User ID")
-                                    val stats = userStatisticsService.getUserStats(userId)
-                                    call.respond(stats)
-                                }
-                            }
+
+                }
+                authenticate("auth-jwt") {
+                    withRoles(Role.ADMIN) {
+                        get("/stats"){
+                            val stats = userStatisticsService.getAllUsersStats()
+                            call.respond(stats)
                         }
                     }
-                }
-                authenticate("auth-jwt"){
 
-                    // Protected routes
+                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR, Role.STUDENT) {
+
+                        route("{userId}/stats") {
+                            get {
+                                val userId = call.parameters["userId"]?.toIntOrNull()
+                                    ?: throw BadRequestException("Invalid User ID")
+                                val stats = userStatisticsService.getUserStats(userId)
+                                call.respond(stats)
+                            }
+                        }
+
+                    }
+
                     withRoles(Role.ADMIN, Role.CONTENT_EDITOR) {
+                        route("/stats/students") {
+                            get {
+                                val stats = userStatisticsService.getAllStudentsStats()
+                                call.respond(stats)
+                            }
+                        }
+
                         get {
                             val users = userService.getAllUsers()
                             call.respond(users)
@@ -292,22 +309,22 @@ fun Application.configureRouting() {
                         val userRole = principal?.payload?.getClaim("role")?.asString()
                         val id = call.parameters["id"]?.toIntOrNull()
                             ?: throw BadRequestException("Invalid ID in get user")
-                        if((userIdPayload != id && userRole == Role.STUDENT.name) || userIdPayload == null){
+                        if ((userIdPayload != id && userRole == Role.STUDENT.name) || userIdPayload == null) {
                             call.respond(
                                 HttpStatusCode.Forbidden,
                                 mapOf("error" to "No tienes permiso para realizar esta acción")
                             )
                             return@get
-                        }else{
+                        } else {
                             val user = userService.getUserById(id)
                             if (user != null) {
-                                if(user.role == Role.ADMIN && userIdPayload != id){
+                                if (user.role == Role.ADMIN && userIdPayload != id) {
                                     call.respond(
                                         HttpStatusCode.Forbidden,
                                         mapOf("error" to "No tienes permiso para realizar esta acción")
                                     )
                                     return@get
-                                }else{
+                                } else {
                                     call.respond(user)
                                 }
                             } else {
@@ -354,16 +371,17 @@ fun Application.configureRouting() {
 
 
 
-            authenticate("auth-jwt"){
+            authenticate("auth-jwt") {
                 // Units
                 route("/units") {
-                    withRoles( Role.ADMIN, Role.CONTENT_EDITOR, Role.STUDENT){
-                        
+                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR, Role.STUDENT) {
+
                         get("{id}") {
                             val id = call.parameters["id"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid ID in get unit")
                             val item =
-                                unitService.getUnitById(id) ?: throw NotFoundException("Unit not found")
+                                unitService.getUnitById(id)
+                                    ?: throw NotFoundException("Unit not found")
                             call.respond(item)
                         }
                         get("/byTest/{testId}") {
@@ -376,7 +394,11 @@ fun Application.configureRouting() {
                         get("/search") {
                             val name = call.request.queryParameters["name"]
                             val difficulty =
-                                call.request.queryParameters["difficulty"]?.let { DifficultyLevel.valueOf(it) }
+                                call.request.queryParameters["difficulty"]?.let {
+                                    DifficultyLevel.valueOf(
+                                        it
+                                    )
+                                }
                             val isActiveParam = call.request.queryParameters["isActive"]
                             val isActive = isActiveParam?.let {
                                 when (it.lowercase()) {
@@ -386,11 +408,15 @@ fun Application.configureRouting() {
                                 }
                             }
                             val filters =
-                                FilterUnitsDto(name = name, difficulty = difficulty, isActive = isActive)
+                                FilterUnitsDto(
+                                    name = name,
+                                    difficulty = difficulty,
+                                    isActive = isActive
+                                )
                             val results = unitService.searchUnits(filters)
                             call.respond(results)
                         }
-                        
+
                     }
 
                     route("{unitId}/assignments") {
@@ -400,7 +426,8 @@ fun Application.configureRouting() {
                                 val unitId = call.parameters["unitId"]?.toIntOrNull()
                                     ?: throw BadRequestException("Invalid unit ID")
                                 val mode = call.request.queryParameters["mode"] ?: "initial"
-                                val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 5
+                                val limit =
+                                    call.request.queryParameters["limit"]?.toIntOrNull() ?: 5
                                 val principal = call.principal<JWTPrincipal>()
                                 val tokenUserId = principal?.payload?.getClaim("id")?.asInt()
 
@@ -413,13 +440,23 @@ fun Application.configureRouting() {
                                 }
 
                                 // Intentar obtener la asignación actual; si no existe, generar una nueva
-                                val current = unitExerciseAssignmentService.getCurrentAssignment(unitId, tokenUserId, mode, limit)
+                                val current = unitExerciseAssignmentService.getCurrentAssignment(
+                                    unitId,
+                                    tokenUserId,
+                                    mode,
+                                    limit
+                                )
                                 if (current != null) {
                                     call.respond(HttpStatusCode.OK, current)
                                     return@post
                                 }
 
-                                val assignment = unitExerciseAssignmentService.generateAssignment(unitId, tokenUserId, mode, limit)
+                                val assignment = unitExerciseAssignmentService.generateAssignment(
+                                    unitId,
+                                    tokenUserId,
+                                    mode,
+                                    limit
+                                )
                                 call.respond(HttpStatusCode.Created, assignment)
                             }
                         }
@@ -456,7 +493,7 @@ fun Application.configureRouting() {
                             val success = unitService.reorderUnits(dto)
                             call.respond(success)
                         }
-    
+
                         delete("{id}") {
                             val id = call.parameters["id"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid ID in delete unit")
@@ -468,7 +505,7 @@ fun Application.configureRouting() {
 
                 // Exercises
                 route("/exercises") {
-                    withRoles(Role.CONTENT_EDITOR){
+                    withRoles(Role.CONTENT_EDITOR) {
                         get { call.respond(exerciseService.getAll()) }
                         post {
                             val dto = call.receive<CreateExerciseDto>()
@@ -480,8 +517,9 @@ fun Application.configureRouting() {
                                 ?: throw BadRequestException("Invalid ID")
                             val dto = call.receive<UpdateExerciseDto>()
                             dto.isActive?.let {
-                                val questionsActive =  questionService.getQuestionsByExerciseId(id).filter { it.isActive == true }
-                                if(questionsActive.count() < 1){
+                                val questionsActive = questionService.getQuestionsByExerciseId(id)
+                                    .filter { it.isActive == true }
+                                if (questionsActive.count() < 1) {
                                     throw BadRequestException("El ejercicio debe tener al menos una pregunta activa")
                                 }
                             }
@@ -509,7 +547,7 @@ fun Application.configureRouting() {
                             exerciseContentService.deleteByExerciseId(id)
                             call.respond(exerciseService.delete(id))
                         }
-                        
+
                     }
                     withRoles(Role.ADMIN, Role.CONTENT_EDITOR, Role.STUDENT) {
                         get("{id}") {
@@ -532,7 +570,11 @@ fun Application.configureRouting() {
                                 }
                             }
                             val filters =
-                                FilterExercisesDto(name = name, isActive = isActive, unitId = unitId)
+                                FilterExercisesDto(
+                                    name = name,
+                                    isActive = isActive,
+                                    unitId = unitId
+                                )
                             val results = exerciseService.searchExercises(filters)
                             call.respond(results)
                         }
@@ -542,18 +584,24 @@ fun Application.configureRouting() {
                             val exercises = exerciseService.getByUnitId(unitId)
                             call.respond(exercises)
                         }
-                        
+
                     }
                 }
 
                 route("/exerciseContent") {
-                    withRoles(Role.ADMIN,Role.CONTENT_EDITOR, Role.STUDENT){
+                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR, Role.STUDENT) {
                         get("/search") {
-                            val exerciseId = call.request.queryParameters["exerciseId"]?.toIntOrNull()
+                            val exerciseId =
+                                call.request.queryParameters["exerciseId"]?.toIntOrNull()
                             val contentType =
-                                call.request.queryParameters["contentType"]?.let { ContentType.valueOf(it) }
+                                call.request.queryParameters["contentType"]?.let {
+                                    ContentType.valueOf(
+                                        it
+                                    )
+                                }
                             val textContent = call.request.queryParameters["textContent"]
-                            val grammarExplanation = call.request.queryParameters["grammarExplanation"]
+                            val grammarExplanation =
+                                call.request.queryParameters["grammarExplanation"]
                             val filters = FilterExerciseContentDto(
                                 exerciseId = exerciseId,
                                 contentType = contentType,
@@ -569,15 +617,16 @@ fun Application.configureRouting() {
                                 ?: throw NotFoundException("ExerciseContent not found")
                             call.respond(item)
                         }
-                        
+
                     }
-                    withRoles(Role.CONTENT_EDITOR){
+                    withRoles(Role.CONTENT_EDITOR) {
                         get { call.respond(exerciseContentService.getAllExerciseContent()) }
                         post("/{id}") {
                             val dto = call.receive<CreateExerciseContentDto>()
                             val exerciseId = call.parameters["id"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid Exercise ID")
-                            val created = exerciseContentService.createExerciseContent(exerciseId, dto)
+                            val created =
+                                exerciseContentService.createExerciseContent(exerciseId, dto)
                             call.respond(HttpStatusCode.Created, created)
                         }
                         put("/exercise/{id}") {
@@ -592,13 +641,13 @@ fun Application.configureRouting() {
                                 ?: throw BadRequestException("Invalid ID")
                             call.respond(exerciseContentService.deleteByExerciseId(id))
                         }
-                        
+
                     }
                 }
 
                 // QuestionExercises
                 route("/question-exercises") {
-                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR, Role.STUDENT){
+                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR, Role.STUDENT) {
                         get { call.respond(exerciseWordService.getAll()) }
                         get("{id}") {
                             val id = call.parameters["id"]?.toIntOrNull()
@@ -607,9 +656,9 @@ fun Application.configureRouting() {
                                 ?: throw NotFoundException("ContentExercise not found")
                             call.respond(item)
                         }
-                        
+
                     }
-                    withRoles(Role.CONTENT_EDITOR){
+                    withRoles(Role.CONTENT_EDITOR) {
                         post {
                             val dto = call.receive<CreateExerciseWordDto>()
                             val created = exerciseWordService.create(dto)
@@ -631,9 +680,9 @@ fun Application.configureRouting() {
                 }
 
                 // ExerciseWords
-                
+
                 route("/exerciseWords") {
-                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR, Role.STUDENT){
+                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR, Role.STUDENT) {
                         get("/exercise/{id}") {
                             val exerciseId = call.parameters["id"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid Exercise ID")
@@ -647,12 +696,12 @@ fun Application.configureRouting() {
                                 ?: throw NotFoundException("ContentWord not found")
                             call.respond(item)
                         }
-                        
+
                     }
-                    withRoles(Role.CONTENT_EDITOR){
+                    withRoles(Role.CONTENT_EDITOR) {
                         get { call.respond(exerciseWordService.getAll()) }
                         post {
-    
+
                             val dto = call.receive<CreateExerciseWordDto>()
                             val exercise = exerciseService.getById(dto.exerciseId)
                             val word = wordService.getById(dto.wordId)
@@ -685,15 +734,16 @@ fun Application.configureRouting() {
                                 ?: throw BadRequestException("Invalid ID")
                             call.respond(exerciseWordService.delete(id))
                         }
-                        
+
                     }
                 }
 
                 // Words
                 route("/words") {
-                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR, Role.STUDENT){
+                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR, Role.STUDENT) {
                         get("/search") {
-                            val exerciseId = call.request.queryParameters["exerciseId"]?.toIntOrNull()
+                            val exerciseId =
+                                call.request.queryParameters["exerciseId"]?.toIntOrNull()
                             val english = call.request.queryParameters["english"]
                             val spanish = call.request.queryParameters["spanish"]
                             val phonetic = call.request.queryParameters["phonetic"]
@@ -717,12 +767,13 @@ fun Application.configureRouting() {
                         get("{id}") {
                             val id = call.parameters["id"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid ID")
-                            val item = wordService.getById(id) ?: throw NotFoundException("Word not found")
+                            val item =
+                                wordService.getById(id) ?: throw NotFoundException("Word not found")
                             call.respond(item)
                         }
-                        
+
                     }
-                    withRoles(Role.CONTENT_EDITOR){
+                    withRoles(Role.CONTENT_EDITOR) {
                         get { call.respond(wordService.getAll()) }
                         post {
                             val dto = call.receive<CreateWordDto>()
@@ -741,7 +792,7 @@ fun Application.configureRouting() {
                                 ?: throw BadRequestException("Invalid ID")
                             call.respond(wordService.delete(id))
                         }
-                        
+
                     }
                 }
 
@@ -784,7 +835,8 @@ fun Application.configureRouting() {
                         get("alternatives/{questionId}") {
                             val questionId = call.parameters["questionId"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid Question ID")
-                            val alternatives = questionService.getAlternativeByQuestionId(questionId)
+                            val alternatives =
+                                questionService.getAlternativeByQuestionId(questionId)
                             call.respond(alternatives)
                         }
                     }
@@ -822,7 +874,8 @@ fun Application.configureRouting() {
                         get("question/{questionId}") {
                             val questionId = call.parameters["questionId"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid Question ID")
-                            val alternatives = questionService.getAlternativeByQuestionId(questionId)
+                            val alternatives =
+                                questionService.getAlternativeByQuestionId(questionId)
                             call.respond(alternatives)
                         }
                     }
@@ -909,16 +962,18 @@ fun Application.configureRouting() {
                         get("{id}") {
                             val id = call.parameters["id"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid ID")
-                            val item = testService.getById(id) ?: throw NotFoundException("Test not found")
+                            val item =
+                                testService.getById(id) ?: throw NotFoundException("Test not found")
                             call.respond(item)
                         }
                         get("/byExercise/{exerciseId}") {
                             val exerciseId = call.parameters["exerciseId"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid Exercise ID")
                             val items = testExerciseService.searchByIds(exerciseId)
-                            val test = testService.getById(items.first().testId) ?: throw NotFoundException(
-                                "No test found for exercise ID $exerciseId"
-                            )
+                            val test = testService.getById(items.first().testId)
+                                ?: throw NotFoundException(
+                                    "No test found for exercise ID $exerciseId"
+                                )
                             call.respond(test)
                         }
                         get("/byUnit/{unitId}") {
@@ -1065,7 +1120,22 @@ fun Application.configureRouting() {
 
                 // UnitsCompleted
                 route("/unitsCompleted") {
-                    get { call.respond(unitService.getAllUnitsCompleted()) }
+                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR) {
+                        get { call.respond(unitService.getAllUnitsCompleted()) }
+                        put("{id}") {
+                            val id = call.parameters["id"]?.toIntOrNull()
+                                ?: throw BadRequestException("Invalid ID")
+                            val dto = call.receive<UpdateUnitCompletedDto>()
+                            unitService.editUnitsCompleted(id, dto)
+                            call.respond(HttpStatusCode.OK)
+                        }
+                        delete("{id}") {
+                            val id = call.parameters["id"]?.toIntOrNull()
+                                ?: throw BadRequestException("Invalid ID")
+                            call.respond(unitService.deleteUnitsCompleted(id))
+                        }
+
+                    }
 
                     get("{id}") {
                         val id = call.parameters["id"]?.toIntOrNull()
@@ -1084,7 +1154,8 @@ fun Application.configureRouting() {
                         val dto = call.receive<CreateUnitCompletedDto>()
                         val created = unitService.createUnitCompleted(dto)
 
-                        val totalUnits = unitService.searchUnits(FilterUnitsDto(isActive = true)).size
+                        val totalUnits =
+                            unitService.searchUnits(FilterUnitsDto(isActive = true)).size
                         val completedUnits = unitService.getUnitsCompletedByUser(dto.userId)
                             .map { it.id }
                             .toSet()
@@ -1105,23 +1176,26 @@ fun Application.configureRouting() {
                                 ?: throw NotFoundException("Error al completar la unidad con ID ${created.unitId}")
                         )
                     }
-                    put("{id}") {
-                        val id = call.parameters["id"]?.toIntOrNull()
-                            ?: throw BadRequestException("Invalid ID")
-                        val dto = call.receive<UpdateUnitCompletedDto>()
-                        unitService.editUnitsCompleted(id, dto)
-                        call.respond(HttpStatusCode.OK)
-                    }
-                    delete("{id}") {
-                        val id = call.parameters["id"]?.toIntOrNull()
-                            ?: throw BadRequestException("Invalid ID")
-                        call.respond(unitService.deleteUnitsCompleted(id))
-                    }
                 }
 
                 // ExercisesCompleted
                 route("/exercisesCompleted") {
-                    get { call.respond(exerciseService.getAllExerciseCompleted()) }
+                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR) {
+                        get { call.respond(exerciseService.getAllExerciseCompleted()) }
+                        put("{id}") {
+                            val id = call.parameters["id"]?.toIntOrNull()
+                                ?: throw BadRequestException("Invalid ID")
+                            val dto = call.receive<UpdateExerciseCompletedDto>()
+                            exerciseService.updateExerciseCompleted(id, dto)
+                            call.respond(HttpStatusCode.OK)
+                        }
+                        delete("{id}") {
+                            val id = call.parameters["id"]?.toIntOrNull()
+                                ?: throw BadRequestException("Invalid ID")
+                            call.respond(exerciseService.deleteExerciseCompleted(id))
+                        }
+
+                    }
                     get("{id}") {
                         val id = call.parameters["id"]?.toIntOrNull()
                             ?: throw BadRequestException("Invalid ID")
@@ -1140,23 +1214,27 @@ fun Application.configureRouting() {
                         val created = exerciseService.createExerciseCompleted(dto)
                         call.respond(HttpStatusCode.Created, created)
                     }
-                    put("{id}") {
-                        val id = call.parameters["id"]?.toIntOrNull()
-                            ?: throw BadRequestException("Invalid ID")
-                        val dto = call.receive<UpdateExerciseCompletedDto>()
-                        exerciseService.updateExerciseCompleted(id, dto)
-                        call.respond(HttpStatusCode.OK)
-                    }
-                    delete("{id}") {
-                        val id = call.parameters["id"]?.toIntOrNull()
-                            ?: throw BadRequestException("Invalid ID")
-                        call.respond(exerciseService.deleteExerciseCompleted(id))
-                    }
                 }
 
                 // TestsCompleted
                 route("/testsCompleted") {
-                    get { call.respond(testService.getAllTestCompleted()) }
+                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR) {
+                        get { call.respond(testService.getAllTestCompleted()) }
+                        put("{id}") {
+                            val id = call.parameters["id"]?.toIntOrNull()
+                                ?: throw BadRequestException("Invalid ID")
+                            val dto = call.receive<UpdateTestCompletedDto>()
+                            testService.updateTestCompleted(id, dto)
+                            call.respond(HttpStatusCode.OK)
+                        }
+                        delete("{id}") {
+                            val id = call.parameters["id"]?.toIntOrNull()
+                                ?: throw BadRequestException("Invalid ID")
+                            call.respond(testService.deleteTestCompleted(id))
+                        }
+
+
+                    }
                     get("{id}") {
                         val id = call.parameters["id"]?.toIntOrNull()
                             ?: throw BadRequestException("Invalid ID")
@@ -1175,23 +1253,26 @@ fun Application.configureRouting() {
                         val created = testService.createTestCompleted(dto)
                         call.respond(HttpStatusCode.Created, created)
                     }
-                    put("{id}") {
-                        val id = call.parameters["id"]?.toIntOrNull()
-                            ?: throw BadRequestException("Invalid ID")
-                        val dto = call.receive<UpdateTestCompletedDto>()
-                        testService.updateTestCompleted(id, dto)
-                        call.respond(HttpStatusCode.OK)
-                    }
-                    delete("{id}") {
-                        val id = call.parameters["id"]?.toIntOrNull()
-                            ?: throw BadRequestException("Invalid ID")
-                        call.respond(testService.deleteTestCompleted(id))
-                    }
                 }
 
                 // QuestionsCompleted
                 route("/questions-completed") {
-                    get { call.respond(questionService.getAllQuestionsCompleted()) }
+                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR) {
+                        get { call.respond(questionService.getAllQuestionsCompleted()) }
+                        put("{id}") {
+                            val id = call.parameters["id"]?.toIntOrNull()
+                                ?: throw BadRequestException("Invalid ID")
+                            val dto = call.receive<UpdateQuestionCompletedDto>()
+                            questionService.updateQuestionsCompleted(id, dto)
+                            call.respond(HttpStatusCode.OK)
+                        }
+                        delete("{id}") {
+                            val id = call.parameters["id"]?.toIntOrNull()
+                                ?: throw BadRequestException("Invalid ID")
+                            call.respond(questionService.deleteQuestionsCompleted(id))
+                        }
+
+                    }
                     get("{id}") {
                         val id = call.parameters["id"]?.toIntOrNull()
                             ?: throw BadRequestException("Invalid ID")
@@ -1204,18 +1285,6 @@ fun Application.configureRouting() {
                         val created = questionService.createQuestionCompleted(dto)
                         call.respond(HttpStatusCode.Created, created)
                     }
-                    put("{id}") {
-                        val id = call.parameters["id"]?.toIntOrNull()
-                            ?: throw BadRequestException("Invalid ID")
-                        val dto = call.receive<UpdateQuestionCompletedDto>()
-                        questionService.updateQuestionsCompleted(id, dto)
-                        call.respond(HttpStatusCode.OK)
-                    }
-                    delete("{id}") {
-                        val id = call.parameters["id"]?.toIntOrNull()
-                            ?: throw BadRequestException("Invalid ID")
-                        call.respond(questionService.deleteQuestionsCompleted(id))
-                    }
                 }
 
                 // Notifications
@@ -1224,9 +1293,10 @@ fun Application.configureRouting() {
                     get("/search") {
                         val userId = call.request.queryParameters["userId"]?.toIntOrNull()
                         val title = call.request.queryParameters["title"]
-                        val notificationType = call.request.queryParameters["notificationType"]?.let {
-                            NotificationType.valueOf(it)
-                        }
+                        val notificationType =
+                            call.request.queryParameters["notificationType"]?.let {
+                                NotificationType.valueOf(it)
+                            }
                         val category = call.request.queryParameters["category"]?.let {
                             NotificationCategory.valueOf(it)
                         }
@@ -1234,7 +1304,11 @@ fun Application.configureRouting() {
                             NotificationSubCategory.valueOf(it)
                         }
                         val status =
-                            call.request.queryParameters["status"]?.let { NotificationStatus.valueOf(it) }
+                            call.request.queryParameters["status"]?.let {
+                                NotificationStatus.valueOf(
+                                    it
+                                )
+                            }
                         val filters = FilterNotificationsDto(
                             userId = userId,
                             title = title,

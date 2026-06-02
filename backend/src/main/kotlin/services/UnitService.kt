@@ -50,6 +50,10 @@ class UnitService(private val unitRepository: UnitRepository) {
         return unitRepository.getUnitsCompletedByUser(userId)
     }
 
+    fun getAllUnitsCompletedByStudents(): List<UnitCompletedDto> {
+        return unitRepository.getAllUnitsCompletedByStudents()
+    }
+
 
     fun createUnitCompleted(dto: CreateUnitCompletedDto): UnitCompletedDto =
         unitRepository.createUnitsCompleted(dto)

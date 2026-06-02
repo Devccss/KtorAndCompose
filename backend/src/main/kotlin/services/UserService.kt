@@ -26,6 +26,9 @@ class UserService(
     fun getAllUsers(): List<UserDto> {
         return userRepository.getAll()
     }
+    fun getAllStudents(): List<UserDto> {
+        return userRepository.getAllStudents()
+    }
     fun getUserById(id: Int): UserDto? {
         return userRepository.getById(id)
     }

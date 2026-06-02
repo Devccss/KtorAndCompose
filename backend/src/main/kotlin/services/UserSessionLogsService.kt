@@ -22,6 +22,9 @@ class UserSessionLogsService(private val repository: UserSessionLogsRepository) 
 
     fun getSessionsByUserId(userId: Int): List<UserSessionLogDto> = repository.getByUserId(userId)
 
+    fun getAllSessions(): List<UserSessionLogDto> = repository.getAll()
+    fun getAllSessionsByStudents(): List<UserSessionLogDto> = repository.getAllByStudents()
+
     fun getOpenSessionByUserId(userId: Int): UserSessionLogDto? = repository.getOpenSessionByUserId(userId)
 
     fun filter(dto: FilterUserSessionLogsDto): List<UserSessionLogDto> = repository.filter(dto)

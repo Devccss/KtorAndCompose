@@ -169,6 +169,19 @@ class ExerciseRepository {
             }
     }
 
+    fun getAllExercisesCompletedByStudents(): List<ExerciseCompletedDto> = transaction {
+        (ExerciseCompleted innerJoin models.Users).selectAll()
+            .where { models.Users.role eq models.Role.STUDENT }
+            .map { row ->
+                ExerciseCompletedDto(
+                    id = row[ExerciseCompleted.id].value,
+                    userId = row[ExerciseCompleted.userId],
+                    exerciseId = row[ExerciseCompleted.exerciseId],
+                    completedAt = row[ExerciseCompleted.completionDate].toString()
+                )
+            }
+    }
+
     fun createExerciseCompleted(dto: CreateExerciseCompletedDto): ExerciseCompletedDto =
         transaction {
             val exists = ExerciseCompleted.selectAll().where {

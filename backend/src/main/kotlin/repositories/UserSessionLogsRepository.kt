@@ -42,6 +42,9 @@ class UserSessionLogsRepository {
         )
     }
 
+    fun getAll(): List<UserSessionLogDto> = transaction {
+        UserSessionLogs.selectAll().orderBy(UserSessionLogs.loginAt).map(::mapToDto)
+    }
     fun getById(id: Int): UserSessionLogDto? = transaction {
         UserSessionLogs.selectAll().where { UserSessionLogs.id eq id }.singleOrNull()?.let(::mapToDto)
     }
@@ -49,6 +52,13 @@ class UserSessionLogsRepository {
     fun getByUserId(userId: Int): List<UserSessionLogDto> = transaction {
         UserSessionLogs.selectAll()
             .where { UserSessionLogs.userId eq userId }
+            .orderBy(UserSessionLogs.loginAt)
+            .map(::mapToDto)
+    }
+
+    fun getAllByStudents(): List<UserSessionLogDto> = transaction {
+        (UserSessionLogs innerJoin Users).selectAll()
+            .where { Users.role eq Role.STUDENT }
             .orderBy(UserSessionLogs.loginAt)
             .map(::mapToDto)
     }

@@ -24,6 +24,7 @@ class ExerciseService(private val repo: ExerciseRepository) {
     fun getAllExerciseCompleted(): List<ExerciseCompletedDto> = repo.getAllExerciseCompleted()
     fun getExerciseCompletedById(id: Int): ExerciseCompletedDto? = repo.getExerciseCompletedById(id)
     fun getExerciseCompletedByUser(userId: Int): List<ExerciseCompletedDto>  = repo.getExercisesCompletedByUser(userId)
+    fun getAllExercisesCompletedByStudents(): List<ExerciseCompletedDto> = repo.getAllExercisesCompletedByStudents()
     fun updateExerciseCompleted(id: Int, dto: UpdateExerciseCompletedDto) =
         repo.updateExerciseCompleted(id, dto)
 

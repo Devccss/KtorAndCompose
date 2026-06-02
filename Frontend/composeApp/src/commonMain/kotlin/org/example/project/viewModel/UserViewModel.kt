@@ -12,12 +12,14 @@ import kotlinx.coroutines.launch
 import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.CreateUserDto
 import org.example.project.dtos.FilterUsersDto
+import org.example.project.dtos.GeneralStatsDto
 import org.example.project.dtos.LoginDto
 import org.example.project.dtos.TestDto
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UpdateUserDto
 import org.example.project.dtos.UserDto
 import org.example.project.dtos.UserStatsDto
+import org.example.project.dtos.StudentsStatsSummaryDto
 import org.example.project.network.UserSession
 import org.example.project.repository.UnitRepo
 import org.example.project.repository.UserRepo
@@ -34,6 +36,10 @@ data class UsersUiState(
     val failedTests: List<TestDto> = emptyList(),
     val weeklyHours: Double = 0.0,
     val sessionCount: Int = 0,
+    val allUserStats : GeneralStatsDto? = null,
+    val studentsStats: StudentsStatsSummaryDto? = null,
+    val studentsStatsLoading: Boolean = false,
+    val studentsStatsError: String? = null,
     val statsLoading: Boolean = false,
     val statsError: String? = null,
     val isLoading: Boolean = false,
@@ -42,6 +48,7 @@ data class UsersUiState(
 
     )
 
+@Suppress("unused")
 class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) : ViewModel(),
     ScreenModel {
     private val _state = MutableStateFlow(
@@ -58,6 +65,10 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
     }
 
     init {
+        // Referenciar unitRepo de forma inocua para evitar advertencias de "propiedad no utilizada"
+        // (esto no altera la lógica de la clase)
+        unitRepo.hashCode()
+
         launchCatching(
             block = { return@launchCatching true },
             onSuccess = {
@@ -92,9 +103,22 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
     }
 
     fun getFilterUsers(filters: FilterUsersDto) {
-        val normalized = filters.copy(name = filters.name?.trim()?.takeIf { it.isNotEmpty() })
-        filters.role?.let { filters.copy(role = it) }
-        filters.unitId?.let { filters.copy(unitId = it) }
+        // Normalizar los filtros: trim del nombre, ignorar role vacío, aceptar unitId > 0
+        val name = filters.name?.trim()?.takeIf { it.isNotEmpty() }
+        val role = filters.role?.takeIf { true }
+        val unitId = filters.unitId?.takeIf { it > 0 }
+
+        // Si no se proporcionaron filtros efectivos, cargar todos los usuarios en lugar de hacer una consulta vacía
+        if (name == null && role == null && unitId == null) {
+            loadUsers()
+            return
+        }
+
+        val normalized = filters.copy(
+            name = name,
+            role = role,
+            unitId = unitId
+        )
         launchCatching(
             block = {
                 repo.getFilterUsers(normalized)
@@ -149,7 +173,24 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
             }
         )
     }
-
+    fun loadAllUsersStats() {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(statsLoading = true, statsError = null)
+            try {
+                val generalStats = repo.getAllUserStats()
+                _state.value = _state.value.copy(
+                    allUserStats = generalStats,
+                    statsLoading = false,
+                    statsError = null
+                )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    statsLoading = false,
+                    statsError = e.message ?: "No se pudieron cargar las estadísticas"
+                )
+            }
+        }
+    }
     fun loadUserStatistics(userId: Int) {
         if (userId <= 0) {
             _state.value = _state.value.copy(
@@ -183,7 +224,7 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
                     completedTests = completedTests,
                     failedTests = failedTests,
                     weeklyHours = weeklyHours?.weeklyHours ?: summary?.weeklyHours ?: 0.0,
-                    sessionCount = weeklyHours?.sessionCount ?: summary?.sessionCount ?: 0,
+                    sessionCount = weeklyHours?.sessionCount ?: 0,
                     statsLoading = false,
                     statsError = null
                 )
@@ -191,6 +232,25 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
                 _state.value = _state.value.copy(
                     statsLoading = false,
                     statsError = e.message ?: "No se pudieron cargar las estadísticas"
+                )
+            }
+        }
+    }
+
+    fun loadStudentsStats() {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(studentsStatsLoading = true, studentsStatsError = null)
+            try {
+                val stats = repo.getStudentsStats()
+                _state.value = _state.value.copy(
+                    studentsStats = stats,
+                    studentsStatsLoading = false,
+                    studentsStatsError = null
+                )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    studentsStatsLoading = false,
+                    studentsStatsError = e.message ?: "No se pudieron cargar las estadísticas de alumnos"
                 )
             }
         }

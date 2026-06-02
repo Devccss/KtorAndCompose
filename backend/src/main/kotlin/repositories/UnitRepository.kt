@@ -11,7 +11,6 @@ import io.ktor.server.plugins.BadRequestException
 import models.Units
 import models.DifficultyLevel
 import models.UnitsCompleted
-
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.jdbc.andWhere
@@ -172,6 +171,12 @@ class UnitRepository {
     fun getUnitsCompletedByUser(userId: Int): List<UnitDto> = transaction {
         (UnitsCompleted innerJoin Units).selectAll().where { UnitsCompleted.userId eq userId }
             .map(::resultRowToUnit)
+    }
+
+    fun getAllUnitsCompletedByStudents(): List<UnitCompletedDto> = transaction {
+        (UnitsCompleted innerJoin models.Users).selectAll()
+            .where { models.Users.role eq models.Role.STUDENT }
+            .map(::resultRowToUnitCompleted)
     }
 
     fun editUnitsCompleted(id: Int, dto: UpdateUnitCompletedDto) {
