@@ -1,0 +1,20 @@
+meta {
+  name: User stats
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{BackendKtor}}/users/2/stats
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJrdG9yLWF1ZGllbmNlIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDAwIiwiaWQiOjMsInVzZXJuYW1lIjoiZWRpdG9yQDIwMjYiLCJyb2xlIjoiQ09OVEVOVF9FRElUT1IiLCJleHAiOjE3ODAzMzkxNTh9.EBq0qxeUYnaly_HoEkKHFcs0PhDH61IVCdsN87oLA9U
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

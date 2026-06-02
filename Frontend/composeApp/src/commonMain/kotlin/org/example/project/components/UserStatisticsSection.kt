@@ -27,12 +27,12 @@ fun UserStatisticsSection(
     state: UsersUiState,
     modifier: Modifier = Modifier
 ) {
-    val completedUnitsCount = state.userStats?.completedUnits ?: state.completedUnits.size
-    val completedExercisesCount = state.userStats?.completedExercises ?: state.completedExercises.size
-    val completedTestsCount = state.userStats?.completedTests ?: state.completedTests.size
-    val failedTestsCount = state.userStats?.failedTests ?: state.failedTests.size
+    val completedUnitsCount = state.userStats?.completedUnitsCount ?: state.completedUnits.size
+    val completedExercisesCount = state.userStats?.completedExercisesCount ?: state.completedExercises.size
+    val completedTestsCount = state.userStats?.completedTestsCount ?: state.completedTests.size
+    val failedTestsCount = state.userStats?.failedTestsCount ?: state.failedTests.size
     val weeklyHours = state.userStats?.weeklyHours ?: state.weeklyHours
-    val sessionCount = state.userStats?.sessionCount ?: state.sessionCount
+    val sessionCount = state.userStats?.weeklyHours  ?: state.sessionCount
 
     Column(
         modifier = modifier.fillMaxWidth(),

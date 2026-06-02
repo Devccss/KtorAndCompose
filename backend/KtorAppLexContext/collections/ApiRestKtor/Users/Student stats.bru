@@ -1,0 +1,20 @@
+meta {
+  name: Student stats
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{BackendKtor}}/users/stats/students
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJrdG9yLWF1ZGllbmNlIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDAwIiwiaWQiOjMsInVzZXJuYW1lIjoiZWRpdG9yQDIwMjYiLCJyb2xlIjoiQ09OVEVOVF9FRElUT1IiLCJleHAiOjE3ODAzMzkxNTh9.EBq0qxeUYnaly_HoEkKHFcs0PhDH61IVCdsN87oLA9U
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

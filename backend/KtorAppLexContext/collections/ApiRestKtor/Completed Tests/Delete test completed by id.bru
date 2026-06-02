@@ -1,0 +1,20 @@
+meta {
+  name: Delete test completed by id
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{BackendKtor}}/testsCompleted/2
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJrdG9yLWF1ZGllbmNlIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDAwIiwiaWQiOjMsInVzZXJuYW1lIjoiZWRpdG9yQDIwMjYiLCJyb2xlIjoiQ09OVEVOVF9FRElUT1IiLCJleHAiOjE3ODAzMzc5NDV9.psdYsZdeQVQrYn9mGqCNApzUQMbnHs-WTwH8AxCnRFA
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

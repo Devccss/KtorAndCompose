@@ -13,12 +13,14 @@ import io.ktor.http.contentType
 import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.CreateUserDto
 import org.example.project.dtos.FilterUsersDto
+import org.example.project.dtos.GeneralStatsDto
 import org.example.project.dtos.LoginDto
 import org.example.project.dtos.TestDto
 import org.example.project.dtos.UpdateUserDto
 import org.example.project.dtos.UserDto
 import org.example.project.dtos.UserStatsDto
 import org.example.project.dtos.UserWeeklyHoursDto
+import org.example.project.dtos.StudentsStatsSummaryDto
 import org.example.project.dtos.UnitDto
 
 class UserRepo(private val httpClient: HttpClient, private val baseUrl: String) {
@@ -58,6 +60,10 @@ class UserRepo(private val httpClient: HttpClient, private val baseUrl: String) 
             if (response.status == HttpStatusCode.NotFound) null else response.parseOrThrow()
         }
 
+    suspend fun getAllUserStats(): GeneralStatsDto =
+        httpClient.get("$baseUrl/api/v1/users/stats") {
+            addAuthHeader()
+        }.parseOrThrow()
     suspend fun getUserStats(userId: Int): UserStatsDto? =
         httpClient.get("$baseUrl/api/v1/users/$userId/stats") {
             addAuthHeader()
@@ -88,6 +94,11 @@ class UserRepo(private val httpClient: HttpClient, private val baseUrl: String) 
 
     suspend fun getWeeklyHoursByUserId(userId: Int): UserWeeklyHoursDto =
         httpClient.get("$baseUrl/api/v1/users/$userId/weekly-hours") {
+            addAuthHeader()
+        }.parseOrThrow()
+
+    suspend fun getStudentsStats(): StudentsStatsSummaryDto =
+        httpClient.get("$baseUrl/api/v1/users/stats/students") {
             addAuthHeader()
         }.parseOrThrow()
 

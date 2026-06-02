@@ -27,14 +27,21 @@ import frontend.composeapp.generated.resources.Res
 import frontend.composeapp.generated.resources.encode_sans_bold
 import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import org.example.project.components.AppLayout
+import org.example.project.dtos.GeneralStatsDto
 import org.example.project.dtos.Role
+import org.example.project.dtos.StudentsStatsSummaryDto
 import org.example.project.dtos.WeeklySessionMetricDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
+import org.example.project.screens.editorScreens.SummaryMetricCard
+import org.example.project.screens.editorScreens.SummaryMetricRow
+import org.example.project.screens.editorScreens.formatHours
+import org.example.project.screens.editorScreens.formatScore
 import org.example.project.viewModel.ExercisesViewModel
 import org.example.project.viewModel.SessionLogViewModel
 import org.example.project.viewModel.UnitViewModel
 import org.example.project.viewModel.UserViewModel
+import org.example.project.viewModel.UsersUiState
 import org.jetbrains.compose.resources.Font
 
 data class WeeklyStats(val day: String, val users: Int, val lessons: Int)
@@ -72,10 +79,30 @@ class AdminDashboard(private val id: Int? = null ) : Screen {
         var totalUsers by remember { mutableStateOf(0) }
         var totalExercises by remember { mutableStateOf(0) }
 
+        val snackbarHostState = remember { SnackbarHostState() }
+
         LaunchedEffect(unitUi.units, userUi.users, exerciseUi.exercises) {
             totalUnits = unitUi.units.size
             totalUsers = userUi.users.size
             totalExercises = exerciseUi.exercises.size
+        }
+        LaunchedEffect( unitUi.error, userUi.error, exerciseUi.error, sessionUi.error) {
+            if (!unitUi.error.isNullOrBlank()) {
+                snackbarHostState.showSnackbar("Error al cargar unidades: ${unitUi.error}")
+                println("Error al cargar unidades: ${unitUi.error}")
+            }
+            if (!userUi.error.isNullOrBlank()) {
+                snackbarHostState.showSnackbar("Error al cargar usuarios: ${userUi.error}")
+                println("Error al cargar usuarios: ${userUi.error}")
+            }
+            if (!exerciseUi.error.isNullOrBlank()) {
+                snackbarHostState.showSnackbar("Error al cargar ejercicios: ${exerciseUi.error}")
+                println("Error al cargar ejercicios: ${exerciseUi.error}")
+            }
+            if (!sessionUi.error.isNullOrBlank()) {
+                snackbarHostState.showSnackbar("Error al cargar métricas de sesiones: ${sessionUi.error}")
+                println("Error al cargar métricas de sesiones: ${sessionUi.error}")
+            }
         }
         LaunchedEffect(id){
             id?.let { userId ->
@@ -83,6 +110,9 @@ class AdminDashboard(private val id: Int? = null ) : Screen {
                     userVm.getUserById(userId)
                 }
             }
+        }
+        LaunchedEffect(Unit) {
+            userVm.loadAllUsersStats()
         }
 
 
@@ -92,6 +122,7 @@ class AdminDashboard(private val id: Int? = null ) : Screen {
             actualScreen = null,
             selectedIndex = selectedIndex,
             onSelect = { idx -> selectedIndex = idx },
+            snackbarHostState = remember { SnackbarHostState() },
         ) { _,_,_ ->
 
             if (UserSession.role != Role.ADMIN) {
@@ -108,10 +139,7 @@ class AdminDashboard(private val id: Int? = null ) : Screen {
 
             // Llamamos al contenido del dashboard, pasando padding desde el layout
             AdminDashboardContent(
-                adminName = UserSession.name?: "Unknown",
-                totalUnits = totalUnits,
-                totalUsers = totalUsers,
-                totalExercises = totalExercises,
+                userUi = userUi,
                 weeklyMetrics = sessionUi.weeklyMetrics,
                 sessionMetricsLoading = sessionUi.isLoading,
                 sessionMetricsError = sessionUi.error,
@@ -124,10 +152,7 @@ class AdminDashboard(private val id: Int? = null ) : Screen {
 @Composable
 fun AdminDashboardContent(
     modifier: Modifier = Modifier,
-    adminName: String,
-    totalUnits: Int,
-    totalUsers: Int,
-    totalExercises: Int,
+    userUi : UsersUiState,
     weeklyMetrics: List<WeeklySessionMetricDto>,
     sessionMetricsLoading: Boolean,
     sessionMetricsError: String?,
@@ -235,83 +260,12 @@ fun AdminDashboardContent(
             }
         }
 
-        // Sección de estadísticas con tabs
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ){
-                    Text(
-                        "Análisis" ,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily(Font(Res.font.encode_sans_bold, weight = FontWeight.Bold)),
-                    )
-                }
-                var selectedSectionTabs by remember { mutableStateOf(0) } // 0: Análisis, 1: Unidades, 2: Usuarios
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-
-                    TextButton(onClick = { selectedSectionTabs = 0 }) {
-                        Text(
-                            "General",
-                            color = if (selectedSectionTabs == 0) Color(0xFFFF6B6B) else Color.Gray,
-                            fontWeight = if (selectedSectionTabs == 0) FontWeight.Bold else FontWeight.Normal,
-                            fontFamily = FontFamily(Font(Res.font.jetbrains_mono_regular)),
-                            fontSize = 14.sp
-                        )
-                    }
-                    TextButton(onClick = { selectedSectionTabs = 2 }) {
-                        Text(
-                            "Usuarios",
-                            color = if (selectedSectionTabs == 2) Color(0xFFFF6B6B) else Color.Gray,
-                            fontWeight = if (selectedSectionTabs == 2) FontWeight.Bold else FontWeight.Normal,
-                            fontFamily = FontFamily(Font(Res.font.jetbrains_mono_regular)),
-                            fontSize = 14.sp
-                        )
-                    }
-                    TextButton(onClick = { selectedSectionTabs = 1 }) {
-                        Text(
-                            "Unidades",
-                            color = if (selectedSectionTabs == 1) Color(0xFFFF6B6B) else Color.Gray,
-                            fontWeight = if (selectedSectionTabs == 1) FontWeight.Bold else FontWeight.Normal,
-                            fontFamily = FontFamily(Font(Res.font.jetbrains_mono_regular)),
-                            fontSize = 14.sp
-                        )
-                    }
-                    TextButton(onClick = { selectedSectionTabs = 3 }) {
-                        Text(
-                            "Ejercicios",
-                            color = if (selectedSectionTabs == 3) Color(0xFFFF6B6B) else Color.Gray,
-                            fontWeight = if (selectedSectionTabs == 3) FontWeight.Bold else FontWeight.Normal,
-                            fontFamily = FontFamily(Font(Res.font.jetbrains_mono_regular)),
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                when (selectedSectionTabs) {
-                    0 -> AnalysisSection()
-                    1 -> UnitPreviewSection(totalUnits)
-                    2 -> UsersSection(totalUsers)
-                    3 -> ExerciseSection(totalExercises)
-                }
-            }
-        }
+        OverviewCard(
+            generalStats = userUi.allUserStats, // Aquí podrías pasar stats generales si los obtienes
+            loading = false,
+            error = null,
+            onRetry = {}
+        )
     }
 }
 
@@ -488,6 +442,92 @@ class UnitDetailsPlaceholder(private val unitId: Int) : Screen {
             Text("Detalle de unidad (placeholder)", fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
             Text("ID: $unitId")
+        }
+    }
+}
+
+@Composable
+private fun OverviewCard(
+    generalStats: GeneralStatsDto?,
+    loading: Boolean,
+    error: String?,
+    onRetry: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Estadísticas generales de los usuarios",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF2D2D2D)
+            )
+
+            when {
+                loading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = Color(0xFFFF6B6B))
+                    }
+                }
+
+                !error.isNullOrBlank() -> {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = error,
+                            color = Color(0xFFB00020),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        TextButton(onClick = onRetry) { Text("Reintentar") }
+                    }
+                }
+
+                generalStats == null -> {
+                    Text(
+                        text = "Sin estadísticas de usuarios por el momento.",
+                        color = Color.Gray
+                    )
+                }
+
+                else -> {
+                    SummaryMetricRow(
+                        first = "Alumnos",
+                        firstValue = generalStats.totalUsers.toString(),
+                        second = "Unidades",
+                        secondValue = generalStats.totalUnits.toString()
+                    )
+                    SummaryMetricRow(
+                        first = "Ejercicios",
+                        firstValue = generalStats.totalExercises.toString(),
+                        second = "Tests",
+                        secondValue = generalStats.totalTests.toString()
+                    )
+                    SummaryMetricRow(
+                        first = "Fallos en tests",
+                        firstValue = generalStats.totalFailedTests.toString(),
+                        second = "Horas de estudio",
+                        secondValue = generalStats.totalStudyHours.formatHours()
+                    )
+                    SummaryMetricCard(
+                        title = "Promedio general de tests",
+                        value = "${generalStats.averageTestScore.formatScore()}%",
+                        accent = Color(0xFFFFE7D1)
+                    )
+                }
+            }
         }
     }
 }
