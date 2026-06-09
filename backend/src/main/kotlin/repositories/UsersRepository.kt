@@ -107,7 +107,13 @@ class UsersRepository {
                 dto.name?.let { u[name] = it }
                 dto.preferences?.let { u[preferences] = it }
                 dto.provider?.let { u[provider] = it }
-                dto.currentUnitId?.let { u[currentUnitId] = it }
+                dto.currentUnitId?.let {
+                    if(dto.currentUnitId == -1){
+                        u[currentUnitId] = null
+                    }else{
+                        u[currentUnitId] = it
+                    }
+                }
                 dto.role?.let { u[role] = it}
 
             }

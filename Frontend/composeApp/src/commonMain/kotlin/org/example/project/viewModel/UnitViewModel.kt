@@ -234,6 +234,7 @@ class UnitViewModel(
             }
         )
     }
+
     fun createUnitCompleted(dto: CreateUnitCompletedDto) {
         launchCatching(
             block = { unitRepo.createUnitCompleted(dto) },

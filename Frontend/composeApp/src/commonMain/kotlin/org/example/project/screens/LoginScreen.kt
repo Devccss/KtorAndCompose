@@ -21,16 +21,19 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import org.example.project.viewModel.UserViewModel
 import cafe.adriel.voyager.core.model.rememberScreenModel
+import org.example.project.NotificationPermissionManager
 import org.example.project.dtos.LoginDto
 import org.example.project.dtos.Role
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.SessionLogTracker
 import org.example.project.network.UserSession
+import org.example.project.requestNotificationPermission
 import org.example.project.screens.admindScreens.AdminDashboard
 import org.example.project.screens.admindScreens.RegisterScreen
 import org.example.project.screens.editorScreens.EditorDashboard
 import org.example.project.screens.studentScreens.StudentWelcomeScreen
 import org.example.project.service.NotificationService
+
 
 class LoginScreen(private val logout: Boolean? = false, private val userId: Int? = null) : Screen {
     @Composable
@@ -82,6 +85,10 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
             }
 
         }
+        LaunchedEffect(Unit) {
+            requestNotificationPermission()
+        }
+
         // Mostrar error si existe
         LaunchedEffect(uiState.error) {
             uiState.error?.let {
@@ -302,11 +309,6 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
                                         currentUser.token,
                                         actualUnit = currentUser.currentUnitId
                                     )
-                                    try {
-                                        NotificationService.startNotificationPolling()
-                                    } catch (e: Exception) {
-                                        println("[LoginScreen] ⚠️ Error al iniciar notificaciones: ${e.message}")
-                                    }
                                     navigator.push(StudentWelcomeScreen())
                                 } else if (currentUser?.role == Role.ADMIN && currentUserId != null) {
                                     try {
@@ -321,11 +323,6 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
                                         currentUser.token,
                                         actualUnit = currentUser.currentUnitId
                                     )
-                                    try {
-                                        NotificationService.startNotificationPolling()
-                                    } catch (e: Exception) {
-                                        println("[LoginScreen] ⚠️ Error al iniciar notificaciones: ${e.message}")
-                                    }
                                     navigator.push(AdminDashboard(currentUserId))
                                 } else if (currentUser?.role == Role.CONTENT_EDITOR && currentUserId != null) {
                                     try {
@@ -340,11 +337,6 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
                                         currentUser.token,
                                         actualUnit = currentUser.currentUnitId
                                     )
-                                    try {
-                                        NotificationService.startNotificationPolling()
-                                    } catch (e: Exception) {
-                                        println("[LoginScreen] ⚠️ Error al iniciar notificaciones: ${e.message}")
-                                    }
                                     navigator.push(EditorDashboard(currentUserId))
 
                                 }

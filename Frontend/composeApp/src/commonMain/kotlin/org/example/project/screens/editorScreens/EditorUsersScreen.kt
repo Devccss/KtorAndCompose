@@ -133,7 +133,11 @@ class EditorUsersScreen : Screen {
         }
 
         LaunchedEffect(Unit) {
-            vm.loadUsers()
+            vm.getFilterUsers(
+                FilterUsersDto(
+                    role = Role.STUDENT
+                )
+            )
         }
 
         LaunchedEffect(ui.error) {

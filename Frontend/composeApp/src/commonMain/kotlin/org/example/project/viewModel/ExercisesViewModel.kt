@@ -9,6 +9,7 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.example.project.NotificationData
 import org.example.project.dtos.CreateExerciseContentDto
 import org.example.project.dtos.CreateExerciseDto
 import org.example.project.dtos.CreateExerciseCompletedDto
@@ -20,7 +21,6 @@ import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UpdateExerciseContentDto
 import org.example.project.dtos.UpdateExerciseDto
 import org.example.project.repository.ExerciseRepo
-
 data class ExercisesUiState(
     val actualUnit: UnitDto? = null,
     val selectedExercise: ExerciseDto? = null,
@@ -72,7 +72,7 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
 
             },
             onSuccess = { exercise ->
-
+                NotificationData.totalExercises = exercise.size
                 _state.value = _state.value.copy(exercises = exercise)
             },
             onError = { error ->
@@ -248,6 +248,7 @@ class ExercisesViewModel(private val repo: ExerciseRepo, private val unitId:Int?
         launchCatching(
             block = { repo.getExercisesCompletedByUserId(userId) },
             onSuccess = { completed ->
+                NotificationData.completedExercises = completed.size
                 _state.value = _state.value.copy(completedExercises = completed)
             },
             onError = { error ->

@@ -84,6 +84,7 @@ import org.example.project.dtos.UserDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
 import org.example.project.screens.LoginScreen
+import org.example.project.viewModel.UnitViewModel
 import org.example.project.viewModel.UserViewModel
 import org.jetbrains.compose.resources.Font
 
@@ -94,7 +95,12 @@ class EditorUserDetailsScreen(private val userId: Int) : Screen {
         val vm = rememberScreenModel {
             UserViewModel(RepositoryProvider.userRepo, RepositoryProvider.unitRepo)
         }
+        val unitVm = rememberScreenModel {
+            UnitViewModel(RepositoryProvider.unitRepo)
+        }
+
         val ui by vm.state.collectAsState()
+        val unitUi by unitVm.state.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
         val navigator = LocalNavigator.currentOrThrow
         val scope = rememberCoroutineScope()
@@ -450,7 +456,7 @@ class EditorUserDetailsScreen(private val userId: Int) : Screen {
                                                 expanded = unitMenuExpanded,
                                                 onDismissRequest = { unitMenuExpanded = false }
                                             ) {
-                                                ui.unit.forEach { unit ->
+                                                unitUi.units.forEach { unit ->
                                                     DropdownMenuItem(
                                                         text = { Text(unit.name) },
                                                         onClick = {
@@ -489,11 +495,10 @@ class EditorUserDetailsScreen(private val userId: Int) : Screen {
                                     Spacer(Modifier.height(12.dp))
 
                                     // Calcular progreso basado en la posición de la unidad
-                                    val totalUnits = ui.unit.size
-                                    val currentUnitIndex =
-                                        ui.unit.indexOfFirst { it.id == editedUnitId }
-                                    val progress = if (totalUnits > 0 && currentUnitIndex >= 0) {
-                                        ((currentUnitIndex + 1).toFloat() / totalUnits.toFloat())
+                                    val totalUnits = unitUi.units.size
+                                    val completedUnitsSize = unitUi.unitsCompleted.size
+                                    val progress = if (totalUnits > 0 && completedUnitsSize >= 0) {
+                                        completedUnitsSize.toFloat() / totalUnits
                                     } else 0f
 
                                     LinearProgressIndicator(

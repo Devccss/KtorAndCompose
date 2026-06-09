@@ -6,6 +6,7 @@ import config.withRoles
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
+import io.ktor.server.auth.Credential
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.principal
@@ -248,15 +249,15 @@ fun Application.configureRouting() {
                     call.respond(HttpStatusCode.Created, user)
                 }
 
-
-                authenticate("auth-jwt") {
-
-                }
                 authenticate("auth-jwt") {
                     withRoles(Role.ADMIN) {
                         get("/stats"){
                             val stats = userStatisticsService.getAllUsersStats()
                             call.respond(stats)
+                        }
+                        get {
+                            val users = userService.getAllUsers()
+                            call.respond(users)
                         }
                     }
 
@@ -281,10 +282,7 @@ fun Application.configureRouting() {
                             }
                         }
 
-                        get {
-                            val users = userService.getAllUsers()
-                            call.respond(users)
-                        }
+
                         get("/filter") {
                             val name =
                                 call.request.queryParameters["name"]?.takeIf { it.isNotBlank() }
@@ -352,6 +350,23 @@ fun Application.configureRouting() {
                         val id = call.parameters["id"]?.toIntOrNull()
                             ?: throw BadRequestException("Invalid ID in put user")
                         val dto = call.receive<UpdateUserDto>()
+                        val user = userService.getUserById(id) ?: throw NotFoundException("User not found")
+                        val units = unitService.searchUnits(FilterUnitsDto(isActive = true))
+                        dto.currentUnitId?.let {
+                            if(user.currentUnitId != it){
+                                if(dto.currentUnitId == -1){
+                                    unitService.deleteUnitsCompletedByUserId(user.id)
+                                }else{
+                                    for (u in units) {
+                                        if(u.id != it){
+                                            unitService.createUnitCompleted(
+                                                CreateUnitCompletedDto( user.id, u.id)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         val updatedUser = userService.updateUser(id, dto)
                         call.respond(updatedUser)
                     }

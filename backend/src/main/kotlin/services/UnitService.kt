@@ -72,4 +72,6 @@ class UnitService(private val unitRepository: UnitRepository) {
     fun deleteUnitsCompleted(completedId: Int) =
         unitRepository.deleteUnitsCompleted(completedId)
 
+    fun deleteUnitsCompletedByUserId( unitId: Int) =
+        unitRepository.deleteUnitsCompletedByUserId( unitId)
 }

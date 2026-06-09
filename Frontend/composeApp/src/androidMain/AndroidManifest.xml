@@ -7,7 +7,9 @@
         android:name="android.permission.FOREGROUND_SERVICE"
         tools:ignore="ForegroundServicePermission" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
     <application
+
         android:networkSecurityConfig="@xml/network_security_config"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -25,11 +27,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <receiver
+            android:name=".ReminderReceiver"
+            android:exported="false" />
 
-        <service
-            android:name=".notifications.NotificationForegroundService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
     </application>
 
 </manifest>

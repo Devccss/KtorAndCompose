@@ -206,4 +206,8 @@ class UnitRepository {
             ?: throw BadRequestException("La unidad completada con ID $id no existe.")
         UnitsCompleted.deleteWhere { UnitsCompleted.id eq id } > 0
     }
+
+    fun deleteUnitsCompletedByUserId(userId: Int): Boolean = transaction {
+        UnitsCompleted.deleteWhere { UnitsCompleted.userId eq userId } > 0
+    }
 }

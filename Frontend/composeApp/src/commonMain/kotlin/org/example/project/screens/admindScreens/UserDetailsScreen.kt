@@ -76,12 +76,14 @@ import frontend.composeapp.generated.resources.jetbrains_mono_regular
 import kotlinx.coroutines.launch
 import org.example.project.components.AppLayout
 import org.example.project.components.UserStatisticsSection
+import org.example.project.dtos.FilterUnitsDto
 import org.example.project.dtos.Role
 import org.example.project.dtos.UpdateUserDto
 import org.example.project.dtos.UserDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
 import org.example.project.screens.LoginScreen
+import org.example.project.viewModel.UnitViewModel
 import org.example.project.viewModel.UserViewModel
 import org.jetbrains.compose.resources.Font
 
@@ -92,7 +94,11 @@ class UserDetailsScreen(private val userId: Int) : Screen {
         val vm = rememberScreenModel {
             UserViewModel(RepositoryProvider.userRepo, RepositoryProvider.unitRepo)
         }
+        val unitVm = rememberScreenModel {
+            UnitViewModel(RepositoryProvider.unitRepo)
+        }
         val ui by vm.state.collectAsState()
+        val unitUi by unitVm.state.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
         val navigator = LocalNavigator.currentOrThrow
         val scope = rememberCoroutineScope()
@@ -128,6 +134,13 @@ class UserDetailsScreen(private val userId: Int) : Screen {
             if (userId > 0 ) {
                 vm.getUserById(userId)
                 vm.loadUserStatistics(userId)
+                unitVm.searchUnits(
+                    FilterUnitsDto(
+                        isActive = true
+                    )
+                )
+                unitVm.getAllUnitsCompletedByUserId(userId)
+
             }
         }
 
@@ -287,13 +300,15 @@ class UserDetailsScreen(private val userId: Int) : Screen {
                                                 onDismissRequest = { roleMenuExpanded = false }
                                             ) {
                                                 Role.entries.forEach { role ->
-                                                    DropdownMenuItem(
-                                                        text = { Text(role.name) },
-                                                        onClick = {
-                                                            editedRole = role
-                                                            roleMenuExpanded = false
-                                                        }
-                                                    )
+                                                    if(role != Role.ADMIN){
+                                                        DropdownMenuItem(
+                                                            text = { Text(role.name) },
+                                                            onClick = {
+                                                                editedRole = role
+                                                                roleMenuExpanded = false
+                                                            }
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
@@ -440,7 +455,7 @@ class UserDetailsScreen(private val userId: Int) : Screen {
                                             expanded = unitMenuExpanded,
                                             onExpandedChange = { unitMenuExpanded = !unitMenuExpanded }
                                         ) {
-                                            val currentUnitName = ui.unit.find { it.id == editedUnitId }?.name ?: "Sin asignar"
+                                            val currentUnitName = unitUi.units.find { it.id == editedUnitId }?.name ?: "Sin asignar"
                                             
                                             OutlinedTextField(
                                                 value = currentUnitName,
@@ -457,7 +472,14 @@ class UserDetailsScreen(private val userId: Int) : Screen {
                                                 expanded = unitMenuExpanded,
                                                 onDismissRequest = { unitMenuExpanded = false }
                                             ) {
-                                                ui.unit.forEach { unit ->
+                                                DropdownMenuItem(
+                                                    text = { Text("Sin asignar") },
+                                                    onClick = {
+                                                        editedUnitId = -1
+                                                        unitMenuExpanded = false
+                                                    }
+                                                )
+                                                unitUi.units.forEach { unit ->
                                                     DropdownMenuItem(
                                                         text = { Text(unit.name) },
                                                         onClick = {
@@ -469,7 +491,7 @@ class UserDetailsScreen(private val userId: Int) : Screen {
                                             }
                                         }
                                     } else {
-                                        val currentUnitName = ui.unit.find { it.id == editedUnitId }?.name ?: "Sin asignar"
+                                        val currentUnitName = unitUi.units.find { it.id == editedUnitId }?.name ?: "Sin asignar"
                                         Text(
                                             currentUnitName,
                                             style = MaterialTheme.typography.titleMedium,
@@ -490,10 +512,10 @@ class UserDetailsScreen(private val userId: Int) : Screen {
                                     Spacer(Modifier.height(12.dp))
                                     
                                     // Calcular progreso basado en la posición de la unidad
-                                    val totalUnits = ui.unit.size
-                                    val currentUnitIndex = ui.unit.indexOfFirst { it.id == editedUnitId }
-                                    val progress = if (totalUnits > 0 && currentUnitIndex >= 0) {
-                                        ((currentUnitIndex + 1).toFloat() / totalUnits.toFloat())
+                                    val totalUnits = unitUi.units.size
+                                    val completedUnitsSize = unitUi.unitsCompleted.size
+                                    val progress = if (totalUnits > 0 && completedUnitsSize >= 0) {
+                                        completedUnitsSize.toFloat() / totalUnits
                                     } else 0f
                                     
                                     LinearProgressIndicator(

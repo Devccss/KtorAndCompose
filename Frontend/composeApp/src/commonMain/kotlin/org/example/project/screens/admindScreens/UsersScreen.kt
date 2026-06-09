@@ -67,13 +67,16 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.core.screen.uniqueScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import kotlinx.coroutines.isActive
 import org.example.project.components.AppLayout
 import org.example.project.dtos.CreateUserDto
+import org.example.project.dtos.FilterUnitsDto
 import org.example.project.dtos.FilterUsersDto
 import org.example.project.dtos.Role
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UserDto
 import org.example.project.network.RepositoryProvider
+import org.example.project.viewModel.UnitViewModel
 import org.example.project.viewModel.UserViewModel
 
 class UsersScreen : Screen {
@@ -86,9 +89,13 @@ class UsersScreen : Screen {
         val vm = rememberScreenModel {
             UserViewModel(RepositoryProvider.userRepo, RepositoryProvider.unitRepo)
         }
+        val unitVm = rememberScreenModel {
+            UnitViewModel(RepositoryProvider.unitRepo)
+        }
+
 
         val ui by vm.state.collectAsState()
-
+        val unitUi by unitVm.state.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
         val navigator = LocalNavigator.currentOrThrow
 
@@ -136,6 +143,9 @@ class UsersScreen : Screen {
 
         LaunchedEffect(Unit) {
             vm.loadUsers()
+            unitVm.searchUnits(FilterUnitsDto(
+                isActive = true
+            ))
         }
 
         LaunchedEffect(ui.error) {
@@ -591,7 +601,7 @@ class UsersScreen : Screen {
                                         } ?: run { /* manejar error */ }
                                     },
                                     onEdit = { editing = user },
-                                    levels = ui.unit,
+                                    levels = unitUi.units,
                                     onDelete = { confirmDelete = user }
                                 )
                             }
@@ -648,11 +658,11 @@ fun UserCard(
                     ) {
                         Text(user.name, style = MaterialTheme.typography.titleMedium)
                         if (user.role == Role.STUDENT) {
-                            Badge(containerColor = BadgeDefaults.containerColor) {
+                            Badge(containerColor = Color(0xFFB8F4C4)) {
                                 Text(user.role.name.lowercase(), fontSize = 12.sp)
                             }
                         } else {
-                            Badge(containerColor = Color(0xFF8A4F13)) {
+                            Badge(containerColor = Color(0xFFFCD3AB)) {
                                 user.role?.let { Text(it.name.lowercase(), fontSize = 12.sp) }
                             }
                         }

@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.example.project.dtos.Role
 import org.example.project.viewModel.UsersUiState
 import kotlin.math.round
 
@@ -27,12 +28,12 @@ fun UserStatisticsSection(
     state: UsersUiState,
     modifier: Modifier = Modifier
 ) {
+    val currentUserRol = state.currentUser?.role ?: "student"
     val completedUnitsCount = state.userStats?.completedUnitsCount ?: state.completedUnits.size
     val completedExercisesCount = state.userStats?.completedExercisesCount ?: state.completedExercises.size
     val completedTestsCount = state.userStats?.completedTestsCount ?: state.completedTests.size
     val failedTestsCount = state.userStats?.failedTestsCount ?: state.failedTests.size
     val weeklyHours = state.userStats?.weeklyHours ?: state.weeklyHours
-    val sessionCount = state.userStats?.weeklyHours  ?: state.sessionCount
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -77,30 +78,37 @@ fun UserStatisticsSection(
             }
 
             else -> {
-                StatGridRow(
-                    leftTitle = "Unidades completadas",
-                    leftValue = completedUnitsCount.toString(),
-                    leftColor = Color(0xFFF7FFF3),
-                    rightTitle = "Ejercicios completados",
-                    rightValue = completedExercisesCount.toString(),
-                    rightColor = Color(0xFFFFF9EA)
-                )
-                StatGridRow(
-                    leftTitle = "Tests completados",
-                    leftValue = completedTestsCount.toString(),
-                    leftColor = Color(0xFFF3F8FF),
-                    rightTitle = "Tests fallidos",
-                    rightValue = failedTestsCount.toString(),
-                    rightColor = Color(0xFFFFF1F1)
-                )
-                StatGridRow(
-                    leftTitle = "Horas semanales",
-                    leftValue = weeklyHours.formatHours(),
-                    leftColor = Color(0xFFF9FAFB),
-                    rightTitle = "Sesiones registradas",
-                    rightValue = sessionCount.toString(),
-                    rightColor = Color(0xFFF7F7F7)
-                )
+                if(currentUserRol != Role.STUDENT){
+                    StatGridRow(
+                        leftTitle = "Horas semanales",
+                        leftValue = weeklyHours.formatHours(),
+                        leftColor = Color(0xFFF9FAFB)
+                    )
+                }else{
+                    StatGridRow(
+                        leftTitle = "Unidades completadas",
+                        leftValue = completedUnitsCount.toString(),
+                        leftColor = Color(0xFFF7FFF3),
+                        rightTitle = "Ejercicios completados",
+                        rightValue = completedExercisesCount.toString(),
+                        rightColor = Color(0xFFFFF9EA)
+                    )
+                    StatGridRow(
+                        leftTitle = "Tests completados",
+                        leftValue = completedTestsCount.toString(),
+                        leftColor = Color(0xFFF3F8FF),
+                        rightTitle = "Tests fallidos",
+                        rightValue = failedTestsCount.toString(),
+                        rightColor = Color(0xFFFFF1F1)
+                    )
+                    StatGridRow(
+                        leftTitle = "Horas semanales",
+                        leftValue = weeklyHours.formatHours(),
+                        leftColor = Color(0xFFF9FAFB)
+                    )
+
+                }
+
             }
         }
     }
@@ -111,9 +119,9 @@ private fun StatGridRow(
     leftTitle: String,
     leftValue: String,
     leftColor: Color,
-    rightTitle: String,
-    rightValue: String,
-    rightColor: Color
+    rightTitle: String? = null,
+    rightValue: String? = null,
+    rightColor: Color? = null
 ) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         StatCard(
@@ -122,12 +130,14 @@ private fun StatGridRow(
             background = leftColor,
             modifier = Modifier.weight(1f)
         )
-        StatCard(
-            title = rightTitle,
-            value = rightValue,
-            background = rightColor,
-            modifier = Modifier.weight(1f)
-        )
+        if (rightTitle != null && rightValue != null && rightColor != null) {
+            StatCard(
+                title = rightTitle,
+                value = rightValue,
+                background = rightColor,
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 

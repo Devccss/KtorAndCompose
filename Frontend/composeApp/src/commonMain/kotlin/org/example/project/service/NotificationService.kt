@@ -59,15 +59,7 @@ class NotificationService(
             )
         )
     }
-
-    companion object {
-        fun startNotificationPolling() {
-            NotificationPollingManager.start()
-        }
-    }
 }
 
-expect object NotificationPollingManager {
-    fun start()
-}
+
 
