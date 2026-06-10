@@ -175,7 +175,7 @@ object SeedDataProvider {
                 difficulty = DifficultyLevel.A1,
                 name = "Unidad 1: Verbo to be",
                 description = "Introducción al verbo 'to be'",
-                orderUnit = 1,
+                orderUnit = 2,
                 isActive = true,
                 createdAt = "2026-01-01T00:00:00"
             ),
@@ -185,7 +185,7 @@ object SeedDataProvider {
                 difficulty = DifficultyLevel.A1,
                 name = "Unidad 2: Present Simple",
                 description = "Rutinas, hábitos y acciones frecuentes",
-                orderUnit = 2,
+                orderUnit = 3,
                 isActive = true,
                 createdAt = "2026-01-01T00:00:00"
             ),
@@ -195,7 +195,7 @@ object SeedDataProvider {
                 difficulty = DifficultyLevel.A1,
                 name = "Unidad 3: Family and Daily Life",
                 description = "Vocabulario familiar y actividades cotidianas",
-                orderUnit = 3,
+                orderUnit = 4,
                 isActive = true,
                 createdAt = "2026-01-01T00:00:00"
             ),
@@ -205,7 +205,7 @@ object SeedDataProvider {
                 difficulty = DifficultyLevel.A1,
                 name = "Unidad 4: Present Continuous",
                 description = "Acciones que ocurren en este momento",
-                orderUnit = 4,
+                orderUnit = 5,
                 isActive = true,
                 createdAt = "2026-01-01T00:00:00"
             ),
@@ -215,7 +215,7 @@ object SeedDataProvider {
                 difficulty = DifficultyLevel.A2,
                 name = "Unidad 5: Past Simple",
                 description = "Eventos y experiencias del pasado",
-                orderUnit = 5,
+                orderUnit = 6,
                 isActive = true,
                 createdAt = "2026-01-01T00:00:00"
             ),
@@ -225,7 +225,7 @@ object SeedDataProvider {
                 difficulty = DifficultyLevel.A2,
                 name = "Unidad 6: Future Forms",
                 description = "Uso de will y going to",
-                orderUnit = 6,
+                orderUnit = 7,
                 isActive = true,
                 createdAt = "2026-01-01T00:00:00"
             )
@@ -1637,7 +1637,7 @@ object SeedDataProvider {
             CompletedExerciseSeed(userId = 6, exerciseId = 16),
             CompletedExerciseSeed(userId = 6, exerciseId = 17),
 
-            // Student 5 (id=7) - Completó todo
+            // Student 5 (id=7) - Completó todas las unidades
             *(
                     (1..27).map {
                         CompletedExerciseSeed(userId = 7, exerciseId = it)
