@@ -14,6 +14,7 @@ import org.example.project.dtos.CreateUserDto
 import org.example.project.dtos.FilterUsersDto
 import org.example.project.dtos.GeneralStatsDto
 import org.example.project.dtos.LoginDto
+import org.example.project.dtos.Role
 import org.example.project.dtos.TestDto
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UpdateUserDto
@@ -105,13 +106,12 @@ class UserViewModel(private val repo: UserRepo, private val unitRepo: UnitRepo) 
     fun getFilterUsers(filters: FilterUsersDto) {
         // Normalizar los filtros: trim del nombre, ignorar role vacío, aceptar unitId > 0
         val name = filters.name?.trim()?.takeIf { it.isNotEmpty() }
-        val role = filters.role?.takeIf { true }
+        var role = filters.role?.takeIf { true }
         val unitId = filters.unitId?.takeIf { it > 0 }
 
         // Si no se proporcionaron filtros efectivos, cargar todos los usuarios en lugar de hacer una consulta vacía
         if (name == null && role == null && unitId == null) {
-            loadUsers()
-            return
+            role = Role.STUDENT
         }
 
         val normalized = filters.copy(
