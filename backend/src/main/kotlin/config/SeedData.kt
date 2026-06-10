@@ -1,6 +1,5 @@
 package config
 
-import com.example.dtos.CreateUnitDto
 import com.example.dtos.UnitDto
 import com.example.dtos.UserDto
 import io.github.cdimascio.dotenv.dotenv
@@ -125,7 +124,7 @@ fun studentsCreate(studentPassword: String, studentEmail: String, student: Strin
         it[role] = Role.STUDENT
     }
 
-    val newid2 = Users.insert {
+    Users.insert {
         it[email] = "student2@2026"
         it[password] = hashed
         it[name] = "student2"
