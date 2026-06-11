@@ -31,7 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -394,23 +393,23 @@ class StudentUnitExercisesScreen(
 
 @Composable
 fun UnitCard(
-    progress: UnitProgress,
-    isLocked: Boolean = false,
+    unit: UnitDto,
+    progressPercentage: Int,
+    completedExercises : Int,
+    totalExercises : Int,
+    isLocked: Boolean? = false,
     onClick: () -> Unit,
 ) {
-    val completed = progress.completedCount
-    val total = progress.totalCount
-    val rate = progress.completionRate
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = !isLocked, onClick = onClick),
+            .clickable(enabled = isLocked == true, onClick = onClick),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isLocked) Color(0xFFE0E0E0) else Color(0xFFF9FAFC)
+            containerColor = if (isLocked == true) Color(0xFFE0E0E0) else Color(0xFFF9FAFC)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isLocked) 0.dp else 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isLocked == true) 0.dp else 1.dp)
     ) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
@@ -420,37 +419,37 @@ fun UnitCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        progress.unit.name,
+                        unit.name,
                         fontWeight = FontWeight.Bold,
-                        color = if (isLocked) Color.Gray else Color.Black
+                        color = if (isLocked == true) Color.Gray else Color.Black
                     )
                     Text(
-                        text = progress.unit.description,
+                        text = unit.description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isLocked) Color.Gray.copy(alpha = 0.6f) else Color.Gray,
+                        color = if (isLocked == true) Color.Gray.copy(alpha = 0.6f) else Color.Gray,
                         maxLines = 2
                     )
                 }
                 Icon(
-                    imageVector = if (isLocked) Icons.Default.Lock else Icons.AutoMirrored.Filled.ArrowForward,
+                    imageVector = if (isLocked == true) Icons.Default.Lock else Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = null,
-                    tint = if (isLocked) Color.Gray else Color(0xFF003AB6)
+                    tint = if (isLocked == true) Color.Gray else Color(0xFF003AB6)
                 )
             }
 
             Text(
-                text = "$completed/$total ejercicios (${(rate * 100).toInt()}%)",
+                text = "$completedExercises/$totalExercises ejercicios (${(progressPercentage * 100).toInt()}%)",
                 style = MaterialTheme.typography.bodySmall,
-                color = if (isLocked) Color.Gray.copy(alpha = 0.6f) else Color.Gray
+                color = if (isLocked == true) Color.Gray.copy(alpha = 0.6f) else Color.Gray
             )
             LinearProgressIndicator(
-                progress = { rate.coerceIn(0f, 1f) },
+                progress = {  progressPercentage.coerceIn(0, 100) / 100f },
                 modifier = Modifier.fillMaxWidth(),
-                color = if (isLocked) Color.Gray else Color(0xFF1565C0),
-                trackColor = if (isLocked) Color.Gray.copy(alpha = 0.3f) else Color(0xFFE0E0E0)
+                color = if (isLocked == true) Color.Gray else Color(0xFF1565C0),
+                trackColor = if (isLocked == true) Color.Gray.copy(alpha = 0.3f) else Color(0xFFE0E0E0)
             )
 
-            if (isLocked) {
+            if (isLocked == true) {
                 Text(
                     text = "🔒 Desbloqueada después de completar la unidad anterior",
                     style = MaterialTheme.typography.bodySmall,
@@ -511,10 +510,11 @@ fun ExerciseCard(
 
 @Composable
 fun UnitTestCard(
-    test: TestDto,
-    isLocked: Boolean,
-    latestAttempt: TestCompletedDto?,
-    remainingReviewExercises: Int,
+    testName : String,
+    isLocked : Boolean,
+    remainingReviewExercises : Int,
+    requiresReview : Boolean,
+    latestAttempt : Int,
     onClick: () -> Unit,
 ) {
     Card(
@@ -525,7 +525,7 @@ fun UnitTestCard(
         colors = CardDefaults.cardColors(
             containerColor = when {
                 isLocked -> Color(0xFFFFF4E5)
-                latestAttempt?.score == 100 -> Color(0xFFEAF7EE)
+                latestAttempt == 100 -> Color(0xFFEAF7EE)
                 else -> Color(0xFFEFF5FF)
             }
         ),
@@ -539,15 +539,9 @@ fun UnitTestCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = test.name,
+                        text = testName,
                         fontWeight = FontWeight.Bold,
                         color = if (isLocked) Color.Gray else Color.Black
-                    )
-                    Text(
-                        text = test.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (isLocked) Color.Gray.copy(alpha = 0.6f) else Color.Gray,
-                        maxLines = 2
                     )
                 }
                 Icon(
@@ -558,7 +552,7 @@ fun UnitTestCard(
             }
 
             when {
-                latestAttempt?.score == 100 -> Text(
+                latestAttempt == 100 -> Text(
                     text = "✅ Aprobado. Puedes volver a abrirlo si deseas repasar.",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF2E7D32)
@@ -574,9 +568,9 @@ fun UnitTestCard(
                 )
             }
 
-            if (latestAttempt?.score != null && latestAttempt.score != 100) {
+            if (latestAttempt != 100) {
                 Text(
-                    text = "Último intento: ${latestAttempt.score}%",
+                    text = "Último intento: ${latestAttempt}%",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray
                 )

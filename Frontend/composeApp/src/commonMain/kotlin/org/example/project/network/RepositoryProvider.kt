@@ -3,6 +3,7 @@ package org.example.project.network
 import io.ktor.client.HttpClient
 import org.example.project.repository.ExerciseRepo
 import org.example.project.repository.AiQuestionGenerationRepo
+import org.example.project.repository.LearningDashboardRepository
 import org.example.project.repository.QuestionsRepo
 import org.example.project.repository.NotificationRepo
 import org.example.project.repository.SessionLogRepo
@@ -77,6 +78,12 @@ object RepositoryProvider {
             "RepositoryProvider.notificationRepo not initialized. Call RepositoryProvider.init(httpClient, baseUrl) before using repositories."
         )
 
+    private var _learningDashboardRepo: LearningDashboardRepository? = null
+    val learningDashboardRepo: LearningDashboardRepository
+        get() = _learningDashboardRepo ?: throw IllegalStateException(
+            "RepositoryProvider.learningDashboardRepo not initialized. Call RepositoryProvider.init(httpClient, baseUrl) before using repositories."
+        )
+
 
     fun init(httpClient: HttpClient, baseUrl: String) {
         if (initialized) {
@@ -95,6 +102,7 @@ object RepositoryProvider {
         _aiQuestionGenerationRepo = AiQuestionGenerationRepo(httpClient, baseUrl)
         _sessionLogRepo = SessionLogRepo(httpClient, baseUrl)
         _notificationRepo = NotificationRepo(httpClient, baseUrl)
+        _learningDashboardRepo = LearningDashboardRepository(httpClient, baseUrl)
 
         initialized = true
         println("[RepositoryProvider] ✅ Todos los repositorios inicializados correctamente")
@@ -113,6 +121,7 @@ object RepositoryProvider {
         _aiQuestionGenerationRepo = null
         _sessionLogRepo = null
         _notificationRepo = null
+        _learningDashboardRepo = null
     }
 
     fun checkInitialized() {

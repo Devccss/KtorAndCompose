@@ -22,6 +22,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
+import kotlinx.coroutines.isActive
 import kotlinx.serialization.Serializable
 import models.ContentType
 import models.DifficultyLevel
@@ -232,6 +233,102 @@ fun Application.configureRouting() {
                         }
                     }
 
+                }
+            }
+
+            route("/learningDashboard") {
+                withRoles(Role.ADMIN, Role.CONTENT_EDITOR, Role.STUDENT) {
+
+                    get {
+
+                        val principal = call.principal<JWTPrincipal>()
+                        val userIdPayload = principal?.payload?.getClaim("id")?.asInt()
+                            ?: throw BadRequestException("Invalid User ID")
+
+                        val user = userService.getUserById(userIdPayload)
+
+                        val units = unitService.searchUnits(
+                            FilterUnitsDto(isActive = true)
+                        ).sortedBy { it.difficulty }
+
+                        val completedExercises =
+                            exerciseService.getExerciseCompletedByUser(userIdPayload)
+
+                        val completedUnits =
+                            unitService.getUnitsCompletedByUser(userIdPayload)
+
+                        val unitProgress = units.mapIndexed { index, unit ->
+
+                            val exercisesOfUnit = exerciseService.searchExercises(
+                                FilterExercisesDto(
+                                    unitId = unit.id,
+                                    isActive = true
+                                )
+                            )
+
+                            val completedExercisesInUnit =
+                                completedExercises.count { completed ->
+                                    exercisesOfUnit.any { it.id == completed.exerciseId }
+                                }
+
+                            val totalExercises = exercisesOfUnit.size
+
+                            val progressPercentage =
+                                if (totalExercises == 0) 0
+                                else (completedExercisesInUnit * 100) / totalExercises
+
+                            val completed =
+                                completedUnits.any { it.id == unit.id }
+
+                            // Primera unidad siempre desbloqueada.
+                            // Las demás dependen de la unidad anterior.
+                            val unlocked =
+                                if (index == 0) {
+                                    true
+                                } else {
+                                    completedUnits.any {
+                                        it.id == units[index - 1].id
+                                    }
+                                }
+
+                            val test = testService.getTestsByUnitId(unit.id)
+
+                            UnitProgressDto(
+                                unitId = unit.id,
+                                unitName = unit.name,
+                                orderUnit = unit.orderUnit,
+
+                                totalExercises = totalExercises,
+                                completedExercises = completedExercisesInUnit,
+
+                                progressPercentage = progressPercentage,
+
+                                unlocked = unlocked,
+                                completed = completed,
+
+                                testId = test?.id,
+                                testName = test?.name,
+
+                                testLocked = completedExercisesInUnit < totalExercises,
+
+                                requiresReview = false,
+                                remainingReviewExercises = 0
+                            )
+                        }
+
+                        call.respond(
+                            LearningDashboardDto(
+                                totalUnits = units.size,
+                                totalExercises = exerciseService.searchExercises(
+                                    FilterExercisesDto(isActive = true)
+                                ).size,
+                                completedExercises = completedExercises.size,
+                                completedUnits = completedUnits.size,
+                                currentUnitId = user?.currentUnitId,
+                                units = unitProgress
+                            )
+                        )
+                    }
                 }
             }
 

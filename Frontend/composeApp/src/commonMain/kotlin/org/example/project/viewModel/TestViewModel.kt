@@ -15,6 +15,7 @@ import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.FilterTestsDto
 import org.example.project.dtos.TestCompletedDto
 import org.example.project.dtos.TestDto
+import org.example.project.dtos.UnitReviewStatusDto
 import org.example.project.dtos.UpdateTestCompletedDto
 import org.example.project.dtos.UpdateTestDto
 import org.example.project.dtos.UpdateTestExerciseDto
@@ -33,6 +34,7 @@ data class TestUIState(
     val testExercises: List<ExerciseDto> = emptyList(),
     val allTestExercises: Map<Int, List<ExerciseDto>> = emptyMap(),  // testId -> ejercicios
     val allExercisesInTests: Set<Int> = emptySet(),  // IDs de ejercicios que están en algún test
+    val reviewStatus : UnitReviewStatusDto? = null,
     val welcomeTests: List<WelcomeTestDto> = emptyList(),
     val currentWelcomeTest : TestDto? = null,
     val testsCompleted: List<TestCompletedDto> = emptyList(),
@@ -93,8 +95,20 @@ class TestViewModel(
     }
 
     // Nuevo: consultar al backend el estado de repaso para una unidad/test y usuario
-    suspend fun fetchUnitReviewStatus(userId: Int, unitId: Int, testId: Int) : org.example.project.dtos.UnitReviewStatusDto {
-        return testRepo.getUnitReviewStatus(userId, unitId, testId)
+    fun fetchUnitReviewStatus(userId: Int? , unitId: Int?, testId: Int?){
+        if (userId == null || unitId == null || testId == null) {
+            _state.value = _state.value.copy(error = "No se puede obtener estado de repaso: userId, unitId o testId es nulo", reviewStatus = null)
+            return
+        }
+        launchCatching(
+            block = { testRepo.getUnitReviewStatus(userId, unitId, testId) },
+            onSuccess = { status ->
+                _state.value = _state.value.copy(reviewStatus = status)
+            },
+            onError = { error ->
+                _state.value = _state.value.copy(error = "Error al obtener estado de repaso: ${error.message}", reviewStatus = null)
+            }
+        )
     }
 
     fun getAllTests(){
