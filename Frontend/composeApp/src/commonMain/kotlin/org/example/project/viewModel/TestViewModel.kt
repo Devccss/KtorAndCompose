@@ -67,32 +67,8 @@ class TestViewModel(
             .filter { it.testId == testId }
             .maxByOrNull { it.id }
 
-    fun hasPassedTest(testId: Int): Boolean = getLastAttemptForTest(testId)?.score == 100
 
-    @Deprecated("La verificación de repaso ahora se hace en el backend. Usar fetchUnitReviewStatus")
-    fun requiresReview(unitId: Int, completedUnitsCount: Int): Boolean =
-        UserSession.requiresUnitReview(unitId, completedUnitsCount)
 
-    fun markTestRequiresReview(unitId: Int, completedUnitsCount: Int) {
-        UserSession.markUnitRequiresReview(unitId, completedUnitsCount)
-    }
-
-    fun clearTestReviewRequirement(unitId: Int) {
-        UserSession.clearUnitReviewRequirement(unitId)
-    }
-
-    @Deprecated("Usar fetchUnitReviewStatus para obtener el estado real desde el backend")
-    fun remainingReviewExercises(unitId: Int, totalExercisesInUnit: Int): Int {
-        val required = UserSession.requiredReviewExercises(totalExercisesInUnit)
-        val done = UserSession.reviewedExercisesCount(unitId)
-        return (required - done).coerceAtLeast(0)
-    }
-
-    fun registerReviewedExercise(unitId: Int, exerciseId: Int) {
-        // Legacy: the backend now computes review progress. Keep this method as a no-op for compatibility.
-        // Prefer creating ExerciseCompleted via ExerciseViewModel / ExerciseRepo so the server can count it.
-        UserSession.registerReviewedExercise(unitId, exerciseId)
-    }
 
     // Nuevo: consultar al backend el estado de repaso para una unidad/test y usuario
     fun fetchUnitReviewStatus(userId: Int? , unitId: Int?, testId: Int?){
@@ -224,8 +200,7 @@ class TestViewModel(
             val hasFilters = normalized.name != null || normalized.unitId != null || normalized.isActive != null
             launchCatching(
                 block = {
-                    if (hasFilters) testRepo.searchTests(normalized)
-                    else testRepo.getAllTests()
+                    testRepo.searchTests(normalized)
                 },
                 onSuccess = { tests ->
                     _state.value = _state.value.copy(searchTest = tests, allTests = tests)

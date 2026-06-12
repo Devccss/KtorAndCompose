@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Flag
@@ -52,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -78,6 +80,34 @@ import kotlin.time.ExperimentalTime
 private const val WELCOME_EXERCISE_PASS_THRESHOLD = 0.8f
 private const val UNIT_DOMINANCE_EFFECTIVE_SCORE = 3
 private const val SPARSE_UNIT_EXERCISE_THRESHOLD = 3
+
+data class LearningTip(
+    val title: String,
+    val description: String
+)
+
+val learningTips = listOf(
+    LearningTip(
+        "Estudia todos los días",
+        "10 minutos diarios son mejores que 1 hora una vez por semana."
+    ),
+    LearningTip(
+        "Escucha inglés",
+        "Música, series y podcasts ayudan a mejorar la comprensión."
+    ),
+    LearningTip(
+        "Aprende vocabulario",
+        "Las palabras frecuentes aparecen en casi todos los ejercicios."
+    ),
+    LearningTip(
+        "No traduzcas todo",
+        "Intenta pensar directamente en inglés."
+    ),
+    LearningTip(
+        "Repite en voz alta",
+        "Mejora pronunciación y memoria."
+    )
+)
 
 class StudentWelcomeScreen(val id: Int? = null) : Screen {
     @OptIn(ExperimentalTime::class)
@@ -213,7 +243,8 @@ class StudentWelcomeScreen(val id: Int? = null) : Screen {
 
                     testVm.getTestsCompletedByUser(safeUserId)
                     exercisesVm.getExercisesCompletedByUserId(safeUserId)
-                }
+                },
+                navigator = navigator
             )
         }
     }
@@ -229,6 +260,7 @@ fun StudentDashboardContent(
     isLoading: Boolean,
     units: List<UnitDto>,
     onFinishWelcome: (Set<Int>, PlacementSummary) -> Unit,
+    navigator: Navigator
 ) {
     var expandedWelcome by remember { mutableStateOf(welcomeTestPending) }
 
@@ -334,6 +366,21 @@ fun StudentDashboardContent(
                         }
                     }
                 }
+
+                item {
+                    WelcomePlacementCard(
+                        expanded = expandedWelcome,
+                        isLoading = isLoading,
+                        welcomeExercises = welcomeExercises,
+                        units = units,
+                        onToggleExpand = { expandedWelcome = !expandedWelcome },
+                        onFinish = { passedExercises, placement ->
+                            onFinishWelcome(passedExercises, placement)
+                            expandedWelcome = false
+                        }
+                    )
+                }
+
             }
 
             item {
@@ -366,22 +413,57 @@ fun StudentDashboardContent(
                     )
                 }
             }
+            item {
 
-            if (welcomeTestPending) {
-                item {
-                    WelcomePlacementCard(
-                        expanded = expandedWelcome,
-                        isLoading = isLoading,
-                        welcomeExercises = welcomeExercises,
-                        units = units,
-                        onToggleExpand = { expandedWelcome = !expandedWelcome },
-                        onFinish = { passedExercises, placement ->
-                            onFinishWelcome(passedExercises, placement)
-                            expandedWelcome = false
-                        }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+
+                    StatCard(
+                        title = "Ejercicios",
+                        value = "${progress.completedExercises}",
+                        color = Color(0xFFE3F2FD),
+                        textColor = Color(0xFF1565C0),
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    StatCard(
+                        title = "Pendientes",
+                        value = "${progress.totalExercises - progress.completedExercises}",
+                        color = Color(0xFFFFF3E0),
+                        textColor = Color(0xFFEF6C00),
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
+            item {
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFEAF7EE)
+                    )
+                ) {
+
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+
+                        Text(
+                            "Meta del día",
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            "Completa 3 ejercicios para mantener tu progreso."
+                        )
+                    }
+                }
+            }
+
 
             if (progress.bonusPointsFromSparseUnits > 0) {
                 item {
@@ -390,6 +472,98 @@ fun StudentDashboardContent(
                         title = "Estimacion aplicada",
                         description = "Se aplicaron ${progress.bonusPointsFromSparseUnits} punto(s) extra por unidades con pocos ejercicios."
                     )
+                }
+            }
+
+            item {
+
+                Text(
+                    text = "Consejos",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+
+                    items(learningTips.size) { index ->
+
+                        val tip = learningTips[index]
+
+                        Card(
+                            modifier = Modifier
+                                .fillParentMaxWidth(0.85f),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFF8FBFF)
+                            )
+                        ) {
+
+                            Column(
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+
+                                Text(
+                                    tip.title,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Text(
+                                    tip.description,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            navigator.push(
+                                StudentLearnScreen()
+                            )
+                        },
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF003AB6)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Column {
+                            Text(
+                                "Continuar aprendiendo",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                currentUnitName ?: "Comienza tu siguiente unidad",
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                        }
+
+                        Icon(
+                            Icons.Default.School,
+                            null,
+                            tint = Color.White
+                        )
+                    }
                 }
             }
         }

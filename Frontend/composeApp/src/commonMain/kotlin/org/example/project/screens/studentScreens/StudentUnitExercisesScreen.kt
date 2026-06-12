@@ -49,8 +49,6 @@ import org.example.project.dtos.ExerciseDto
 import org.example.project.dtos.FilterExercisesDto
 import org.example.project.dtos.FilterTestsDto
 import org.example.project.dtos.FilterUnitsDto
-import org.example.project.dtos.TestCompletedDto
-import org.example.project.dtos.TestDto
 import org.example.project.dtos.UnitDto
 import org.example.project.dtos.UnitReviewStatusDto
 import org.example.project.network.RepositoryProvider
@@ -92,6 +90,8 @@ class StudentUnitExercisesScreen(
         val coroutineScope = rememberCoroutineScope()
         var selectedIndex by remember { mutableStateOf(1) }
         var assignmentExercises by remember { mutableStateOf<List<ExerciseDto>?>(null) }
+
+
 
         // Recargar búsquedas cuando cambie el usuario o la unidad seleccionada
         LaunchedEffect(userId, unitId) {
@@ -180,7 +180,6 @@ class StudentUnitExercisesScreen(
             )
         }
 
-        val unitCompleted = completionRate >= UNLOCK_THRESHOLD
         val unitTest = remember(testUi.searchTest.firstOrNull()) { testUi.searchTest.firstOrNull()}
         val latestAttempt = unitTest?.let { testVm.getLastAttemptForTest(it.id) }
         var reviewStatus by remember { mutableStateOf<UnitReviewStatusDto?>(null) }
@@ -198,7 +197,6 @@ class StudentUnitExercisesScreen(
 
         val reviewBlocked = unitTest != null && (reviewStatus?.requiresReview ?: false)
         val remainingReviewExercises = reviewStatus?.remainingExercises ?: 0
-        val testLocked = unitTest != null && (!isAlreadyMarkedCompleted || (reviewBlocked && remainingReviewExercises > 0))
 
         LaunchedEffect(isAlreadyMarkedCompleted, unitTest, unitUi.units, userUi.currentUser?.currentUnitId, userId) {
             val safeUserId = userId ?: return@LaunchedEffect
@@ -218,6 +216,32 @@ class StudentUnitExercisesScreen(
                 actualUnit = nextUnitId
             )
         }
+
+
+        val assignedExercises = assignmentExercises ?: availableExercises
+
+        val completedAssignedExercises = assignedExercises.count {
+            it.id in completedIds
+        }
+
+        val allAssignedExercisesCompleted =
+            assignedExercises.isNotEmpty() &&
+                    completedAssignedExercises >= assignedExercises.size
+
+
+        LaunchedEffect(
+            allAssignedExercisesCompleted,
+            completedAssignedExercises,
+            assignedExercises.size
+        ) {
+            println("assignedExercises=${assignedExercises.size}")
+            println("completedAssignedExercises=$completedAssignedExercises")
+            println("allAssignedExercisesCompleted=$allAssignedExercisesCompleted")
+        }
+
+        val testLocked = unitTest != null &&
+                (!allAssignedExercisesCompleted ||
+                        (reviewBlocked && remainingReviewExercises > 0))
 
         StudentAppLayout(
             actualScreen = unitName,
@@ -267,7 +291,7 @@ class StudentUnitExercisesScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     color = if (completionRate >= UNLOCK_THRESHOLD) Color(0xFF2E7D32) else Color(0xFF1565C0)
                                 )
-                                if (unitCompleted ) {
+                                if (allAssignedExercisesCompleted) {
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
                                         text = if (unitTest != null) {
@@ -344,10 +368,17 @@ class StudentUnitExercisesScreen(
                                     }
                                     Text(
                                         text = when {
-                                            !isAlreadyMarkedCompleted -> "Completa la unidad para desbloquear este test."
-                                            reviewBlocked && remainingReviewExercises > 0 -> "Repaso pendiente: aprueba $remainingReviewExercises ejercicio(s) para habilitar el reintento del test."
-                                            latestAttempt?.score == 100 -> "Test aprobado. Puedes volver a abrirlo si deseas repasar."
-                                            else -> "⚠️ Respóndelo con calma: el intento quedará registrado incluso si no apruebas."
+                                            !allAssignedExercisesCompleted ->
+                                                "Completa todos los ejercicios asignados para desbloquear este test."
+
+                                            reviewBlocked && remainingReviewExercises > 0 ->
+                                                "Repaso pendiente: aprueba $remainingReviewExercises ejercicio(s) para habilitar el reintento del test."
+
+                                            latestAttempt?.score == 100 ->
+                                                "Test aprobado. Puedes volver a abrirlo si deseas repasar."
+
+                                            else ->
+                                                "⚠️ Respóndelo con calma: el intento quedará registrado incluso si no apruebas."
                                         },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = if (testLocked) Color.Gray.copy(alpha = 0.8f) else Color(0xFF8A5A00)
@@ -393,23 +424,23 @@ class StudentUnitExercisesScreen(
 
 @Composable
 fun UnitCard(
-    unit: UnitDto,
+    unitName: String,
     progressPercentage: Int,
     completedExercises : Int,
     totalExercises : Int,
-    isLocked: Boolean? = false,
+    isLocked: Boolean,
     onClick: () -> Unit,
 ) {
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = isLocked == true, onClick = onClick),
+            .clickable(enabled = !isLocked, onClick = onClick),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isLocked == true) Color(0xFFE0E0E0) else Color(0xFFF9FAFC)
+            containerColor = if (isLocked) Color(0xFFE0E0E0) else Color(0xFFF9FAFC)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isLocked == true) 0.dp else 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isLocked) 0.dp else 1.dp)
     ) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
@@ -419,37 +450,31 @@ fun UnitCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        unit.name,
+                        unitName,
                         fontWeight = FontWeight.Bold,
-                        color = if (isLocked == true) Color.Gray else Color.Black
-                    )
-                    Text(
-                        text = unit.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (isLocked == true) Color.Gray.copy(alpha = 0.6f) else Color.Gray,
-                        maxLines = 2
+                        color = if (isLocked) Color.Gray else Color.Black
                     )
                 }
                 Icon(
-                    imageVector = if (isLocked == true) Icons.Default.Lock else Icons.AutoMirrored.Filled.ArrowForward,
+                    imageVector = if (isLocked) Icons.Default.Lock else Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = null,
-                    tint = if (isLocked == true) Color.Gray else Color(0xFF003AB6)
+                    tint = if (isLocked) Color.Gray else Color(0xFF003AB6)
                 )
             }
 
             Text(
-                text = "$completedExercises/$totalExercises ejercicios (${(progressPercentage * 100).toInt()}%)",
+                text = "$completedExercises/$totalExercises ejercicios (${(progressPercentage * 100)}%)",
                 style = MaterialTheme.typography.bodySmall,
-                color = if (isLocked == true) Color.Gray.copy(alpha = 0.6f) else Color.Gray
+                color = if (isLocked) Color.Gray.copy(alpha = 0.6f) else Color.Gray
             )
             LinearProgressIndicator(
                 progress = {  progressPercentage.coerceIn(0, 100) / 100f },
                 modifier = Modifier.fillMaxWidth(),
-                color = if (isLocked == true) Color.Gray else Color(0xFF1565C0),
-                trackColor = if (isLocked == true) Color.Gray.copy(alpha = 0.3f) else Color(0xFFE0E0E0)
+                color = if (isLocked) Color.Gray else Color(0xFF1565C0),
+                trackColor = if (isLocked) Color.Gray.copy(alpha = 0.3f) else Color(0xFFE0E0E0)
             )
 
-            if (isLocked == true) {
+            if (isLocked) {
                 Text(
                     text = "🔒 Desbloqueada después de completar la unidad anterior",
                     style = MaterialTheme.typography.bodySmall,
@@ -513,7 +538,6 @@ fun UnitTestCard(
     testName : String,
     isLocked : Boolean,
     remainingReviewExercises : Int,
-    requiresReview : Boolean,
     latestAttempt : Int,
     onClick: () -> Unit,
 ) {

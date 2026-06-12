@@ -266,49 +266,6 @@ class StudentExerciseResolverScreen(
                         }
                     }
 
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F8FF))
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(
-                                    text = if (submitted) {
-                                        "Resultado: ${(score ?: 0f) * 100f}%"
-                                    } else {
-                                        "Resuelve las preguntas y envía tus respuestas"
-                                    },
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                LinearProgressIndicator(
-                                    progress = { (score ?: 0f).coerceIn(0f, 1f) },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                Text(
-                                    text = "Completado correctamente: $successCount vez/veces",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFF2E7D32),
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                if (retryCooldownSeconds > 0) {
-                                    Text(
-                                        text = "Fallaste este intento. Espera $retryCooldownSeconds s para volver a intentarlo.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color(0xFFC62828)
-                                    )
-                                }
-                                if (submitted) {
-                                    Text(
-                                        text = if (passing) "Ejercicio aprobado" else "Ejercicio no aprobado",
-                                        color = if (passing) Color(0xFF2E7D32) else Color(0xFFC62828),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-                    }
-
                     exerciseUi.selectedContent?.let { content ->
                         item {
                             ExerciseInfoSections(
@@ -351,6 +308,49 @@ class StudentExerciseResolverScreen(
                                 )
                             } else {
                                 Text(if (submitted) "Volver a evaluar" else "Enviar respuestas")
+                            }
+                        }
+                    }
+
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F8FF))
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    text = if (submitted) {
+                                        "Resultado: ${(score ?: 0f) * 100f}%"
+                                    } else {
+                                        "Resuelve las preguntas y envía tus respuestas"
+                                    },
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                LinearProgressIndicator(
+                                    progress = { (score ?: 0f).coerceIn(0f, 1f) },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Text(
+                                    text = "Completado correctamente: $successCount vez/veces",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF2E7D32),
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                if (retryCooldownSeconds > 0) {
+                                    Text(
+                                        text = "Fallaste este intento. Espera $retryCooldownSeconds s para volver a intentarlo.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color(0xFFC62828)
+                                    )
+                                }
+                                if (submitted) {
+                                    Text(
+                                        text = if (passing) "Ejercicio aprobado" else "Ejercicio no aprobado",
+                                        color = if (passing) Color(0xFF2E7D32) else Color(0xFFC62828),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                     }

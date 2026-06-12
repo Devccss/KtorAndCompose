@@ -30,6 +30,8 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import org.example.project.components.StudentAppLayout
+import org.example.project.dtos.FilterTestsDto
+import org.example.project.dtos.LearningDashboardDto
 import org.example.project.network.RepositoryProvider
 import org.example.project.network.UserSession
 import org.example.project.viewModel.LearningDashboardViewModel
@@ -49,33 +51,28 @@ class StudentLearnScreen(
                 RepositoryProvider.learningDashboardRepo
             )
         }
-        val unitVm = rememberScreenModel {
-            UnitViewModel(
-                RepositoryProvider.unitRepo
-            )
-        }
-        val testVm = rememberScreenModel {
-            TestViewModel(
-                RepositoryProvider.testRepo,
-                welcomeTestRepo = RepositoryProvider.welcomeTestRepo
-            )
-        }
-
         val ui by dashboardVm.state.collectAsState()
-        val uiUnit by unitVm.state.collectAsState()
-        val uiTest by testVm.state.collectAsState()
 
         val userId = userIdArg ?: UserSession.idUser
         val studentName = studentNameArg ?: UserSession.name ?: "Estudiante"
         val snackbarHostState = remember { SnackbarHostState() }
         var selectedIndex by remember { mutableStateOf(1) }
 
-        LaunchedEffect(Unit) {
+        val dashboard = ui.dashboard
+
+
+        LaunchedEffect(ui.error, ) {
+            val errorMessage = ui.error
+            errorMessage?.let {
+                snackbarHostState.showSnackbar(it)
+                println("Error en StudentLearnScreen: $it")
+            }
+        }
+
+        LaunchedEffect(Unit){
             dashboardVm.loadDashboard()
         }
 
-
-        val dashboard = ui.dashboard
 
         StudentAppLayout(
             actualScreen = "Aprender",
@@ -107,75 +104,75 @@ class StudentLearnScreen(
                             color = Color.Gray
                         )
                     }
-
-                    if (dashboard?.units?.isEmpty() ?: true) {
+                    if (ui.isLoading) {
                         item {
-                            EmptyStateCard(
-                                title = "No hay unidades disponibles",
-                                description = "Cuando existan unidades activas aparecerán aquí."
+                            Text(
+                                text = "Cargando unidades...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.Gray
                             )
                         }
-                    } else {
+                    } else{
+                        if (dashboard?.units?.isEmpty() ?: true) {
+                            item {
+                                EmptyStateCard(
+                                    title = "No hay unidades disponibles",
+                                    description = "Cuando existan unidades activas aparecerán aquí."
+                                )
+                            }
+                        } else {
 
-                        //Como prosigo aqui?
-                        items(dashboard.units, key = { it.unitId }) { unidad ->
-                            unitVm.getUnitById(unidad.unitId)
-                            testVm.getTestByUnitId(unidad.unitId)
-                            testVm.fetchUnitReviewStatus(
-                                userId = userId,
-                                unitId = unidad.unitId,
-                                testId = uiTest.currentTest?.id
-                            )
-                            uiUnit.actualUnit?.let {
+                            items(dashboard.units, key = { key-> key.unitId }) { unit ->
                                 UnitCard(
-                                    unit = it,
-                                    progressPercentage = unidad.progressPercentage,
-                                    completedExercises = unidad.completedExercises,
-                                    totalExercises = unidad.totalExercises,
-                                    isLocked = !unidad.unlocked,
+                                    unitName = unit.unitName,
+                                    progressPercentage = unit.progressPercentage,
+                                    completedExercises = unit.completedExercises,
+                                    totalExercises = unit.totalExercises,
+                                    isLocked = !unit.unlocked,
                                     onClick = {
-                                        if (!unidad.unlocked) return@UnitCard
+                                        if (!unit.unlocked) return@UnitCard
 
                                         navigator.push(
                                             StudentUnitExercisesScreen(
-                                                unitId = unidad.unitId,
-                                                unitName = unidad.unitName,
+                                                unitId = unit.unitId,
+                                                unitName = unit.unitName,
                                                 userIdArg = userId,
                                                 studentNameArg = studentName
                                             )
                                         )
                                     }
                                 )
-                            }?: unitVm.updateMessage("Error al cargar la unidad ${unidad.unitName}")
 
-                            if (uiTest.currentTest != null) {
+                                unit.testId?.let {
+                                    UnitTestCard(
+                                        testName = unit.testName?:"Test de ${unit.unitName}",
+                                        isLocked = unit.testLocked,
+                                        remainingReviewExercises = unit.remainingReviewExercises,
+                                        latestAttempt = unit.progressPercentage,
+                                        onClick = {
 
-                                UnitTestCard(
-                                    testName = uiTest.currentTest?.name ?: "Test desconocido",
-                                    isLocked = unidad.testLocked,
-                                    remainingReviewExercises = uiTest.reviewStatus?.remainingExercises
-                                        ?: 0,
-                                    requiresReview = uiTest.reviewStatus?.requiresReview ?: false,
-                                    latestAttempt = uiTest.reviewStatus?.lastAttemptScore ?: 0,
-                                    onClick = {
+                                            if (unit.testLocked) return@UnitTestCard
+                                            unit.testId.let { testId->
+                                                navigator.push(
+                                                    StudentTestResolverScreen(
+                                                        testId = testId,
+                                                        testName = unit.testName?:"Test de ${unit.unitName}",
+                                                        unitId = unit.unitId,
+                                                        unitName = unit.unitName,
+                                                        userIdArg = userId,
+                                                        studentNameArg = studentName
+                                                    )
+                                                )
+                                            }
 
-                                        if (unidad.testLocked) return@UnitTestCard
-
-                                        navigator.push(
-                                            StudentTestResolverScreen(
-                                                testId = uiTest.currentTest?.id ?: -1,
-                                                testName = uiTest.currentTest?.name ?: "Test desconocido",
-                                                unitId = unidad.unitId,
-                                                unitName = unidad.unitName,
-                                                userIdArg = userId,
-                                                studentNameArg = studentName
-                                            )
-                                        )
-                                    }
-                                )
+                                        }
+                                    )
+                                }
                             }
                         }
+
                     }
+
                 }
             }
         }

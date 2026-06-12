@@ -57,6 +57,8 @@ import org.example.project.dtos.CreateTestCompletedDto
 import org.example.project.dtos.ExerciseContentDto
 import org.example.project.dtos.FilterExercisesDto
 import org.example.project.dtos.QuestionDto
+import org.example.project.dtos.UnitExerciseAssignmentDto
+import org.example.project.dtos.UnitReviewStatusDto
 import org.example.project.dtos.UpdateUserDto
 import org.example.project.dtos.WordDto
 import org.example.project.network.RepositoryProvider
@@ -114,6 +116,24 @@ class StudentTestResolverScreen(
         var loadingExerciseData by remember { mutableStateOf(false) }
         var resolverError by remember { mutableStateOf<String?>(null) }
         var selectedIndex by remember { mutableStateOf(1) }
+        var activeAssignment by remember {
+            mutableStateOf<UnitExerciseAssignmentDto?>(null)
+        }
+
+
+        LaunchedEffect(unitId) {
+            try {
+                activeAssignment =
+                    RepositoryProvider.unitRepo.getActiveAssignment(unitId)
+            } catch (e: Exception) {
+                println("Error cargando assignment: ${e.message}")
+            }
+        }
+
+        LaunchedEffect(testUi.error, userUi.error, resolverError) {
+            val error = testUi.error ?: userUi.error ?: resolverError
+            error?.let { snackbarHostState.showSnackbar(it) }
+        }
 
         LaunchedEffect(testId) {
             testVm.getExercisesByTestId(testId)
@@ -127,6 +147,8 @@ class StudentTestResolverScreen(
             }
         }
 
+
+
         suspend fun loadWordsForExercise(exerciseId: Int): List<WordDto> {
             val relations = RepositoryProvider.wordRepo.getExerciseWordsByExerciseId(exerciseId)
             return coroutineScope {
@@ -135,6 +157,7 @@ class StudentTestResolverScreen(
                 }.awaitAll()
             }
         }
+
 
         LaunchedEffect(testUi.testExercises) {
             val exercises = testUi.testExercises.filter { it.isActive }.sortedBy { it.orderExercise }
@@ -194,10 +217,8 @@ class StudentTestResolverScreen(
             }
         }
 
-        LaunchedEffect(testUi.error, userUi.error, resolverError) {
-            val error = testUi.error ?: userUi.error ?: resolverError
-            error?.let { snackbarHostState.showSnackbar(it) }
-        }
+
+
 
         val orderedExercises = remember(testUi.testExercises) {
             testUi.testExercises.filter { it.isActive }.sortedBy { it.orderExercise }
@@ -205,15 +226,25 @@ class StudentTestResolverScreen(
         val allQuestions = orderedExercises.flatMap { exercise ->
             questionsByExercise[exercise.id].orEmpty()
         }
-        val completedUnitsCount = unitUi.unitsCompleted.size
-        val totalActiveExercisesInUnit = remember(exercisesUi.exercises) {
-            exercisesUi.exercises.count { it.unitId == unitId && it.isActive }
-        }
         val latestAttempt = remember(testUi.testsCompleted, testId) {
             testVm.getLastAttemptForTest(testId)
         }
+        val assignedExerciseIds =
+            activeAssignment?.exerciseIds ?: emptyList()
 
-        var reviewStatus: org.example.project.dtos.UnitReviewStatusDto? by remember { mutableStateOf(null) }
+        val completedAssignedExercises =
+            assignedExerciseIds.count { assignedId ->
+
+                exercisesUi.completedExercises.any {
+                    it.exerciseId == assignedId
+                }
+            }
+
+        val testUnlocked =
+            assignedExerciseIds.isNotEmpty() &&
+                    completedAssignedExercises >= assignedExerciseIds.size
+
+        var reviewStatus: UnitReviewStatusDto? by remember { mutableStateOf(null) }
 
         LaunchedEffect(userId, unitId, testId) {
             val safeUser = userId ?: return@LaunchedEffect
@@ -270,7 +301,6 @@ class StudentTestResolverScreen(
             )
 
             if (passing) {
-                testVm.clearTestReviewRequirement(unitId)
 
                 // Actualizar a la siguiente unidad si está disponible
                 val currentUnitIndex = userUi.unit.indexOfFirst { it.id == unitId }
