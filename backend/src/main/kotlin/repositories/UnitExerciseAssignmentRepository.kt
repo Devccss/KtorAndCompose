@@ -49,6 +49,20 @@ class UnitExerciseAssignmentRepository {
         )
     }
 
+    fun getActiveAssignmentAnyType(
+        userId: Int,
+        unitId: Int
+    ): UnitExerciseAssignmentRecord? = transaction {
+
+        UnitExerciseAssignments.selectAll()
+            .where {
+                (UnitExerciseAssignments.userId eq userId) and
+                        (UnitExerciseAssignments.unitId eq unitId) and
+                        (UnitExerciseAssignments.status eq AssignmentStatus.ACTIVE)
+            }
+            .map(::rowToRecord)
+            .maxByOrNull { it.createdAt }
+    }
     fun getActiveAssignment(userId: Int, unitId: Int, assignmentType: AssignmentType): UnitExerciseAssignmentRecord? = transaction {
         UnitExerciseAssignments.selectAll()
             .where {

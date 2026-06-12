@@ -234,103 +234,177 @@ fun Application.configureRouting() {
                     }
 
                 }
-            }
 
-            route("/learningDashboard") {
-                withRoles(Role.ADMIN, Role.CONTENT_EDITOR, Role.STUDENT) {
+                route("/learningDashboard") {
+                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR, Role.STUDENT) {
 
-                    get {
+                        get {
 
-                        val principal = call.principal<JWTPrincipal>()
-                        val userIdPayload = principal?.payload?.getClaim("id")?.asInt()
-                            ?: throw BadRequestException("Invalid User ID")
+                            val principal = call.principal<JWTPrincipal>()
+                            val userIdPayload = principal?.payload?.getClaim("id")?.asInt()
+                                ?: throw BadRequestException("Invalid User ID")
 
-                        val user = userService.getUserById(userIdPayload)
+                            val user = userService.getUserById(userIdPayload)
 
-                        val units = unitService.searchUnits(
-                            FilterUnitsDto(isActive = true)
-                        ).sortedBy { it.difficulty }
+                            val units = unitService.searchUnits(
+                                FilterUnitsDto(isActive = true)
+                            ).sortedBy { it.difficulty }
 
-                        val completedExercises =
-                            exerciseService.getExerciseCompletedByUser(userIdPayload)
+                            val completedExercises =
+                                exerciseService.getExerciseCompletedByUser(userIdPayload)
 
-                        val completedUnits =
-                            unitService.getUnitsCompletedByUser(userIdPayload)
+                            val completedUnits =
+                                unitService.getUnitsCompletedByUser(userIdPayload)
 
-                        val unitProgress = units.mapIndexed { index, unit ->
+                            val unitProgress = units.mapIndexed { index, unit ->
 
-                            val exercisesOfUnit = exerciseService.searchExercises(
-                                FilterExercisesDto(
-                                    unitId = unit.id,
-                                    isActive = true
+                                val exercisesOfUnit = exerciseService.searchExercises(
+                                    FilterExercisesDto(
+                                        unitId = unit.id,
+                                        isActive = true
+                                    )
+                                )
+
+                                val completedExercisesInUnit =
+                                    completedExercises.count { completed ->
+                                        exercisesOfUnit.any { it.id == completed.exerciseId }
+                                    }
+
+                                val totalExercises = exercisesOfUnit.size
+
+                                val progressPercentage =
+                                    if (totalExercises == 0) 0
+                                    else (completedExercisesInUnit * 100) / totalExercises
+
+                                val completed =
+                                    completedUnits.any { it.id == unit.id }
+
+                                // Primera unidad siempre desbloqueada.
+                                // Las demás dependen de la unidad anterior.
+                                val unlocked =
+                                    if (index == 0) {
+                                        true
+                                    } else {
+
+                                        val previousUnit = units[index - 1]
+
+                                        val previousTest =
+                                            testService.getTestsByUnitId(previousUnit.id)
+
+                                        when {
+                                            previousTest == null -> {
+                                                completedUnits.any {
+                                                    it.id == previousUnit.id
+                                                }
+                                            }
+
+                                            else -> {
+                                                testService.hasUserPassedTest(
+                                                    userIdPayload,
+                                                    previousTest.id
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                val test = testService.getTestsByUnitId(unit.id)
+                                if (test != null) {
+
+                                    val welcomeTest = welcomeTestService.getByTestId(test.id)
+
+                                    if (welcomeTest == null) {
+                                        val assignment =
+                                            unitExerciseAssignmentService.getActiveAssignment(
+                                                unitId = unit.id,
+                                                userId = userIdPayload
+                                            )
+
+                                        val assignedExerciseIds =
+                                            assignment?.exerciseIds ?: emptyList()
+
+                                        val completedAssignedExercises =
+                                            completedExercises.count {
+                                                it.exerciseId in assignedExerciseIds
+                                            }
+
+                                        val testLocked =
+                                            assignedExerciseIds.isEmpty() ||
+                                                    completedAssignedExercises < assignedExerciseIds.size
+
+                                        UnitProgressDto(
+                                            unitId = unit.id,
+                                            unitName = unit.name,
+                                            orderUnit = unit.orderUnit,
+
+                                            totalExercises = totalExercises,
+                                            completedExercises = completedExercisesInUnit,
+
+                                            progressPercentage = progressPercentage,
+
+                                            unlocked = unlocked,
+                                            completed = completed,
+
+                                            testId = test.id,
+                                            testName = test.name,
+
+                                            testLocked = testLocked,
+
+                                            requiresReview = false,
+                                            remainingReviewExercises = 0
+                                        )
+                                    }else{
+                                        UnitProgressDto(
+                                            unitId = unit.id,
+                                            unitName = unit.name,
+                                            orderUnit = unit.orderUnit,
+
+                                            totalExercises = totalExercises,
+                                            completedExercises = completedExercisesInUnit,
+
+                                            progressPercentage = progressPercentage,
+
+                                            unlocked = unlocked,
+                                            completed = completed,
+
+                                            testId = null,
+                                            testName = null,
+
+                                            testLocked = false,
+
+                                            requiresReview = false,
+                                            remainingReviewExercises = 0
+                                        )
+                                    }
+
+
+
+
+
+                                }else{
+                                    throw NotFoundException("Test not found")
+                                }
+
+                            }
+
+                            call.respond(
+                                LearningDashboardDto(
+                                    totalUnits = units.size,
+                                    totalExercises = exerciseService.searchExercises(
+                                        FilterExercisesDto(isActive = true)
+                                    ).size,
+                                    completedExercises = completedExercises.size,
+                                    completedUnits = completedUnits.size,
+                                    currentUnitId = user?.currentUnitId,
+                                    units = unitProgress
                                 )
                             )
-
-                            val completedExercisesInUnit =
-                                completedExercises.count { completed ->
-                                    exercisesOfUnit.any { it.id == completed.exerciseId }
-                                }
-
-                            val totalExercises = exercisesOfUnit.size
-
-                            val progressPercentage =
-                                if (totalExercises == 0) 0
-                                else (completedExercisesInUnit * 100) / totalExercises
-
-                            val completed =
-                                completedUnits.any { it.id == unit.id }
-
-                            // Primera unidad siempre desbloqueada.
-                            // Las demás dependen de la unidad anterior.
-                            val unlocked =
-                                if (index == 0) {
-                                    true
-                                } else {
-                                    completedUnits.any {
-                                        it.id == units[index - 1].id
-                                    }
-                                }
-
-                            val test = testService.getTestsByUnitId(unit.id)
-
-                            UnitProgressDto(
-                                unitId = unit.id,
-                                unitName = unit.name,
-                                orderUnit = unit.orderUnit,
-
-                                totalExercises = totalExercises,
-                                completedExercises = completedExercisesInUnit,
-
-                                progressPercentage = progressPercentage,
-
-                                unlocked = unlocked,
-                                completed = completed,
-
-                                testId = test?.id,
-                                testName = test?.name,
-
-                                testLocked = completedExercisesInUnit < totalExercises,
-
-                                requiresReview = false,
-                                remainingReviewExercises = 0
-                            )
                         }
-
-                        call.respond(
-                            LearningDashboardDto(
-                                totalUnits = units.size,
-                                totalExercises = exerciseService.searchExercises(
-                                    FilterExercisesDto(isActive = true)
-                                ).size,
-                                completedExercises = completedExercises.size,
-                                completedUnits = completedUnits.size,
-                                currentUnitId = user?.currentUnitId,
-                                units = unitProgress
-                            )
-                        )
                     }
                 }
+
             }
+
+
 
 
             route("/users") {
@@ -534,6 +608,33 @@ fun Application.configureRouting() {
                     route("{unitId}/assignments") {
                         withRoles(Role.STUDENT) {
 
+                            get {
+
+                                val unitId =
+                                    call.parameters["unitId"]?.toIntOrNull()
+                                        ?: throw BadRequestException("Invalid unit ID")
+
+                                val principal =
+                                    call.principal<JWTPrincipal>()
+
+                                val userId =
+                                    principal?.payload?.getClaim("id")?.asInt()
+                                        ?: throw BadRequestException("Invalid User ID")
+
+                                val assignment =
+                                    unitExerciseAssignmentService.getActiveAssignment(
+                                        unitId = unitId,
+                                        userId = userId
+                                    )
+
+                                if (assignment == null) {
+                                    call.respond(HttpStatusCode.NotFound)
+                                    return@get
+                                }
+
+                                call.respond(assignment)
+                            }
+
                             post {
                                 val unitId = call.parameters["unitId"]?.toIntOrNull()
                                     ?: throw BadRequestException("Invalid unit ID")
@@ -551,25 +652,37 @@ fun Application.configureRouting() {
                                     return@post
                                 }
 
+                                val assignment = unitExerciseAssignmentService.getActiveAssignment(
+                                    userId = tokenUserId,
+                                    unitId = unitId
+                                )
+
+                                val assignedExerciseIds = assignment
+                                    ?.exercises
+                                    ?.map { it.id }
+                                    ?: emptyList()
+
                                 // Intentar obtener la asignación actual; si no existe, generar una nueva
                                 val current = unitExerciseAssignmentService.getCurrentAssignment(
                                     unitId,
                                     tokenUserId,
                                     mode,
-                                    limit
+                                    limit,
+                                    assignedExerciseIds = assignedExerciseIds
                                 )
                                 if (current != null) {
                                     call.respond(HttpStatusCode.OK, current)
                                     return@post
                                 }
 
-                                val assignment = unitExerciseAssignmentService.generateAssignment(
+                                val generateAssignment= unitExerciseAssignmentService.generateAssignment(
                                     unitId,
                                     tokenUserId,
                                     mode,
-                                    limit
+                                    limit,
+                                    assignedExerciseIds = assignedExerciseIds
                                 )
-                                call.respond(HttpStatusCode.Created, assignment)
+                                call.respond(HttpStatusCode.Created, generateAssignment)
                             }
                         }
                     }
@@ -1050,17 +1163,37 @@ fun Application.configureRouting() {
                             call.respond(exercisesInTest)
                         }
                     }
-                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR) {
+                    withRoles(Role.ADMIN, Role.CONTENT_EDITOR,Role.STUDENT) {
                         // Obtener estado de repaso para una unidad/test y usuario
                         get("/review-status") {
+
                             val userId = call.request.queryParameters["userId"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid userId")
+
                             val unitId = call.request.queryParameters["unitId"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid unitId")
+
                             val testId = call.request.queryParameters["testId"]?.toIntOrNull()
                                 ?: throw BadRequestException("Invalid testId")
 
-                            val status = testService.getUnitReviewStatus(userId, unitId, testId)
+                            // Obtener assignment activo
+                            val assignment = unitExerciseAssignmentService.getActiveAssignment(
+                                userId = userId,
+                                unitId = unitId
+                            )
+
+                            val assignedExerciseIds = assignment
+                                ?.exercises
+                                ?.map { it.id }
+                                ?: emptyList()
+
+                            val status = testService.getUnitReviewStatus(
+                                userId = userId,
+                                unitId = unitId,
+                                testId = testId,
+                                assignedExerciseIds = assignedExerciseIds
+                            )
+
                             call.respond(status)
                         }
                     }

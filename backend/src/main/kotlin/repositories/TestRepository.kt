@@ -5,6 +5,7 @@ import com.example.dtos.CreateTestDto
 import com.example.dtos.FilterTestsDto
 import com.example.dtos.TestCompletedDto
 import com.example.dtos.TestDto
+import com.example.dtos.UnitReviewStatusDto
 import com.example.dtos.UpdateTestCompletedDto
 import com.example.dtos.UpdateTestDto
 import io.ktor.server.plugins.BadRequestException
@@ -185,23 +186,48 @@ class TestRepository {
         TestCompleted.deleteWhere { TestCompleted.id eq id } > 0
     }
 
+
+    fun hasUserPassedTest(userId: Int, testId: Int, passingScore: Int = 60): Boolean = transaction {
+        TestCompleted.selectAll()
+            .where {
+                (TestCompleted.userId eq userId) and
+                        (TestCompleted.testId eq testId) and
+                        (TestCompleted.score greaterEq passingScore)
+            }
+            .count() > 0
+    }
+
     // Calcula el estado de repaso para una unidad/test para un usuario
-    fun getUnitReviewStatus(userId: Int, unitId: Int, testId: Int): com.example.dtos.UnitReviewStatusDto = transaction {
-        // obtener último intento del test por este usuario
+    fun getUnitReviewStatus(
+        userId: Int,
+        unitId: Int,
+        testId: Int,
+        assignedExerciseIds: List<Int>
+    ): UnitReviewStatusDto = transaction {
+
         val lastAttemptRow = TestCompleted.selectAll()
-            .where { (TestCompleted.testId eq testId) and  (TestCompleted.userId eq userId) }
+            .where {
+                (TestCompleted.testId eq testId) and
+                        (TestCompleted.userId eq userId)
+            }
             .orderBy(TestCompleted.completionDate, SortOrder.DESC)
             .limit(1)
             .singleOrNull()
 
-        val lastScore: Int? = lastAttemptRow?.get(TestCompleted.score)
-        val lastAttemptAt: java.time.LocalDateTime? = lastAttemptRow?.get(TestCompleted.completionDate)
+        val lastScore = lastAttemptRow?.get(TestCompleted.score)
+        val lastAttemptAt = lastAttemptRow?.get(TestCompleted.completionDate)
 
-        // contar ejercicios activos en la unidad
-        val totalExercisesInUnit = Exercises.selectAll()
-            .where { Exercises.unitId eq unitId and Exercises.isActive.eq(true) }
-            .count()
-            .toInt()
+        val totalExercisesInUnit = if (assignedExerciseIds.isNotEmpty()) {
+            assignedExerciseIds.size
+        } else {
+            Exercises.selectAll()
+                .where {
+                    (Exercises.unitId eq unitId) and
+                            (Exercises.isActive eq true)
+                }
+                .count()
+                .toInt()
+        }
 
         val required = when {
             totalExercisesInUnit <= 0 -> 1
@@ -210,16 +236,33 @@ class TestRepository {
             else -> kotlin.math.ceil(totalExercisesInUnit * 0.4f).toInt()
         }
 
-        // seleccionar ejercicios completados por el usuario en esa unidad
-        val completedRows = (ExerciseCompleted innerJoin Exercises)
-            .selectAll()
-            .where { (ExerciseCompleted.userId eq userId) and (Exercises.unitId eq unitId) }
+        val completedRows =
+            if (assignedExerciseIds.isNotEmpty()) {
+                ExerciseCompleted
+                    .selectAll()
+                    .where {
+                        (ExerciseCompleted.userId eq userId) and
+                                (ExerciseCompleted.exerciseId inList assignedExerciseIds)
+                    }
+            } else {
+                (ExerciseCompleted innerJoin Exercises)
+                    .selectAll()
+                    .where {
+                        (ExerciseCompleted.userId eq userId) and
+                                (Exercises.unitId eq unitId)
+                    }
+            }
 
-        val reviewedSet: Set<Int> = completedRows.mapNotNull { row ->
+        val reviewedSet = completedRows.mapNotNull { row ->
+
             val completionDate = row[ExerciseCompleted.completionDate]
             val exerciseId = row[ExerciseCompleted.exerciseId]
+
             if (lastAttemptAt != null) {
-                if (completionDate.isAfter(lastAttemptAt)) exerciseId else null
+                if (completionDate.isAfter(lastAttemptAt))
+                    exerciseId
+                else
+                    null
             } else {
                 exerciseId
             }
@@ -227,13 +270,12 @@ class TestRepository {
 
         val reviewed = reviewedSet.size
         val remaining = (required - reviewed).coerceAtLeast(0)
-        val requiresReview = (lastScore ?: 0) != 100 && remaining > 0
 
-        com.example.dtos.UnitReviewStatusDto(
+        UnitReviewStatusDto(
             userId = userId,
             unitId = unitId,
             testId = testId,
-            requiresReview = requiresReview,
+            requiresReview = (lastScore ?: 0) != 100 && remaining > 0,
             requiredExercises = required,
             reviewedExercises = reviewed,
             remainingExercises = remaining,

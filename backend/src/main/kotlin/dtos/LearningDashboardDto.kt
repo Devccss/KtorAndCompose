@@ -8,7 +8,7 @@ data class LearningDashboardDto(
     val completedExercises: Int,
     val totalUnits: Int,
     val completedUnits: Int,
-    val currentUnitId: Int?,
+    val currentUnitId: Int? = null,
     val units: List<UnitProgressDto>
 )
 @Serializable
@@ -25,8 +25,8 @@ data class UnitProgressDto(
     val unlocked: Boolean,
     val completed: Boolean,
 
-    val testId: Int?,
-    val testName: String?,
+    val testId: Int? = null,
+    val testName: String? = null,
 
     val testLocked: Boolean,
 

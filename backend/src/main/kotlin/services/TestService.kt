@@ -30,6 +30,20 @@ class TestService(private val repo: TestRepository) {
     fun updateTestCompleted(id: Int, dto: UpdateTestCompletedDto) = repo.updateTestCompleted(id, dto)
     fun deleteTestCompleted(id: Int): Boolean = repo.deleteTestCompleted(id)
 
-    fun getUnitReviewStatus(userId: Int, unitId: Int, testId: Int) =
-        repo.getUnitReviewStatus(userId, unitId, testId)
+    fun getUnitReviewStatus(
+        userId: Int,
+        unitId: Int,
+        testId: Int,
+        assignedExerciseIds: List<Int>
+    ) = repo.getUnitReviewStatus(
+        userId = userId,
+        unitId = unitId,
+        testId = testId,
+        assignedExerciseIds = assignedExerciseIds
+    )
+
+    fun hasUserPassedTest(
+        userId: Int,
+        testId: Int
+    ): Boolean = repo.hasUserPassedTest(userId, testId)
 }

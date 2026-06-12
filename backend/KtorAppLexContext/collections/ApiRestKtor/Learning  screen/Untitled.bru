@@ -1,0 +1,20 @@
+meta {
+  name: Untitled
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{BackendKtor}}/learningDashboard
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJrdG9yLWF1ZGllbmNlIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDAwIiwiaWQiOjMsInVzZXJuYW1lIjoic3R1ZGVudEAyMDI2Iiwicm9sZSI6IlNUVURFTlQiLCJleHAiOjE3ODEyMzUwNzl9.IV_SF0D_xUicOHkBcQyw9RMMC1dOoh3sNPmI9RrRO94
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

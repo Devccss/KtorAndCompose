@@ -113,30 +113,6 @@ fun createExercises() {
         TestCompleted.deleteAll()
         UserSessionLogs.deleteAll()
 
-        // Crear unidades si no existen
-        fun ensureUnit(
-            orderUnit: Int,
-            difficulty: models.DifficultyLevel,
-            name: String,
-            description: String,
-        ): Int {
-            val existing = Units.selectAll().where { Units.orderUnit eq orderUnit }.firstOrNull()
-            return existing?.get(Units.id)?.value ?: Units.insert {
-                it[this.difficulty] = difficulty
-                it[this.name] = name
-                it[this.description] = description
-                it[this.orderUnit] = orderUnit
-                it[this.isActive] = true
-            }[Units.id].value
-        }
-
-        ensureUnit(
-            orderUnit = 1,
-            difficulty = models.DifficultyLevel.A1,
-            name = "Unidad 1: To Be",
-            description = "Introducción al verbo más importante del inglés"
-        )
-
         // Insertar datos de seeds
         insertSeedData()
     }
