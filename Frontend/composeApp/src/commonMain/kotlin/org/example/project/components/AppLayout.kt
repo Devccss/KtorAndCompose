@@ -64,7 +64,8 @@ fun AppLayout(
                 initialUserName = userName.ifBlank { null },
                 role = userRole
             )
-        }
+        },
+        containerColor = Color(0xFFFFF3E8)
     ) { paddingValues ->
         Column(
             modifier = Modifier

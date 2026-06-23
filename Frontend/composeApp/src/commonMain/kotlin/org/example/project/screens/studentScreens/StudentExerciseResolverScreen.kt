@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -298,7 +300,8 @@ class StudentExerciseResolverScreen(
                             onClick = { coroutineScope.launch { submitAnswers() } },
                             enabled = !isSaving && questions.isNotEmpty() && canAttempt,
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors( containerColor = Color(0xFFE09595))
                         ) {
                             if (isSaving) {
                                 CircularProgressIndicator(
@@ -419,7 +422,12 @@ private fun AlternativeRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        RadioButton(selected = selected, onClick = onClick)
+        RadioButton(selected = selected, onClick = onClick,
+            colors = RadioButtonDefaults.colors(
+                selectedColor = Color(0xFF1565C0),
+                unselectedColor = Color.Gray
+            )
+        )
         Text(text, modifier = Modifier.weight(1f))
     }
 }

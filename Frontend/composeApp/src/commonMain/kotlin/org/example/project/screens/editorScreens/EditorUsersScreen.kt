@@ -630,6 +630,22 @@ fun UserCard(
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFE0E0E0), shape = CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    user.name.take(1).let {
+                        Text(
+                            it.uppercase(),
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF4A4A4A),
+                        )
+                    }
+                }
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(
@@ -649,21 +665,7 @@ fun UserCard(
                     }
                     Text("Nivel: $levelName", style = MaterialTheme.typography.labelSmall)
                 }
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFE0E0E0), shape = CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    user.name.take(1).let {
-                        Text(
-                            it.uppercase(),
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF4A4A4A),
-                        )
-                    }
-                }
+
 
             }
         }

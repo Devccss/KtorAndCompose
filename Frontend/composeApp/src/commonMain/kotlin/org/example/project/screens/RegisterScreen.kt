@@ -1,4 +1,4 @@
-package org.example.project.screens.admindScreens
+package org.example.project.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -28,7 +28,13 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -43,13 +49,13 @@ import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import frontend.composeapp.generated.resources.Res
+import frontend.composeapp.generated.resources.ic_launcher_foreground
 import org.example.project.dtos.CreateUserDto
 import org.example.project.dtos.Role
 import org.example.project.network.RepositoryProvider
-import org.example.project.screens.LoginScreen
 import org.example.project.viewModel.UserViewModel
-
-
+import org.jetbrains.compose.resources.painterResource
 
 class RegisterScreen() : Screen {
     @Composable
@@ -57,7 +63,12 @@ class RegisterScreen() : Screen {
         val navigator = LocalNavigator.currentOrThrow
 
         val userViewModel =
-            rememberScreenModel { UserViewModel(RepositoryProvider.userRepo, RepositoryProvider.unitRepo) }
+            rememberScreenModel {
+                UserViewModel(
+                    RepositoryProvider.userRepo,
+                    RepositoryProvider.unitRepo
+                )
+            }
         val uiState by userViewModel.state.collectAsState()
 
         var name: String by remember { mutableStateOf("") }
@@ -76,15 +87,9 @@ class RegisterScreen() : Screen {
 
 
         // Gradientes
-        val backgroundGradient = Brush.linearGradient(
-            colors = listOf(Color.White, Color(0xFFF5F5FA), Color(0xFFF3E8FF))
-        )
-        val headerGradient = Brush.horizontalGradient(
-            colors = listOf(Color(0xFF003AB6), Color(0xFF48145B))
-        )
-        val buttonGradient = Brush.horizontalGradient(
-            colors = listOf(Color(0xFF003AB6), Color(0xFF48145B))
-        )
+        val backgroundGradient = Color(0xFFFFF3E8)
+        val headerGradient =  Color(0xFFFFF3E8)
+        val buttonGradient =  Color(0xFFE09595)
 
         // Mostrar error si existe
         LaunchedEffect(uiState.error) {
@@ -92,61 +97,65 @@ class RegisterScreen() : Screen {
         }
 
         Box(
-            modifier = Modifier
+            modifier = Modifier.Companion
                 .fillMaxSize()
-                .background(brush = backgroundGradient)
+                .background(color =  backgroundGradient)
         ) {
             // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(brush = headerGradient)
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
 
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = "AP",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp,
-                    modifier = Modifier.align(Alignment.CenterVertically)
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Box(modifier = Modifier.size(40.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_launcher_foreground),
+                        contentDescription = "Logo",
+                        modifier = Modifier.size(150.dp),
+                        tint = Color(0xFFE09595)
+                    )
+
+                }
             }
 
             // Content
             Box(
-                modifier = Modifier
+                modifier = Modifier.Companion
                     .fillMaxSize()
                     .padding(top = 80.dp, bottom = 0.dp),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Companion.Center
             ) {
 
                 Card(
-                    modifier = Modifier
+                    modifier = Modifier.Companion
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
                         .widthIn(max = 400.dp),
                     shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F8F8)),
                     elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
                 ) {
                     Column(
-                        modifier = Modifier
+                        modifier = Modifier.Companion
                             .padding(24.dp)
                             .fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
                         // Título y subtítulo
                         Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth()
+                            horizontalAlignment = Alignment.Companion.CenterHorizontally,
+                            modifier = Modifier.Companion.fillMaxWidth()
                         ) {
                             Text(
                                 text = "Registrarse",
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.Companion.Bold,
                                 fontSize = 24.sp,
                                 color = Color(0xFF131313)
                             )
@@ -161,9 +170,9 @@ class RegisterScreen() : Screen {
                         if (showError && uiState.error != null) {
                             Text(
                                 text = uiState.error ?: "",
-                                color = Color.Red,
+                                color = Color.Companion.Red,
                                 fontSize = 14.sp,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.Companion.fillMaxWidth()
                             )
                             println("--->>>>>>>>>>${uiState.error}")
                         }
@@ -175,7 +184,7 @@ class RegisterScreen() : Screen {
                                 Text(
                                     text = "Nombre",
                                     color = Color(0xFF131313),
-                                    fontWeight = FontWeight.Medium,
+                                    fontWeight = FontWeight.Companion.Medium,
                                     fontSize = 15.sp
                                 )
                                 OutlinedTextField(
@@ -183,10 +192,10 @@ class RegisterScreen() : Screen {
                                     onValueChange = { name = it },
                                     placeholder = { Text("Pepito sandoval") },
                                     singleLine = true,
-                                    modifier = Modifier
+                                    modifier = Modifier.Companion
                                         .fillMaxWidth()
                                         .height(56.dp),
-                                    shape = RoundedCornerShape(16.dp),
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = Color(0xFF003AB6),
                                         unfocusedBorderColor = Color(0xFFE5E7EB)
@@ -199,7 +208,7 @@ class RegisterScreen() : Screen {
                                 Text(
                                     text = "Correo electrónico",
                                     color = Color(0xFF131313),
-                                    fontWeight = FontWeight.Medium,
+                                    fontWeight = FontWeight.Companion.Medium,
                                     fontSize = 15.sp
                                 )
                                 OutlinedTextField(
@@ -207,10 +216,10 @@ class RegisterScreen() : Screen {
                                     onValueChange = { email = it },
                                     placeholder = { Text("tu@email.com") },
                                     singleLine = true,
-                                    modifier = Modifier
+                                    modifier = Modifier.Companion
                                         .fillMaxWidth()
                                         .height(56.dp),
-                                    shape = RoundedCornerShape(16.dp),
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = Color(0xFF003AB6),
                                         unfocusedBorderColor = Color(0xFFE5E7EB)
@@ -222,7 +231,7 @@ class RegisterScreen() : Screen {
                                 Text(
                                     text = "Contraseña",
                                     color = Color(0xFF131313),
-                                    fontWeight = FontWeight.Medium,
+                                    fontWeight = FontWeight.Companion.Medium,
                                     fontSize = 15.sp
                                 )
                                 Box {
@@ -231,11 +240,13 @@ class RegisterScreen() : Screen {
                                         onValueChange = { password = it },
                                         placeholder = { Text("••••••••") },
                                         singleLine = true,
-                                        visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                                        modifier = Modifier
+                                        visualTransformation = if (showPassword) VisualTransformation.Companion.None else PasswordVisualTransformation(),
+                                        modifier = Modifier.Companion
                                             .fillMaxWidth()
                                             .height(56.dp),
-                                        shape = RoundedCornerShape(16.dp),
+                                        shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                                            16.dp
+                                        ),
                                         colors = OutlinedTextFieldDefaults.colors(
                                             focusedBorderColor = Color(0xFF003AB6),
                                             unfocusedBorderColor = Color(0xFFE5E7EB)
@@ -243,7 +254,7 @@ class RegisterScreen() : Screen {
                                         trailingIcon = {
                                             IconButton(
                                                 onClick = { showPassword = !showPassword },
-                                                modifier = Modifier.size(32.dp)
+                                                modifier = Modifier.Companion.size(32.dp)
                                             ) {
                                                 Icon(
                                                     imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
@@ -260,7 +271,7 @@ class RegisterScreen() : Screen {
                                 Text(
                                     text = "Confirmar contraseña",
                                     color = Color(0xFF131313),
-                                    fontWeight = FontWeight.Medium,
+                                    fontWeight = FontWeight.Companion.Medium,
                                     fontSize = 15.sp
                                 )
                                 OutlinedTextField(
@@ -268,11 +279,11 @@ class RegisterScreen() : Screen {
                                     onValueChange = { confirmPassword = it },
                                     placeholder = { Text("••••••••") },
                                     singleLine = true,
-                                    visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                                    modifier = Modifier
+                                    visualTransformation = if (showPassword) VisualTransformation.Companion.None else PasswordVisualTransformation(),
+                                    modifier = Modifier.Companion
                                         .fillMaxWidth()
                                         .height(56.dp),
-                                    shape = RoundedCornerShape(16.dp),
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = Color(0xFF003AB6),
                                         unfocusedBorderColor = Color(0xFFE5E7EB)
@@ -280,7 +291,7 @@ class RegisterScreen() : Screen {
                                     trailingIcon = {
                                         IconButton(
                                             onClick = { showPassword = !showPassword },
-                                            modifier = Modifier.size(32.dp)
+                                            modifier = Modifier.Companion.size(32.dp)
                                         ) {
                                             Icon(
                                                 imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
@@ -312,34 +323,40 @@ class RegisterScreen() : Screen {
                                 userViewModel.registerUser(newUser)
                                 showError = false
                             },
-                            modifier = Modifier
+                            modifier = Modifier.Companion
                                 .fillMaxWidth()
                                 .height(48.dp)
-                                .shadow(8.dp, RoundedCornerShape(16.dp)),
-                            shape = RoundedCornerShape(16.dp),
+                                .shadow(
+                                    8.dp,
+                                    androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                                ),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Transparent
+                                containerColor = Color.Companion.Transparent
                             ),
                             contentPadding = PaddingValues(),
                             enabled = !uiState.isLoading
                         ) {
                             Box(
-                                modifier = Modifier
+                                modifier = Modifier.Companion
                                     .fillMaxSize()
-                                    .background(buttonGradient, RoundedCornerShape(16.dp)),
-                                contentAlignment = Alignment.Center
+                                    .background(
+                                        buttonGradient,
+                                        androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                                    ),
+                                contentAlignment = Alignment.Companion.Center
                             ) {
                                 if (uiState.isLoading) {
                                     CircularProgressIndicator(
-                                        color = Color.White,
-                                        modifier = Modifier.size(24.dp),
+                                        color = Color.Companion.White,
+                                        modifier = Modifier.Companion.size(24.dp),
                                         strokeWidth = 2.dp
                                     )
                                 } else {
                                     Text(
                                         "Registrarse",
-                                        color = Color.White,
-                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.Companion.White,
+                                        fontWeight = FontWeight.Companion.SemiBold,
                                         fontSize = 16.sp
                                     )
                                 }
@@ -355,9 +372,9 @@ class RegisterScreen() : Screen {
                         }
 
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.Companion.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.Companion.CenterVertically
                         ) {
                             Text(
                                 "¿Ya tienes cuenta? ",
@@ -370,8 +387,8 @@ class RegisterScreen() : Screen {
                             ) {
                                 Text(
                                     "Iniciar Sesión",
-                                    color = Color(0xFF003AB6),
-                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFFE09595),
+                                    fontWeight = FontWeight.Companion.SemiBold,
                                     fontSize = 15.sp
                                 )
                             }

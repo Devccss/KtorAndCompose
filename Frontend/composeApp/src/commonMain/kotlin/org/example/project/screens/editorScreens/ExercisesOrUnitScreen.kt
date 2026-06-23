@@ -605,9 +605,7 @@ fun ExercisesSection(
                                 Icon(
                                     Icons.Default.FilterList,
                                     contentDescription = "Filtros",
-                                    tint = if (isFiltering) Color(0xFF003AB6) else Color(
-                                        0xFF4A4A4A
-                                    )
+                                    tint = if (isFiltering) Color(0xFF393939) else Color(0xFF7F7F7F)
                                 )
                             }
                         }

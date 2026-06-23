@@ -94,7 +94,7 @@ fun EditorContentCard(
                         Icon(
                             Icons.Default.ArrowUpward,
                             contentDescription = "Subir",
-                            tint = if (isFirst) Color.LightGray else Color(0xFF003AB6),
+                            tint = if (isFirst) Color.LightGray else Color(0xFFD5D5D5),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -106,7 +106,7 @@ fun EditorContentCard(
                         Icon(
                             Icons.Default.ArrowDownward,
                             contentDescription = "Bajar",
-                            tint = if (isLast) Color.LightGray else Color(0xFF003AB6),
+                            tint = if (isLast) Color.LightGray else Color(0xFFD5D5D5),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -199,7 +199,7 @@ fun EditorContentCard(
                     testName?.let {
                         Badge(
                             containerColor = Color(0xFFE3F2FD),
-                            contentColor = Color(0xFF0D47A1),
+                            contentColor = Color(0xFFD5D5D5),
                             modifier = Modifier.height(20.dp)
                         ) {
                             Text(

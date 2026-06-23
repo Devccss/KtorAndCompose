@@ -205,7 +205,7 @@ fun UnitsSection(
                     Icon(
                         Icons.Default.FilterList,
                         contentDescription = "Filtros",
-                        tint = if (isFiltering) Color(0xFF003AB6) else Color(0xFF4A4A4A)
+                        tint = if (isFiltering) Color(0xFFD5D5D5) else Color(0xFFE0E0E0)
                     )
                 }
             }

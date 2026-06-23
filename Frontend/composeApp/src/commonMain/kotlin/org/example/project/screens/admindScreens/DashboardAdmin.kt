@@ -172,10 +172,8 @@ fun AdminDashboardContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFFFF8F0))
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()),
             // .padding(16.dp) // padding ya aplicado por quien llama
-        ,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
 

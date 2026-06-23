@@ -62,7 +62,8 @@ fun EditorLayout(
                 selectedIndex = selectedIndex,
                 onSelect = { idx -> onSelect(idx) }
             )
-        }
+        },
+        containerColor = Color(0xFFFFF3E8)
     ) { paddingValues ->
         Column(
             modifier = Modifier

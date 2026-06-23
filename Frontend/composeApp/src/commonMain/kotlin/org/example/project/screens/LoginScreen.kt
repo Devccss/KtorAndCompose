@@ -1,5 +1,6 @@
 package org.example.project.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,6 +10,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -21,6 +23,10 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import org.example.project.viewModel.UserViewModel
 import cafe.adriel.voyager.core.model.rememberScreenModel
+import frontend.composeapp.generated.resources.Res
+import frontend.composeapp.generated.resources.allDrawableResources
+import frontend.composeapp.generated.resources.compose_multiplatform
+import frontend.composeapp.generated.resources.ic_launcher_foreground
 import org.example.project.NotificationPermissionManager
 import org.example.project.dtos.LoginDto
 import org.example.project.dtos.Role
@@ -29,10 +35,11 @@ import org.example.project.network.SessionLogTracker
 import org.example.project.network.UserSession
 import org.example.project.requestNotificationPermission
 import org.example.project.screens.admindScreens.AdminDashboard
-import org.example.project.screens.admindScreens.RegisterScreen
+import org.example.project.screens.RegisterScreen
 import org.example.project.screens.editorScreens.EditorDashboard
 import org.example.project.screens.studentScreens.StudentWelcomeScreen
 import org.example.project.service.NotificationService
+import org.jetbrains.compose.resources.painterResource
 
 
 class LoginScreen(private val logout: Boolean? = false, private val userId: Int? = null) : Screen {
@@ -57,15 +64,9 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
         val snackbarHostState = remember { SnackbarHostState() }
 
         // Gradientes
-        val backgroundGradient = Brush.linearGradient(
-            colors = listOf(Color.White, Color(0xFFF5F5FA), Color(0xFFF3E8FF))
-        )
-        val headerGradient = Brush.horizontalGradient(
-            colors = listOf(Color(0xFF003AB6), Color(0xFF48145B))
-        )
-        val buttonGradient = Brush.horizontalGradient(
-            colors = listOf(Color(0xFF003AB6), Color(0xFF48145B))
-        )
+        val backgroundGradient = Color(0xFFFFF3E8)
+        val headerGradient =  Color(0xFFFFF3E8)
+        val buttonGradient =  Color(0xFFE09595)
         val generalMessage = userViewModel.generalMessage
 
         if (generalMessage != null) {
@@ -100,33 +101,36 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
         Scaffold(
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
             containerColor = Color.Transparent,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxHeight()
         ) { paddingValues ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(brush = backgroundGradient)
+                    .background(color = backgroundGradient)
             ) {
                 // Header
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(brush = headerGradient)
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
 
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text(
-                        text = "AP",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp,
-                        modifier = Modifier.align(Alignment.CenterVertically)
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Box(modifier = Modifier.size(40.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_launcher_foreground),
+                            contentDescription = "Logo",
+                            modifier = Modifier.size(150.dp),
+                            tint = Color(0xFFE09595)
+                        )
+
+                    }
                 }
 
                 // Content
@@ -142,6 +146,7 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
                             .padding(horizontal = 24.dp)
                             .widthIn(max = 400.dp),
                         shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F8F8)),
                         elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
                     ) {
                         Column(
@@ -372,7 +377,7 @@ class LoginScreen(private val logout: Boolean? = false, private val userId: Int?
                                 ) {
                                     Text(
                                         "Regístrate",
-                                        color = Color(0xFF003AB6),
+                                        color = Color(0xFFE09595),
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 15.sp
                                     )

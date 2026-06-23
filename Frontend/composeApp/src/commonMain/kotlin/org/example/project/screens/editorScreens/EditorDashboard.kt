@@ -146,9 +146,7 @@ fun EditorDashboardContent(
 
     LazyColumn(
         modifier = modifier
-            .fillMaxSize()
-            .background(Color(0xFFFFF8F0))
-            .padding(horizontal = 16.dp),
+            .fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(vertical = 16.dp)
     ) {

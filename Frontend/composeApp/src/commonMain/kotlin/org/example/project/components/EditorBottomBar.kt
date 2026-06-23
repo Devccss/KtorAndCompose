@@ -88,14 +88,14 @@ fun ReusableEditorBottomBar(
                             Icon(
                                 item.icon,
                                 contentDescription = item.label,
-                                tint = if (selected) Color(0xFFFF6B6B) else Color.Gray
+                                tint = if (selected) Color(0xFFE09595) else Color.Gray
                             )
                         }
                     },
                     label = {
                         Text(
                             text = item.label,
-                            color = if (selected) Color(0xFFFF6B6B) else Color.Gray
+                            color = if (selected) Color(0xFFE09595) else Color.Gray
                         ) },
                     alwaysShowLabel = false,
                     selected = selected,

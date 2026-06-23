@@ -73,8 +73,11 @@ fun ExerciseInfoSections(
 
     ContentSectionCard(
         title = "Contexto",
-        iconTint = Color(0xFF1565C0),
-        icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = Color(0xFF1565C0)) },
+        iconTint = Color(0xFF003AB6),
+        icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = Color(
+            0xFF003AB6
+        )
+        ) },
         content = {
             Text(
                 text = "Tipo: ${content.contentType}",
@@ -88,8 +91,8 @@ fun ExerciseInfoSections(
 
     ContentSectionCard(
         title = "Gramatica",
-        iconTint = Color(0xFF6A1B9A),
-        icon = { Icon(Icons.Default.Translate, contentDescription = null, tint = Color(0xFF6A1B9A)) },
+        iconTint = Color(0xFFE09595),
+        icon = { Icon(Icons.Default.Translate, contentDescription = null, tint = Color(0xFFE09595)) },
         content = {
             Text(
                 text = grammarOnly.ifBlank { "Sin explicacion gramatical adicional." },
